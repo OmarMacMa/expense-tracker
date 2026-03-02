@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.config import settings
 from app.models import User
+from app.schemas.space import SpaceCreate
+from app.services.space import create_space
 
 
 @pytest_asyncio.fixture
@@ -43,6 +45,13 @@ async def test_user(db_session: AsyncSession) -> User:
     db_session.add(user)
     await db_session.flush()
     return user
+
+
+@pytest_asyncio.fixture
+async def test_space(db_session: AsyncSession, test_user: User):
+    """Create a test space with the test_user as creator."""
+    data = SpaceCreate(name="Test Space", currency_code="USD", timezone="UTC")
+    return await create_space(db_session, test_user, data)
 
 
 @pytest_asyncio.fixture
