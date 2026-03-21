@@ -13,6 +13,12 @@ import AddExpense from '@/routes/add-expense';
 import Insights from '@/routes/insights';
 import Limits from '@/routes/limits';
 import Settings from '@/routes/settings';
+import SettingsCategories from '@/routes/settings/categories';
+import SettingsPaymentMethods from '@/routes/settings/payment-methods';
+import SettingsTags from '@/routes/settings/tags';
+import SettingsMembers from '@/routes/settings/members';
+import SettingsInvite from '@/routes/settings/invite';
+import SettingsTaxes from '@/routes/settings/taxes';
 import JoinSpace from '@/routes/join-space';
 
 const queryClient = new QueryClient({
@@ -111,6 +117,66 @@ function App() {
               <AuthGuard>
                 <AppLayout>
                   <Settings />
+                </AppLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/settings/categories"
+            element={
+              <AuthGuard>
+                <AppLayout>
+                  <SettingsCategories />
+                </AppLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/settings/payment-methods"
+            element={
+              <AuthGuard>
+                <AppLayout>
+                  <SettingsPaymentMethods />
+                </AppLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/settings/tags"
+            element={
+              <AuthGuard>
+                <AppLayout>
+                  <SettingsTags />
+                </AppLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/settings/members"
+            element={
+              <AuthGuard>
+                <AppLayout>
+                  <SettingsMembers />
+                </AppLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/settings/invite"
+            element={
+              <AuthGuard>
+                <AppLayout>
+                  <SettingsInvite />
+                </AppLayout>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/settings/taxes"
+            element={
+              <AuthGuard>
+                <AppLayout>
+                  <SettingsTaxes />
                 </AppLayout>
               </AuthGuard>
             }
