@@ -10,6 +10,12 @@ from app.models import Category, Expense, ExpenseLine, Space, Tag, User
 from app.models.expense import expense_line_tags
 from app.services.time_window import TimeWindowResolver
 
+
+def _escape_like(value: str) -> str:
+    """Escape SQL LIKE/ILIKE special characters."""
+    return value.replace("%", r"\%").replace("_", r"\_")
+
+
 PERIOD_LABELS = {
     "this_week": "This Week",
     "last_week": "Last Week",
@@ -85,7 +91,9 @@ async def _sum_expenses_in_window(
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
     if merchant:
-        stmt = stmt.where(Expense.merchant_normalized.ilike(f"%{merchant.lower()}%"))
+        stmt = stmt.where(
+            Expense.merchant_normalized.ilike(f"%{_escape_like(merchant.lower())}%")
+        )
     if category_id:
         stmt = stmt.where(
             Expense.id.in_(
@@ -253,7 +261,9 @@ async def _daily_amounts(
         stmt = stmt.where(Expense.payment_method_id == filters["payment_method_id"])
     if filters.get("merchant"):
         stmt = stmt.where(
-            Expense.merchant_normalized.ilike(f"%{filters['merchant'].lower()}%")
+            Expense.merchant_normalized.ilike(
+                f"%{_escape_like(filters['merchant'].lower())}%"
+            )
         )
     if filters.get("category_id"):
         stmt = stmt.where(
@@ -261,6 +271,19 @@ async def _daily_amounts(
                 select(ExpenseLine.expense_id).where(
                     ExpenseLine.category_id == filters["category_id"]
                 )
+            )
+        )
+    if filters.get("tag"):
+        tag_norm = filters["tag"].strip().lower().lstrip("#")
+        stmt = stmt.where(
+            Expense.id.in_(
+                select(ExpenseLine.expense_id)
+                .join(
+                    expense_line_tags,
+                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
+                )
+                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
+                .where(Tag.name == tag_norm)
             )
         )
 
@@ -338,9 +361,24 @@ async def get_category_breakdown(
     if spender_id:
         stmt = stmt.where(Expense.spender_id == spender_id)
     if merchant:
-        stmt = stmt.where(Expense.merchant_normalized.ilike(f"%{merchant.lower()}%"))
+        stmt = stmt.where(
+            Expense.merchant_normalized.ilike(f"%{_escape_like(merchant.lower())}%")
+        )
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
+    if tag:
+        tag_norm = tag.strip().lower().lstrip("#")
+        stmt = stmt.where(
+            Expense.id.in_(
+                select(ExpenseLine.expense_id)
+                .join(
+                    expense_line_tags,
+                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
+                )
+                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
+                .where(Tag.name == tag_norm)
+            )
+        )
 
     result = await db.execute(stmt)
     rows = result.all()
@@ -398,6 +436,27 @@ async def get_merchant_leaderboard(
         stmt = stmt.where(Expense.spender_id == spender_id)
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
+    if category_id:
+        stmt = stmt.where(
+            Expense.id.in_(
+                select(ExpenseLine.expense_id).where(
+                    ExpenseLine.category_id == category_id
+                )
+            )
+        )
+    if tag:
+        tag_norm = tag.strip().lower().lstrip("#")
+        stmt = stmt.where(
+            Expense.id.in_(
+                select(ExpenseLine.expense_id)
+                .join(
+                    expense_line_tags,
+                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
+                )
+                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
+                .where(Tag.name == tag_norm)
+            )
+        )
 
     result = await db.execute(stmt)
     rows = result.all()
@@ -439,9 +498,32 @@ async def get_spender_breakdown(
         .order_by(func.sum(Expense.total_amount).desc())
     )
     if merchant:
-        stmt = stmt.where(Expense.merchant_normalized.ilike(f"%{merchant.lower()}%"))
+        stmt = stmt.where(
+            Expense.merchant_normalized.ilike(f"%{_escape_like(merchant.lower())}%")
+        )
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
+    if category_id:
+        stmt = stmt.where(
+            Expense.id.in_(
+                select(ExpenseLine.expense_id).where(
+                    ExpenseLine.category_id == category_id
+                )
+            )
+        )
+    if tag:
+        tag_norm = tag.strip().lower().lstrip("#")
+        stmt = stmt.where(
+            Expense.id.in_(
+                select(ExpenseLine.expense_id)
+                .join(
+                    expense_line_tags,
+                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
+                )
+                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
+                .where(Tag.name == tag_norm)
+            )
+        )
 
     result = await db.execute(stmt)
     rows = result.all()

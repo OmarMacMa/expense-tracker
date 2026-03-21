@@ -8,10 +8,23 @@ from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Expense, ExpenseLine, Tag, User
+from app.models import (
+    Category,
+    Expense,
+    ExpenseLine,
+    PaymentMethod,
+    SpaceMember,
+    Tag,
+    User,
+)
 from app.models.expense import expense_line_tags
 from app.services.merchant import upsert_merchant
 from app.services.tag import ensure_tags
+
+
+def _escape_like(value: str) -> str:
+    """Escape SQL LIKE/ILIKE special characters."""
+    return value.replace("%", r"\%").replace("_", r"\_")
 
 
 async def create_expense(
@@ -45,6 +58,57 @@ async def create_expense(
                 }
             },
         )
+
+    # Validate spender is a space member
+    spender_stmt = select(SpaceMember).where(
+        SpaceMember.space_id == space_id,
+        SpaceMember.user_id == data.spender_id,
+    )
+    spender_result = await db.execute(spender_stmt)
+    if spender_result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": {
+                    "code": "INVALID_SPENDER",
+                    "message": "Spender is not a member of this space",
+                }
+            },
+        )
+
+    # Validate category belongs to space
+    cat_stmt = select(Category).where(
+        Category.id == data.category_id, Category.space_id == space_id
+    )
+    cat_result = await db.execute(cat_stmt)
+    if cat_result.scalar_one_or_none() is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": {
+                    "code": "INVALID_CATEGORY",
+                    "message": "Category not found in this space",
+                }
+            },
+        )
+
+    # Validate payment method belongs to space (if provided)
+    if data.payment_method_id:
+        pm_stmt = select(PaymentMethod).where(
+            PaymentMethod.id == data.payment_method_id,
+            PaymentMethod.space_id == space_id,
+        )
+        pm_result = await db.execute(pm_stmt)
+        if pm_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": {
+                        "code": "INVALID_PAYMENT_METHOD",
+                        "message": "Payment method not found in this space",
+                    }
+                },
+            )
 
     merchant_normalized = data.merchant.strip().lower()
 
@@ -194,7 +258,9 @@ async def list_expenses(
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
 
     if merchant:
-        stmt = stmt.where(Expense.merchant_normalized.ilike(f"%{merchant.lower()}%"))
+        stmt = stmt.where(
+            Expense.merchant_normalized.ilike(f"%{_escape_like(merchant.lower())}%")
+        )
 
     if category_id:
         stmt = stmt.where(
@@ -220,7 +286,7 @@ async def list_expenses(
         )
 
     if search:
-        search_term = f"%{search.lower()}%"
+        search_term = f"%{_escape_like(search.lower())}%"
         tag_subquery = (
             select(ExpenseLine.expense_id)
             .join(
@@ -346,9 +412,40 @@ async def update_expense(
         expense.merchant_normalized = update_data["merchant"].strip().lower()
 
     if "spender_id" in update_data:
+        spender_stmt = select(SpaceMember).where(
+            SpaceMember.space_id == space_id,
+            SpaceMember.user_id == update_data["spender_id"],
+        )
+        spender_result = await db.execute(spender_stmt)
+        if spender_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": {
+                        "code": "INVALID_SPENDER",
+                        "message": "Spender is not a member of this space",
+                    }
+                },
+            )
         expense.spender_id = update_data["spender_id"]
 
     if "payment_method_id" in update_data:
+        if update_data["payment_method_id"] is not None:
+            pm_stmt = select(PaymentMethod).where(
+                PaymentMethod.id == update_data["payment_method_id"],
+                PaymentMethod.space_id == space_id,
+            )
+            pm_result = await db.execute(pm_stmt)
+            if pm_result.scalar_one_or_none() is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "error": {
+                            "code": "INVALID_PAYMENT_METHOD",
+                            "message": "Payment method not found in this space",
+                        }
+                    },
+                )
         expense.payment_method_id = update_data["payment_method_id"]
 
     if "notes" in update_data:
@@ -371,8 +468,23 @@ async def update_expense(
         if line:
             line.amount = update_data["amount"]
 
-    # Handle category change — update line + re-upsert merchant
+    # Handle category change — validate, update line + re-upsert merchant
     if "category_id" in update_data and update_data["category_id"] is not None:
+        cat_stmt = select(Category).where(
+            Category.id == update_data["category_id"],
+            Category.space_id == space_id,
+        )
+        cat_result = await db.execute(cat_stmt)
+        if cat_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": {
+                        "code": "INVALID_CATEGORY",
+                        "message": "Category not found in this space",
+                    }
+                },
+            )
         line = await _get_sole_line()
         if line:
             line.category_id = update_data["category_id"]

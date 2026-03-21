@@ -120,6 +120,7 @@ class TimeWindowResolver:
 
         start_dt = datetime.combine(start_date, time.min, tzinfo=self._tz)
         end_dt = datetime.combine(end_date, time(23, 59, 59, 999999), tzinfo=self._tz)
+        end_dt = end_dt.replace(fold=1)  # Prefer post-DST occurrence
         return start_dt, end_dt
 
     def _shift_back(self, timeframe: Timeframe, local_date: date, n: int) -> date:

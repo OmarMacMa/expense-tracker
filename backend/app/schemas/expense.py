@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ExpenseCreate(BaseModel):
@@ -15,6 +15,13 @@ class ExpenseCreate(BaseModel):
     notes: str | None = Field(None, max_length=500)
     tags: list[str] = Field(default_factory=list, max_length=10)
 
+    @field_validator("merchant")
+    @classmethod
+    def merchant_must_have_content(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Merchant cannot be empty or whitespace-only")
+        return v
+
 
 class ExpenseUpdate(BaseModel):
     """PATCH — partial update. All fields optional."""
@@ -26,7 +33,14 @@ class ExpenseUpdate(BaseModel):
     spender_id: uuid.UUID | None = None
     payment_method_id: uuid.UUID | None = None
     notes: str | None = Field(None, max_length=500)
-    tags: list[str] | None = None
+    tags: list[str] | None = Field(None, max_length=10)
+
+    @field_validator("merchant")
+    @classmethod
+    def merchant_must_have_content(cls, v: str | None) -> str | None:
+        if v is not None and not v.strip():
+            raise ValueError("Merchant cannot be empty or whitespace-only")
+        return v
 
 
 class TagInfo(BaseModel):
