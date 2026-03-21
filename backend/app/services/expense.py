@@ -1,4 +1,5 @@
 import base64
+import binascii
 import json
 import uuid
 from datetime import UTC, datetime
@@ -239,7 +240,7 @@ async def list_expenses(
                     ),
                 )
             )
-        except (json.JSONDecodeError, KeyError, ValueError):
+        except (json.JSONDecodeError, KeyError, ValueError, binascii.Error):
             raise HTTPException(
                 status_code=400,
                 detail={
@@ -390,6 +391,26 @@ async def update_expense(
         )
 
     update_data = data.model_dump(exclude_unset=True)
+
+    # Reject explicit null for NOT NULL fields
+    non_nullable = (
+        "spender_id",
+        "category_id",
+        "amount",
+        "merchant",
+        "purchase_datetime",
+    )
+    for field in non_nullable:
+        if field in update_data and update_data[field] is None:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": {
+                        "code": "REQUIRED_FIELD",
+                        "message": f"{field} cannot be null",
+                    }
+                },
+            )
 
     if "purchase_datetime" in update_data and update_data["purchase_datetime"]:
         dt = update_data["purchase_datetime"]

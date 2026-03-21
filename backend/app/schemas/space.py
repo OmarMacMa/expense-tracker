@@ -9,7 +9,7 @@ class SpaceCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     currency_code: str = Field(..., min_length=3, max_length=3)
     timezone: str = Field(..., min_length=1, max_length=100)
-    default_tax_pct: Decimal | None = Field(None, ge=0, le=100)
+    default_tax_pct: Decimal | None = Field(None, ge=0, le=Decimal("99.99"))
     seed_default_categories: bool = False
 
 
@@ -18,7 +18,7 @@ class SpaceUpdate(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=100)
     timezone: str = Field(..., min_length=1, max_length=100)
-    default_tax_pct: Decimal | None = Field(None, ge=0, le=100)
+    default_tax_pct: Decimal | None = Field(None, ge=0, le=Decimal("99.99"))
 
 
 class SpaceResponse(BaseModel):

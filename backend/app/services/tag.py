@@ -35,11 +35,13 @@ async def ensure_tags(
     if not tag_names:
         return []
 
+    seen = set()
     tags = []
     for raw_name in tag_names:
         normalized = normalize_tag_name(raw_name)
-        if not normalized:
+        if not normalized or normalized in seen:
             continue
+        seen.add(normalized)
         if not TAG_PATTERN.match(normalized):
             raise HTTPException(
                 status_code=422,
@@ -50,6 +52,16 @@ async def ensure_tags(
                             f"Invalid tag name: {raw_name}. "
                             "Allowed: alphanumeric, hyphens, underscores."
                         ),
+                    }
+                },
+            )
+        if len(normalized) > 50:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": {
+                        "code": "TAG_TOO_LONG",
+                        "message": f"Tag name cannot exceed 50 characters: {raw_name}",
                     }
                 },
             )

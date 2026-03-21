@@ -59,8 +59,8 @@ class RecurringTemplate(Base):
         ForeignKey("payment_methods.id", ondelete="SET NULL"),
         nullable=True,
     )
-    default_tags: Mapped[dict | None] = mapped_column(
-        JSONB, nullable=False, server_default="'[]'"
+    default_tags: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default="[]"
     )
     next_due_date: Mapped[date] = mapped_column(Date, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

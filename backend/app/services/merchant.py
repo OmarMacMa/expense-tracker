@@ -57,7 +57,10 @@ async def get_category_suggestion(
         }
 
     # Fetch category name
-    cat_stmt = select(Category).where(Category.id == merchant.last_category_id)
+    cat_stmt = select(Category).where(
+        Category.id == merchant.last_category_id,
+        Category.space_id == space_id,
+    )
     cat_result = await db.execute(cat_stmt)
     category = cat_result.scalar_one_or_none()
 

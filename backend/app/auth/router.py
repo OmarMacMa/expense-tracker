@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
@@ -19,22 +21,58 @@ from app.models import Space, SpaceMember, User
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
+STATE_COOKIE_NAME = "oauth_state"
+STATE_COOKIE_MAX_AGE = 300  # 5 minutes
+
 
 @router.get("/google")
 async def google_login(request: Request) -> RedirectResponse:
     """Redirect to Google OAuth consent page."""
     redirect_uri = str(request.url_for("google_callback"))
-    auth_url = get_google_auth_url(redirect_uri)
-    return RedirectResponse(url=auth_url)
+    state = secrets.token_urlsafe(32)
+    auth_url = get_google_auth_url(redirect_uri, state)
+    response = RedirectResponse(url=auth_url)
+    response.set_cookie(
+        key=STATE_COOKIE_NAME,
+        value=state,
+        max_age=STATE_COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=cookie_secure(),
+        path="/",
+    )
+    return response
 
 
 @router.get("/google/callback")
 async def google_callback(
     request: Request,
-    code: str,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
     """Handle Google OAuth callback: upsert user, set JWT cookie, redirect."""
+    if error:
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/?error=oauth_failed",
+            status_code=302,
+        )
+
+    if not code:
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/?error=oauth_no_code",
+            status_code=302,
+        )
+
+    # Validate state parameter (CSRF protection)
+    stored_state = request.cookies.get(STATE_COOKIE_NAME)
+    if not state or not stored_state or not secrets.compare_digest(state, stored_state):
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/?error=oauth_invalid_state",
+            status_code=302,
+        )
+
     redirect_uri = str(request.url_for("google_callback"))
     google_user = await exchange_code_for_user(code, redirect_uri)
 
@@ -81,6 +119,7 @@ async def google_callback(
         secure=cookie_secure(),
         path="/",
     )
+    response.delete_cookie(key=STATE_COOKIE_NAME, path="/")
     return response
 
 

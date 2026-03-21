@@ -55,6 +55,17 @@ async def update_category(
     """Rename a category. Raises 404 / 409."""
     category = await _get_category(db, space_id, cat_id)
 
+    if category.is_system:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": {
+                    "code": "SYSTEM_ENTITY",
+                    "message": "Cannot update system category",
+                }
+            },
+        )
+
     normalized_name = data.name.strip().lower()
     existing = await _find_by_normalized_name(db, space_id, normalized_name)
     if existing is not None and existing.id != cat_id:

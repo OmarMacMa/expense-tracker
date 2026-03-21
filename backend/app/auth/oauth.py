@@ -9,7 +9,7 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 
-def get_google_auth_url(redirect_uri: str) -> str:
+def get_google_auth_url(redirect_uri: str, state: str) -> str:
     """Build Google OAuth consent URL."""
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
@@ -18,6 +18,7 @@ def get_google_auth_url(redirect_uri: str) -> str:
         "scope": "openid email profile",
         "access_type": "offline",
         "prompt": "consent",
+        "state": state,
     }
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
