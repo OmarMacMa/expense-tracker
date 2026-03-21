@@ -4,6 +4,7 @@ from app.auth.router import router as auth_router
 from app.routers.categories import router as categories_router
 from app.routers.expenses import router as expenses_router
 from app.routers.health import router as health_router
+from app.routers.limits import router as limits_router
 from app.routers.merchants import router as merchants_router
 from app.routers.payment_methods import router as payment_methods_router
 from app.routers.spaces import router as spaces_router
@@ -18,3 +19,4 @@ app.include_router(tags_router)
 app.include_router(merchants_router)
 app.include_router(payment_methods_router)
 app.include_router(expenses_router)
+app.include_router(limits_router)
