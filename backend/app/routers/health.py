@@ -1,13 +1,15 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from sqlalchemy import text
 
 from app.db.session import async_session_factory
+from app.middleware.rate_limit import limiter
 
 router = APIRouter(prefix="/api/v1", tags=["health"])
 
 
 @router.get("/health")
-async def health_check() -> dict:
+@limiter.exempt
+async def health_check(request: Request) -> dict:
     """Health check with database connectivity test."""
     try:
         async with async_session_factory() as session:

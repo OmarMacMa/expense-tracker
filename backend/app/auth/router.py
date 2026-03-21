@@ -17,6 +17,7 @@ from app.auth.oauth import exchange_code_for_user, get_google_auth_url
 from app.config import settings
 from app.db.session import get_db
 from app.middleware.auth import get_current_user
+from app.middleware.rate_limit import limiter
 from app.models import Space, SpaceMember, User
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -26,6 +27,7 @@ STATE_COOKIE_MAX_AGE = 300  # 5 minutes
 
 
 @router.get("/google")
+@limiter.limit("10/minute")
 async def google_login(request: Request) -> RedirectResponse:
     """Redirect to Google OAuth consent page."""
     redirect_uri = str(request.url_for("google_callback"))
@@ -45,6 +47,7 @@ async def google_login(request: Request) -> RedirectResponse:
 
 
 @router.get("/google/callback")
+@limiter.limit("10/minute")
 async def google_callback(
     request: Request,
     code: str | None = None,
