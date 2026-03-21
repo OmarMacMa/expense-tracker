@@ -81,8 +81,7 @@ async def create_expense(
 
     await upsert_merchant(db, space_id, data.merchant, data.category_id)
 
-    # Stub: limit recalculation (Phase 7)
-    # await recalculate_limits(db, space_id, expense)
+    # Limit progress is computed on-read (not stored), so no recalculation needed here
 
     await db.commit()
     await db.refresh(expense)
@@ -402,7 +401,7 @@ async def update_expense(
     # Set updated_at in service layer
     expense.updated_at = datetime.now(UTC)
 
-    # Stub: limit recalculation (Phase 7)
+    # Limit progress is computed on-read (not stored), so no recalculation needed here
 
     await db.commit()
     await db.refresh(expense)
@@ -426,6 +425,6 @@ async def delete_expense(
     await db.delete(expense)
     await db.commit()
 
-    # Stub: limit recalculation (Phase 7)
+    # Limit progress is computed on-read (not stored), so no recalculation needed here
 
     return True
