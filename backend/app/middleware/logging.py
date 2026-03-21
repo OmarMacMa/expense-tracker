@@ -54,6 +54,10 @@ class RequestLoggingMiddleware:
             await send(message)
 
         structlog.contextvars.clear_contextvars()
+        # Bind correlation_id set by CorrelationIdMiddleware (outer layer)
+        state = scope.get("state", {})
+        if hasattr(state, "correlation_id"):
+            structlog.contextvars.bind_contextvars(correlation_id=state.correlation_id)
 
         try:
             await self.app(scope, receive, send_wrapper)

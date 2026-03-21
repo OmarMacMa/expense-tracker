@@ -41,8 +41,8 @@ async def validation_exception_handler(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RequestLoggingMiddleware)  # Added first → runs second (inner)
+app.add_middleware(CorrelationIdMiddleware)  # Added second → runs first (outer)
 
 app.include_router(health_router)
 app.include_router(auth_router)

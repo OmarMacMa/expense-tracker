@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.auth.jwt import create_access_token
 from app.config import settings
@@ -15,30 +15,48 @@ from app.models import Category, PaymentMethod, Space, SpaceMember, User
 
 @pytest_asyncio.fixture
 async def test_engine():
-    """Per-test async engine bound to the current event loop.
+    """Per-test async engine with transaction rollback for test isolation.
 
-    Overrides the app's get_db so the ASGI app uses connections
-    from the same event loop as the test.
+    All sessions (fixture setup AND HTTP request handlers) share the same
+    connection, so a single rollback undoes everything.
     """
     engine = create_async_engine(settings.DATABASE_URL)
-    factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    conn = await engine.connect()
+    trans = await conn.begin()
 
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-        async with factory() as session:
+        session = AsyncSession(bind=conn, expire_on_commit=False)
+
+        async def flush_instead_of_commit() -> None:
+            await session.flush()
+
+        session.commit = flush_instead_of_commit  # type: ignore[method-assign]
+        try:
             yield session
+        finally:
+            await session.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    yield engine, factory
+    yield engine, conn
     app.dependency_overrides.clear()
+    await trans.rollback()
+    await conn.close()
     await engine.dispose()
 
 
 @pytest_asyncio.fixture
 async def test_user_with_space(test_engine):
     """Create a user with a space and return data dict."""
-    _engine, factory = test_engine
+    _engine, conn = test_engine
 
-    async with factory() as session:
+    session = AsyncSession(bind=conn, expire_on_commit=False)
+
+    async def flush_instead_of_commit() -> None:
+        await session.flush()
+
+    session.commit = flush_instead_of_commit  # type: ignore[method-assign]
+
+    try:
         user = User(
             google_id=f"google_{uuid.uuid4().hex[:12]}",
             email=f"integration_{uuid.uuid4().hex[:8]}@test.com",
@@ -88,6 +106,8 @@ async def test_user_with_space(test_engine):
             "category_id": uncat.id,
             "token": create_access_token(user.id),
         }
+    finally:
+        await session.close()
 
     return data
 
