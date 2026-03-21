@@ -32,7 +32,7 @@ class Limit(Base):
     timeframe: Mapped[str] = mapped_column(Text, nullable=False)
     threshold_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     warning_pct: Mapped[Decimal] = mapped_column(
-        Numeric(5, 4), nullable=False, default=Decimal("0.8000")
+        Numeric(5, 4), nullable=False, default=Decimal("0.6000")
     )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=func.now()

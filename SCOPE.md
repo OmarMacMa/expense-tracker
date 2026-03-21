@@ -26,12 +26,12 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - [ ] Invite link invalidated after use
 
 ### Expense entry (single-line only)
-- [ ] Add single-line expense (merchant, datetime, spender, amount, category, notes, tags, payment method)
+- [ ] Add single-line expense (amount, merchant, category, datetime, spender, payment method, tags, notes)
 - [ ] Merchant autocomplete from previously used merchants in space
 - [ ] Merchant → category auto-suggestion (latest used category for that merchant)
 - [ ] Spender defaults to logged-in user
 - [ ] Purchase datetime defaults to now
-- [ ] Modal for single-line expense entry
+- [ ] Full-page expense entry at `/expenses/new`
 
 ### Expense management
 - [ ] Edit expense (all fields editable, including purchase date → limits recalculate)
@@ -62,7 +62,8 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - [ ] Create/edit/delete limits
 - [ ] Timeframes: weekly + monthly only (week starts Monday)
 - [ ] Filters: category only
-- [ ] 80% warning threshold (default), 100% alert
+- [ ] Configurable warning threshold per limit (`warning_pct`, default 60%)
+- [ ] Color states: green (< warning), amber (≥ warning), red (100%), purple (> 100%)
 - [ ] Only confirmed expenses count (pending excluded)
 - [ ] In-app alerts only (2–3 cards on Home)
 
@@ -91,18 +92,19 @@ Ship fast, validate the core expense-tracking loop for one couple.
 
 ### Navigation
 - [ ] Public landing page (unauthenticated visitors)
-- [ ] Mobile: bottom tab bar + centered FAB for "Add Expense"
-- [ ] Desktop: left sidebar + prominent "Add Expense" button
+- [ ] Mobile: bottom tab bar (Home, Transactions, [FAB: +], Limits, Insights) + centered FAB for "Add Expense"
+- [ ] Desktop: left sidebar (Home, Transactions, Limits, Insights, Settings) + prominent "Add Expense" button
+- [ ] Settings accessible from avatar profile menu (mobile) or sidebar bottom (desktop)
 
 ### Settings
-- [ ] Space name (editable)
-- [ ] Currency (display only, not editable after creation)
-- [ ] Timezone (editable)
-- [ ] Default tax % (editable)
-- [ ] Members list (display only, no removal)
-- [ ] Invite link management (generate/disable)
-- [ ] Categories CRUD
-- [ ] Payment methods management (per-member, label only)
+- [ ] Hub-and-spoke navigation layout with drill-down sub-pages
+- [ ] Space info: space name (editable), currency (display only), timezone (editable)
+- [ ] Categories > sub-page: CRUD
+- [ ] Payment Methods > sub-page: per-member, label only
+- [ ] Tags > sub-page: read-only list of space tags
+- [ ] Members > sub-page: display only, no removal
+- [ ] Invite > sub-page: generate/disable invite link
+- [ ] Taxes > sub-page: default tax % (editable)
 
 ### Cross-cutting
 - [ ] Currency-aware formatting via `Intl.NumberFormat`
@@ -124,6 +126,11 @@ Add recurring expenses and shareable analytics.
 - [ ] Confirm / edit+confirm / deny pending expenses
 - [ ] Nav badge with pending count
 
+### Navigation changes
+- [ ] Bottom tab bar: Recurring replaces Transactions (Home, Recurring, [FAB: +], Limits, Insights)
+- [ ] Desktop sidebar: Recurring replaces Transactions (with pending badge)
+- [ ] Transactions remain accessible from Home "View all →" link and within Insights transaction list
+
 ### Home additions
 - [ ] Pending recurring confirmations card
 - [ ] Merchant leaderboard: Amount/Count toggle
@@ -139,9 +146,9 @@ Add recurring expenses and shareable analytics.
 Split purchases, beneficiaries, advanced analytics, and i18n architecture.
 
 ### Split purchases
+- [ ] "Split" toggle on Add Expense page reveals inline split line editor
 - [ ] Add split expense (multiple lines: amount, category, tags per line)
 - [ ] Split validation: sum of lines must equal total (UI blocks save)
-- [ ] Full page for split expense entry
 
 ### Beneficiary
 - [ ] Beneficiary field on expense lines (member or Shared)

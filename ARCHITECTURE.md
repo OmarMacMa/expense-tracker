@@ -134,6 +134,7 @@ User → "Sign in with Google" → Frontend redirects to backend
 | `/home` | Home | Dashboard (hero, charts, alerts) |
 | `/transactions` | TransactionList | Filtered, searchable, infinite scroll |
 | `/transactions/:id` | ExpenseDetail | View/edit/delete expense |
+| `/expenses/new` | AddExpense | Full-page expense entry (MVP: single-line; V1: + split) |
 | `/insights` | Insights | Charts + transaction split view |
 | `/limits` | Limits | Limit management + progress |
 | `/recurring` | Recurring | Templates + pending items (V0.5+) |
@@ -426,7 +427,7 @@ limits
   name             TEXT NOT NULL           -- max 100 characters
   timeframe        TEXT NOT NULL CHECK (timeframe IN ('weekly', 'monthly', 'quarterly', 'yearly'))
   threshold_amount DECIMAL(12,2) NOT NULL CHECK (threshold_amount >= 0.01 AND threshold_amount <= 999999.99)
-  warning_pct      DECIMAL(5,4) NOT NULL DEFAULT 0.8000  -- e.g., 0.8000 = 80%
+  warning_pct      DECIMAL(5,4) NOT NULL DEFAULT 0.6000  -- e.g., 0.6000 = 60%; user-configurable per limit
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 
 -- Filter criteria for limits (one row per filter condition)
@@ -558,7 +559,7 @@ All computed using the **space timezone**. Datetimes stored as UTC.
 - `spent` = sum of confirmed expenses matching all limit filters in current window
 - `progress` = `spent / threshold`
 - `days_remaining` = end of current window - today
-- Warning at `progress >= warning_pct`, alert at `progress >= 1.0`
+- Warning at `progress >= warning_pct`, critical at `progress >= 0.90`, exceeded at `progress > 1.0`
 
 ### Merchant leaderboard
 - Group by `merchant_normalized` within the selected window

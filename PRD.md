@@ -165,7 +165,7 @@ Pending stays pending indefinitely until acted upon.
 ### Split purchases (V1)
 - Hybrid UX: default single line; optional split.
 - Split line requires **Amount + Category + Beneficiary**.
-- **UX**: modal overlay for single-line; expands to full page when "Split" is toggled.
+- **UX**: "Split" toggle on the Add Expense page switches between single-line and split mode. Same page handles both. Toggle reveals/collapses the inline split line editor.
 
 ### Recurring (V0.5+)
 - Schedules: weekly, monthly (V0.5). Quarterly, yearly (V1).
@@ -224,18 +224,18 @@ Pending stays pending indefinitely until acted upon.
 ### 6.3 Expense entry
 
 #### Add expense (single-line) — MVP
+Full-page form at `/expenses/new`. Fields in order:
+- Amount (required; entered as total)
 - Merchant (required; with autocomplete from prior merchants)
+- Category (required; auto-suggested from merchant)
 - Purchase datetime (required; default = now)
 - Spender (required; default = logged-in user)
 - Payment method (optional but recommended)
+- Tags (optional; `#`-triggered autocomplete; max 10 per line)
 - Notes (optional; max 500 characters)
-- Split line (single):
-  - Amount (required; entered as total)
-  - Category (required; auto-suggested from merchant)
-  - Tags (optional; `#`-triggered autocomplete; max 10 per line)
 
 #### Add expense (split) — V1
-- Same purchase header fields
+- Same page and fields, plus "Split" toggle reveals inline line editor
 - Multiple split lines, each with: Amount, Category, Beneficiary, Tags (optional)
 - **Validation**: sum of split line amounts must equal total. UI blocks saving until resolved.
 
@@ -266,7 +266,7 @@ Pending stays pending indefinitely until acted upon.
 ### 6.7 Limits
 - **Timeframes**: weekly / monthly (MVP). Quarterly / yearly added in V1.
 - **Filters**: category only (MVP). Full filter set (category, merchant, tag, spender, beneficiary, payment method) added in V1.
-- **Warning threshold**: 80% (default). Alert at 100%.
+- **Warning threshold**: configurable per limit via `warning_pct` (default: 60%). Colors: green below warning, amber at warning, red at 90%+, purple above 100%.
 - Only confirmed expenses count (pending excluded).
 - A transaction can count toward multiple limits.
 - **In-app alerts only** (2–3 cards on Home), no push notifications.
@@ -350,10 +350,11 @@ Analysis playground.
 ### 8.0 Navigation
 - **Landing page**: public page for unauthenticated visitors. Authenticated users redirect to Home.
 - **Mobile**: bottom tab bar with centered FAB (floating action button) for "Add Expense".
-  - Tabs: Home, Transactions, [FAB: Add], Insights, Settings.
-  - Recurring and Limits accessible as sub-views.
+  - MVP tabs: Home, Transactions, [FAB: Add], Limits, Insights.
+  - V0.5+ tabs: Home, Recurring, [FAB: Add], Limits, Insights. Transactions accessible from Home "View all" and within Insights.
   - Recurring shows a **count badge** when pending items exist.
-- **Desktop**: left sidebar navigation; "Add Expense" as a prominent button.
+  - Settings accessible from avatar profile menu (top-right).
+- **Desktop**: left sidebar navigation; "+ Add Expense" as a prominent button. Settings link at bottom of sidebar.
 
 ### 8.1 Auth
 - Google SSO sign-in / sign-up page.
@@ -369,10 +370,10 @@ Analysis playground.
 - Alerts, pending recurring, graph cards, latest transactions, monthly wrap.
 
 ### 8.4 Add Expense
-- **Modal** for single-line expenses (MVP).
-- **Full page** when "Split" is toggled (V1).
-- **MVP fields**: merchant (autocomplete), datetime (default = now), spender (default = self), payment method (dropdown), category (auto-suggested), amount, tags (`#`-triggered), notes.
-- **V1 adds**: beneficiary (default = Shared), split editor, colored payment method chips.
+- **Full page** (`/expenses/new`) for all expense entry (single-line and split).
+- FAB (mobile) or "+ Add Expense" button (desktop) navigates to this page.
+- **MVP fields** (in order): amount, merchant (autocomplete), category (auto-suggested), datetime (default = now), spender (default = self), payment method (dropdown), tags (`#`-triggered), notes.
+- **V1 adds**: "Split" toggle reveals inline split line editor, beneficiary (default = Shared), colored payment method chips.
 - **V1.5 adds**: total/pre-tax toggle.
 
 ### 8.5 Transaction list
@@ -397,7 +398,9 @@ Analysis playground.
 - Template list (active/inactive toggle), create/edit form, pending items with confirm/edit/deny, nav badge.
 
 ### 8.10 Settings
-- Space name (editable), currency (display only), timezone, default tax %, members list (display only, no removal), invite link management, categories CRUD, payment methods management (per-member).
+- Hub-and-spoke navigation layout with drill-down sub-pages.
+- Top: space name (editable), currency (display only), timezone.
+- Navigation items: Categories (CRUD), Payment Methods (per-member), Tags (view), Members (display only, no removal), Invite (generate/manage links), Taxes (default tax %).
 
 ---
 
@@ -411,18 +414,18 @@ Analysis playground.
 5. Partner opens link → Google sign-in → added to space → link invalidated
 
 ### 9.2 Add an expense (single-line) — MVP
-1. Tap FAB / "Add expense" → modal opens
+1. Tap FAB / "Add expense" → navigates to `/expenses/new`
 2. Enter merchant (autocomplete suggests prior merchants)
 3. Category auto-selects from latest mapping
 4. Spender defaults to logged-in user
 5. Enter amount
 6. Optionally add payment method, tags, notes
-7. Save → modal closes, data refreshes
+7. Save → navigates back, data refreshes
 
 ### 9.3 Add an expense (split) — V1
-1. Start as single-line (modal)
-2. Toggle "Split purchase" → expands to full page
-3. Enter purchase header
+1. Navigate to `/expenses/new`
+2. Tap "Split" button → split line editor appears
+3. Enter purchase header fields
 4. Add 2+ split lines (amount, category, beneficiary, tags)
 5. Running sum shown; **save blocked** until sum matches total
 6. Save
@@ -434,7 +437,7 @@ Analysis playground.
 
 ### 9.5 Limit warning
 1. Expense saved → affected limits recalculated
-2. 80% → warning; 100% → alert
+2. Progress ≥ `warning_pct` → warning (amber); ≥90% → critical (red); >100% → exceeded (purple)
 3. Home shows alert card (up to 2–3)
 4. Click alert → Insights filtered to that limit's criteria
 
@@ -473,7 +476,7 @@ Analysis playground.
 ### Limit progress
 - Spent = sum of confirmed expenses matching limit filters in current window.
 - Progress = spent / threshold.
-- Warning at progress ≥ warning_pct; alert at progress ≥ 1.0.
+- Warning at progress ≥ `warning_pct`; critical at progress ≥ 0.90; exceeded at progress > 1.0.
 - Days remaining = end of window - today.
 
 ### Merchant leaderboard
@@ -498,7 +501,7 @@ Analysis playground.
 - Tags with `#`-triggered autocomplete and normalization
 - Home dashboard with hero total + delta, week/month toggle, alerts, trend line, category pie, merchant leaderboard (amount), latest transactions
 - Insights with filters, trend line, category pie, merchant leaderboard, spender breakdown
-- Limits (weekly/monthly, category filter only) with 80% warning + 100% alert on Home
+- Limits (weekly/monthly, category filter only) with configurable warning threshold, color-coded progress on Home
 - Transaction list grouped by date with infinite scroll
 - Categories with "Uncategorized" system fallback
 - Currency-aware formatting

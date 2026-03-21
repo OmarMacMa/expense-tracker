@@ -266,11 +266,11 @@ Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, benefi
 **Context**: `ARCHITECTURE.md` §4.8, §6 (limit progress), `PRD.md` §6.7
 
 - Schemas, service, router for limits
-- Create: name, timeframe (weekly/monthly only in MVP), threshold, warning_pct, category filters
-- List: return limits with current progress (spent, threshold, progress ratio, days_remaining, warning/alert status)
+- Create: name, timeframe (weekly/monthly only in MVP), threshold, warning_pct (default 60%), category filters
+- List: return limits with current progress (spent, threshold, progress ratio, days_remaining, color state based on warning_pct)
 - Progress = sum of confirmed expenses matching limit filters in current time window / threshold
 - Use TimeWindowResolver for window boundaries
-- **Verify**: create limit → add expenses → progress updates correctly, warning at 80%, alert at 100%
+- **Verify**: create limit → add expenses → progress updates correctly, color changes at warning_pct, at 90%, and above 100%
 
 ### Task 7.3 — Wire limit recalculation into expense lifecycle
 
@@ -422,13 +422,13 @@ Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, benefi
 
 **Goal**: Users can add, view, edit, delete expenses. Transaction list works with filters and infinite scroll.
 
-### Task 12.1 — Add expense modal
+### Task 12.1 — Add expense page
 
 **Context**: `PRD.md` §8.4, §9.2 (add expense flow), §6.3 (expense entry)
 
-- Modal triggered by FAB / "Add Expense" button
-- Fields: merchant (with autocomplete from `/merchants/suggest`), purchase datetime (default now, no future dates), spender (default self, dropdown of members), payment method (dropdown), amount, category (auto-suggested from merchant via `/merchants/{name}/category`), tags (`#`-triggered autocomplete from `/tags`), notes
-- On save: `POST /expenses` → close modal → refetch data (optimistic update)
+- Full page at `/expenses/new`, triggered by FAB / "Add Expense" button
+- Fields (in order): amount, merchant (with autocomplete from `/merchants/suggest`), category (auto-suggested from merchant via `/merchants/{name}/category`), purchase datetime (default now, no future dates), spender (default self, dropdown of members), payment method (dropdown), tags (`#`-triggered autocomplete from `/tags`), notes
+- On save: `POST /expenses` → navigate back → refetch data (optimistic update)
 - **Verify**: add expense with all fields → appears in transaction list, merchant autocomplete works, category auto-suggests, tags create on first use
 
 ### Task 12.2 — Transaction list
@@ -467,7 +467,7 @@ Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, benefi
 - Page at `/home`
 - Hero card: total spent for current window + delta vs 3-month average ("+12%" / "-8% vs avg")
 - Week / Month toggle (switches all content)
-- Limit alert cards (2–3 max): limits at warning (≥80%) or alert (≥100%) level
+- Limit alert cards (2–3 max): limits at warning (≥ warning_pct), critical (≥90%), or exceeded (>100%)
 - Charts (use Recharts):
   - Spending trend line: cumulative current period vs 3-month average
   - Category distribution: pie/donut chart
