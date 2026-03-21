@@ -9,17 +9,20 @@ import {
   ComposedChart,
 } from 'recharts';
 import type { SpendingTrend } from '@/hooks/useInsights';
-import { formatCurrency } from '@/lib/expense-utils';
+import { formatCurrency, getCurrencySymbol } from '@/lib/expense-utils';
 
 interface SpendingTrendChartProps {
   data: SpendingTrend;
   periodLabel: string;
+  currencyCode?: string;
 }
 
 export function SpendingTrendChart({
   data,
   periodLabel,
+  currencyCode = 'USD',
 }: SpendingTrendChartProps) {
+  const symbol = getCurrencySymbol(currencyCode);
   const chartData = data.current_series.map((point) => {
     const avgPoint = data.average_series.find((a) => a.day === point.day);
     return {
@@ -59,7 +62,7 @@ export function SpendingTrendChart({
             tickLine={false}
             axisLine={false}
             tickFormatter={(v: number) =>
-              v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`
+              v >= 1000 ? `${symbol}${(v / 1000).toFixed(1)}k` : `${symbol}${v}`
             }
           />
           <Tooltip
@@ -71,12 +74,19 @@ export function SpendingTrendChart({
                     Day {label}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
-                    Current: {formatCurrency(String(payload[0]?.value ?? '0'))}
+                    Current:{' '}
+                    {formatCurrency(
+                      String(payload[0]?.value ?? '0'),
+                      currencyCode,
+                    )}
                   </p>
                   {payload[1] && (
                     <p className="text-sm text-muted-foreground">
                       Average:{' '}
-                      {formatCurrency(String(payload[1]?.value ?? '0'))}
+                      {formatCurrency(
+                        String(payload[1]?.value ?? '0'),
+                        currencyCode,
+                      )}
                     </p>
                   )}
                 </div>

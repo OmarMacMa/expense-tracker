@@ -22,6 +22,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useCurrency } from '@/hooks/useCurrency';
 import { useCreateExpense } from '@/hooks/useExpenses';
 import { useMerchantSuggest, useMerchantCategory } from '@/hooks/useMerchants';
 import { useCategories } from '@/hooks/useCategories';
@@ -38,15 +39,6 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-function formatCurrency(value: string): string {
-  const num = parseFloat(value);
-  if (isNaN(num)) return '$0.00';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(num);
-}
-
 function formatTimeValue(date: Date): string {
   const hours = date.getHours();
   const minutes = date.getMinutes();
@@ -56,6 +48,7 @@ function formatTimeValue(date: Date): string {
 export default function AddExpense() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { format: formatAmount } = useCurrency();
   const createExpense = useCreateExpense();
 
   // Form state
@@ -284,7 +277,7 @@ export default function AddExpense() {
               Amount
             </p>
             <div className="mb-3 text-[2.5rem] font-bold leading-tight text-foreground md:text-[2.5rem]">
-              {formatCurrency(amount || '0')}
+              {formatAmount(amount || '0')}
             </div>
             <div className="mx-auto h-2 w-12 rounded-full bg-accent" />
             <Input

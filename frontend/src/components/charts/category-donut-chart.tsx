@@ -5,6 +5,7 @@ import { formatCurrency } from '@/lib/expense-utils';
 interface CategoryDonutChartProps {
   data: CategoryBreakdown[];
   totalAmount: string;
+  currencyCode?: string;
 }
 
 const CATEGORY_CHART_COLORS = [
@@ -18,6 +19,7 @@ const CATEGORY_CHART_COLORS = [
 export function CategoryDonutChart({
   data,
   totalAmount,
+  currencyCode = 'USD',
 }: CategoryDonutChartProps) {
   const chartData = data.map((cat) => ({
     name: cat.category_name,
@@ -55,7 +57,7 @@ export function CategoryDonutChart({
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-[10px] text-muted-foreground">Total</span>
           <span className="text-sm font-bold text-foreground">
-            {formatCurrency(totalAmount)}
+            {formatCurrency(totalAmount, currencyCode)}
           </span>
         </div>
       </div>
@@ -79,7 +81,7 @@ export function CategoryDonutChart({
               <span className="font-semibold text-foreground">
                 {parseFloat(cat.percentage).toFixed(0)}%
               </span>{' '}
-              · {formatCurrency(cat.total)}
+              · {formatCurrency(cat.total, currencyCode)}
             </span>
           </div>
         ))}

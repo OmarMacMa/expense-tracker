@@ -3,9 +3,13 @@ import { formatCurrency } from '@/lib/expense-utils';
 
 interface SpenderBreakdownChartProps {
   data: SpenderBreakdown[];
+  currencyCode?: string;
 }
 
-export function SpenderBreakdownChart({ data }: SpenderBreakdownChartProps) {
+export function SpenderBreakdownChart({
+  data,
+  currencyCode = 'USD',
+}: SpenderBreakdownChartProps) {
   return (
     <div className="flex flex-col gap-4">
       {data.map((spender) => {
@@ -31,7 +35,7 @@ export function SpenderBreakdownChart({ data }: SpenderBreakdownChartProps) {
                   {spender.display_name}
                 </span>
                 <span className="shrink-0 text-sm font-semibold text-foreground">
-                  {formatCurrency(spender.total)}
+                  {formatCurrency(spender.total, currencyCode)}
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-secondary">

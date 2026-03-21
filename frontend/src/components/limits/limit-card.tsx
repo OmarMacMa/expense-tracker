@@ -2,6 +2,7 @@ import { Pencil, Trash2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { LimitProgress } from '@/types/api';
+import { useCurrency } from '@/hooks/useCurrency';
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -43,15 +44,6 @@ function getStatusColor(status: string) {
   }
 }
 
-function formatCurrency(amount: string) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(parseFloat(amount));
-}
-
 interface LimitCardProps {
   limit: LimitProgress;
   onEdit: (limit: LimitProgress) => void;
@@ -60,6 +52,7 @@ interface LimitCardProps {
 
 export function LimitCard({ limit, onEdit, onDelete }: LimitCardProps) {
   const colors = getStatusColor(limit.status);
+  const { format } = useCurrency();
   const progressPct = Math.min(parseFloat(limit.progress), 100);
   const displayPct = parseFloat(limit.progress);
 
@@ -116,10 +109,10 @@ export function LimitCard({ limit, onEdit, onDelete }: LimitCardProps) {
       <div className="mt-2 flex items-center justify-between text-xs sm:text-sm">
         <span className="text-muted-foreground">
           <span className={cn('font-semibold', colors.text)}>
-            {formatCurrency(limit.spent)}
+            {format(limit.spent)}
           </span>
           {' / '}
-          {formatCurrency(limit.threshold_amount)}
+          {format(limit.threshold_amount)}
         </span>
 
         <div className="flex items-center gap-2">

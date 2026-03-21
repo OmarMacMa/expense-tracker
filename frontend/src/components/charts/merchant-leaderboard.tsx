@@ -4,11 +4,13 @@ import { formatCurrency } from '@/lib/expense-utils';
 interface MerchantLeaderboardProps {
   data: MerchantLeaderboardData[];
   maxItems?: number;
+  currencyCode?: string;
 }
 
 export function MerchantLeaderboard({
   data,
   maxItems = 10,
+  currencyCode = 'USD',
 }: MerchantLeaderboardProps) {
   const top5 = data.slice(0, maxItems);
 
@@ -30,7 +32,7 @@ export function MerchantLeaderboard({
             {merchant.merchant}
           </div>
           <div className="text-sm font-semibold text-foreground">
-            {formatCurrency(merchant.total)}
+            {formatCurrency(merchant.total, currencyCode)}
           </div>
         </div>
       ))}

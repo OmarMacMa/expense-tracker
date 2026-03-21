@@ -40,7 +40,8 @@ import {
 } from '@/components/ui/command';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { formatCurrency, getCategoryColor } from '@/lib/expense-utils';
+import { getCategoryColor } from '@/lib/expense-utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   useExpense,
   useUpdateExpense,
@@ -110,6 +111,7 @@ function ExpenseViewMode({
   isDeleting: boolean;
 }) {
   const line = expense.lines[0];
+  const { format: formatAmount } = useCurrency();
   const category = categories?.find((c) => c.id === line?.category_id);
   const categoryColor = category ? getCategoryColor(category.name) : null;
   const paymentMethod = paymentMethods?.find(
@@ -124,7 +126,7 @@ function ExpenseViewMode({
           {expense.merchant}
         </h2>
         <div className="text-[2.25rem] font-bold leading-tight text-foreground md:text-[2.5rem]">
-          {formatCurrency(expense.total_amount)}
+          {formatAmount(expense.total_amount)}
         </div>
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-accent" />
       </div>
@@ -317,6 +319,7 @@ function ExpenseEditMode({
   saveError: Error | null;
 }) {
   const line = expense.lines[0];
+  const { format: formatAmount } = useCurrency();
 
   // Form state initialized from expense
   const [amount, setAmount] = useState(expense.total_amount);
@@ -475,7 +478,7 @@ function ExpenseEditMode({
           Amount
         </p>
         <div className="mb-3 text-[2.5rem] font-bold leading-tight text-foreground">
-          {formatCurrency(amount || '0')}
+          {formatAmount(amount || '0')}
         </div>
         <div className="mx-auto h-2 w-12 rounded-full bg-accent" />
         <Input

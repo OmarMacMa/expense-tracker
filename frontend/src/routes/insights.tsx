@@ -22,7 +22,7 @@ import {
   TransactionGroup,
   groupExpensesByDate,
 } from '@/components/expenses/transaction-group';
-import { formatCurrency } from '@/lib/expense-utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
 
 function ChartCard({
@@ -83,6 +83,7 @@ export default function Insights() {
     period: 'this_month',
   });
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const { format, currencyCode } = useCurrency();
 
   // Filter data sources
   const { data: members } = useMembers();
@@ -156,7 +157,7 @@ export default function Insights() {
               {summary.period_label}
             </span>
             <span className="text-lg font-bold text-foreground">
-              {formatCurrency(summary.total_spent)}
+              {format(summary.total_spent)}
             </span>
             {deltaSign && (
               <span
@@ -202,6 +203,7 @@ export default function Insights() {
               <SpendingTrendChart
                 data={trendData}
                 periodLabel={filters.period ?? 'this_month'}
+                currencyCode={currencyCode}
               />
             )}
           </ChartCard>
@@ -220,6 +222,7 @@ export default function Insights() {
                 <CategoryDonutChart
                   data={categoryData}
                   totalAmount={summary?.total_spent ?? '0'}
+                  currencyCode={currencyCode}
                 />
               )}
             </ChartCard>
@@ -229,7 +232,11 @@ export default function Insights() {
               {merchantLoading || !merchantData ? (
                 <ChartSkeleton />
               ) : (
-                <MerchantLeaderboard data={merchantData} maxItems={10} />
+                <MerchantLeaderboard
+                  data={merchantData}
+                  maxItems={10}
+                  currencyCode={currencyCode}
+                />
               )}
             </ChartCard>
           </div>
@@ -239,7 +246,10 @@ export default function Insights() {
             {spenderLoading || !spenderData ? (
               <ChartSkeleton />
             ) : (
-              <SpenderBreakdownChart data={spenderData} />
+              <SpenderBreakdownChart
+                data={spenderData}
+                currencyCode={currencyCode}
+              />
             )}
           </ChartCard>
         </div>

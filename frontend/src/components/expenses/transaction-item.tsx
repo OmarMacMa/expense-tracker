@@ -1,11 +1,8 @@
 import { useNavigate } from 'react-router';
 import type { Expense } from '@/types/api';
 import { cn } from '@/lib/utils';
-import {
-  getCategoryColor,
-  formatCurrency,
-  getRelativeDate,
-} from '@/lib/expense-utils';
+import { getCategoryColor, getRelativeDate } from '@/lib/expense-utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface TransactionItemProps {
   expense: Expense;
@@ -13,6 +10,7 @@ interface TransactionItemProps {
 
 export function TransactionItem({ expense }: TransactionItemProps) {
   const navigate = useNavigate();
+  const { format } = useCurrency();
   const primaryCategory = expense.lines[0]?.category_name ?? 'Uncategorized';
   const color = getCategoryColor(primaryCategory);
   const initial = expense.merchant.charAt(0).toUpperCase();
@@ -65,7 +63,7 @@ export function TransactionItem({ expense }: TransactionItemProps) {
 
       {/* Amount */}
       <div className="shrink-0 text-base font-bold text-foreground">
-        {formatCurrency(expense.total_amount)}
+        {format(expense.total_amount)}
       </div>
     </div>
   );

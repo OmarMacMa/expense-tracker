@@ -34,11 +34,29 @@ export function getDateGroup(dateStr: string): string {
   return 'Earlier';
 }
 
-export function formatCurrency(amount: string): string {
+export function formatCurrency(
+  amount: string | number,
+  currency: string = 'USD',
+): string {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
-  }).format(parseFloat(amount));
+    currency,
+    minimumFractionDigits: 2,
+  }).format(num);
+}
+
+export function getCurrencySymbol(currency: string = 'USD'): string {
+  return (
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })
+      .formatToParts(0)
+      .find((part) => part.type === 'currency')?.value ?? '$'
+  );
 }
 
 function formatTime(dateStr: string): string {

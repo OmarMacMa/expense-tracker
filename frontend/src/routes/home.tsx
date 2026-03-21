@@ -9,6 +9,7 @@ import {
 } from '@/hooks/useInsights';
 import { useExpenseList } from '@/hooks/useExpenses';
 import { formatCurrency } from '@/lib/expense-utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { cn } from '@/lib/utils';
 import { SpendingTrendChart } from '@/components/charts/spending-trend-chart';
 import { CategoryDonutChart } from '@/components/charts/category-donut-chart';
@@ -22,7 +23,13 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn('animate-pulse rounded-lg bg-muted', className)} />;
 }
 
-function LimitAlertCard({ limit }: { limit: LimitProgress }) {
+function LimitAlertCard({
+  limit,
+  currencyCode,
+}: {
+  limit: LimitProgress;
+  currencyCode: string;
+}) {
   const pct = parseFloat(limit.progress);
   const barWidth = Math.min(pct, 100);
 
@@ -81,7 +88,8 @@ function LimitAlertCard({ limit }: { limit: LimitProgress }) {
         />
       </div>
       <div className="mt-1.5 text-right text-xs text-muted-foreground">
-        {formatCurrency(limit.spent)} / {formatCurrency(limit.threshold_amount)}
+        {formatCurrency(limit.spent, currencyCode)} /{' '}
+        {formatCurrency(limit.threshold_amount, currencyCode)}
         {limit.status === 'exceeded' && ' · Exceeded'}
       </div>
     </div>
@@ -90,6 +98,7 @@ function LimitAlertCard({ limit }: { limit: LimitProgress }) {
 
 export default function Home() {
   const [period, setPeriod] = useState<Period>('this_month');
+  const { format, currencyCode } = useCurrency();
 
   const { data: summary, isLoading: summaryLoading } = useInsightsSummary({
     period,
@@ -129,7 +138,7 @@ export default function Home() {
             <Skeleton className="h-9 w-48" />
           ) : (
             <span className="text-4xl font-bold tracking-tight text-foreground md:text-[2rem]">
-              {formatCurrency(summary?.total_spent ?? '0')}
+              {format(summary?.total_spent ?? '0')}
             </span>
           )}
           <div className="flex flex-col gap-0.5">
@@ -192,7 +201,11 @@ export default function Home() {
           </h2>
           <div className="flex flex-col gap-3 md:flex-row">
             {alertLimits.slice(0, 3).map((limit: LimitProgress) => (
-              <LimitAlertCard key={limit.id} limit={limit} />
+              <LimitAlertCard
+                key={limit.id}
+                limit={limit}
+                currencyCode={currencyCode}
+              />
             ))}
           </div>
         </div>
@@ -208,7 +221,11 @@ export default function Home() {
           {trendLoading ? (
             <Skeleton className="h-[200px] w-full" />
           ) : trend ? (
-            <SpendingTrendChart data={trend} periodLabel={period} />
+            <SpendingTrendChart
+              data={trend}
+              periodLabel={period}
+              currencyCode={currencyCode}
+            />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No trend data available
@@ -234,6 +251,7 @@ export default function Home() {
             <CategoryDonutChart
               data={categories}
               totalAmount={summary?.total_spent ?? '0'}
+              currencyCode={currencyCode}
             />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
@@ -254,7 +272,7 @@ export default function Home() {
               ))}
             </div>
           ) : merchants ? (
-            <MerchantLeaderboard data={merchants} />
+            <MerchantLeaderboard data={merchants} currencyCode={currencyCode} />
           ) : null}
         </div>
 
