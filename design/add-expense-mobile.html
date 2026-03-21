@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Expense — Mobile Design Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #7C6FA0;
+      --on-primary: #FFFFFF;
+      --primary-container: #E9DDFF;
+      --on-primary-container: #32264E;
+      --secondary: #8BA89A;
+      --secondary-container: #D4E8DD;
+      --on-secondary-container: #2E4A3D;
+      --tertiary: #A0889C;
+      --tertiary-container: #F2DDE9;
+      --on-tertiary-container: #4A3346;
+      --butter: #B5A24A;
+      --butter-container: #F5EDCF;
+      --on-butter-container: #4A4220;
+      --background: #FAFAFE;
+      --surface: #F3F1F8;
+      --surface-container: #FFFFFF;
+      --on-surface: #1D1B20;
+      --on-surface-variant: #615D69;
+      --outline: rgba(124, 120, 133, 0.15);
+    }
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Ubuntu', sans-serif;
+      background: #1D1B20;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: var(--on-surface);
+    }
+
+    /* ── Phone frame ── */
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      border-radius: 44px;
+      border: 6px solid #2A2830;
+      background: var(--background);
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 2px #3A3840,
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 8px 30px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Dynamic Island ── */
+    .dynamic-island {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 126px;
+      height: 36px;
+      background: #1D1B20;
+      border-radius: 20px;
+      z-index: 10;
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      height: 54px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 28px 6px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--on-surface);
+    }
+
+    .status-bar-time {
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .status-bar-icons {
+      display: flex;
+      gap: 5px;
+      font-size: 0.7rem;
+      color: var(--on-surface-variant);
+    }
+
+    /* ── Top bar ── */
+    .top-bar {
+      height: 52px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      position: relative;
+    }
+
+    .top-bar-back {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+      font-size: 1.3rem;
+      color: var(--on-surface);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .top-bar-back:hover {
+      background: var(--surface);
+    }
+
+    .top-bar-title {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--on-surface);
+    }
+
+    /* ── Scrollable form area ── */
+    .form-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 20px 24px;
+    }
+
+    .form-scroll::-webkit-scrollbar {
+      width: 0;
+    }
+
+    /* ── Hero amount ── */
+    .hero-amount {
+      text-align: center;
+      padding: 20px 0 24px;
+    }
+
+    .hero-amount-label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: var(--on-surface-variant);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .hero-amount-value {
+      font-size: 3.2rem;
+      font-weight: 700;
+      color: var(--on-surface);
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+
+    .hero-accent-line {
+      width: 60px;
+      height: 8px;
+      background: var(--primary-container);
+      border-radius: 4px;
+      margin: 0 auto;
+    }
+
+    /* ── Field sections ── */
+    .field-section {
+      margin-bottom: 20px;
+    }
+
+    .field-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .field-hint {
+      font-size: 0.68rem;
+      color: var(--on-surface-variant);
+      margin-top: 5px;
+    }
+
+    .field-hint.suggestion {
+      color: var(--primary);
+    }
+
+    /* ── Input styles ── */
+    .input-field {
+      width: 100%;
+      height: 48px;
+      padding: 0 16px;
+      background: var(--surface);
+      border: none;
+      border-radius: 12px;
+      font-family: 'Ubuntu', sans-serif;
+      font-size: 0.9rem;
+      color: var(--on-surface);
+      outline: none;
+    }
+
+    .input-field::placeholder {
+      color: var(--on-surface-variant);
+      opacity: 0.6;
+    }
+
+    .input-field:focus {
+      background: #EEEAF4;
+    }
+
+    /* ── Dropdown selector ── */
+    .dropdown-field {
+      width: 100%;
+      height: 48px;
+      padding: 0 16px;
+      background: var(--surface);
+      border: none;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .dropdown-field.category-suggested {
+      background: var(--secondary-container);
+    }
+
+    .dropdown-text {
+      font-size: 0.9rem;
+      color: var(--on-surface);
+      font-family: 'Ubuntu', sans-serif;
+    }
+
+    .dropdown-arrow {
+      color: var(--on-surface-variant);
+      font-size: 0.7rem;
+    }
+
+    /* ── Side by side row ── */
+    .field-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .field-row .field-section {
+      flex: 1;
+    }
+
+    /* ── Date/time with icon ── */
+    .icon-input {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      height: 48px;
+      padding: 0 16px;
+      background: var(--surface);
+      border-radius: 12px;
+    }
+
+    .icon-input-glyph {
+      color: var(--on-surface-variant);
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .icon-input-text {
+      font-size: 0.9rem;
+      color: var(--on-surface);
+    }
+
+    /* ── Avatar in dropdown ── */
+    .avatar-dropdown {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--primary-container), var(--primary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--on-primary);
+      flex-shrink: 0;
+    }
+
+    /* ── Card glyph ── */
+    .card-dropdown {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-glyph {
+      font-size: 0.85rem;
+      color: var(--on-surface-variant);
+    }
+
+    /* ── Tags ── */
+    .tags-container {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 10px 12px;
+      min-height: 48px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .tag-chip.secondary {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+    }
+
+    .tag-chip.primary {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+    }
+
+    .tag-remove {
+      font-size: 0.75rem;
+      cursor: pointer;
+      opacity: 0.6;
+      line-height: 1;
+    }
+
+    .tag-placeholder {
+      font-size: 0.82rem;
+      color: var(--on-surface-variant);
+      opacity: 0.6;
+    }
+
+    /* ── Textarea ── */
+    .textarea-field {
+      width: 100%;
+      padding: 14px 16px;
+      background: var(--surface);
+      border: none;
+      border-radius: 12px;
+      font-family: 'Ubuntu', sans-serif;
+      font-size: 0.9rem;
+      color: var(--on-surface);
+      resize: none;
+      outline: none;
+      min-height: 80px;
+    }
+
+    .textarea-field::placeholder {
+      color: var(--on-surface-variant);
+      opacity: 0.6;
+    }
+
+    .textarea-field:focus {
+      background: #EEEAF4;
+    }
+
+    /* ── Action buttons ── */
+    .actions {
+      padding: 16px 20px 28px;
+      flex-shrink: 0;
+      background: var(--background);
+    }
+
+    .btn-save {
+      width: 100%;
+      height: 48px;
+      background: var(--primary);
+      color: var(--on-primary);
+      border: none;
+      border-radius: 20px;
+      font-family: 'Ubuntu', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-cancel {
+      width: 100%;
+      height: 40px;
+      background: none;
+      border: none;
+      color: var(--on-surface-variant);
+      font-family: 'Ubuntu', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 400;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    /* ── Design reference label ── */
+    .design-label {
+      color: rgba(255, 255, 255, 0.35);
+      font-family: 'Ubuntu', sans-serif;
+      font-size: 0.7rem;
+      text-align: center;
+      margin-top: 20px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <div>
+    <div class="phone-frame">
+      <div class="dynamic-island"></div>
+
+      <!-- Status bar -->
+      <div class="status-bar">
+        <span class="status-bar-time">9:41</span>
+        <div class="status-bar-icons">
+          <span>&#9679;&#9679;&#9679;&#9679;</span>
+          <span>&#9681;</span>
+          <span>&#9608;</span>
+        </div>
+      </div>
+
+      <!-- Top bar -->
+      <div class="top-bar">
+        <div class="top-bar-back">&#8592;</div>
+        <span class="top-bar-title">New Expense</span>
+      </div>
+
+      <!-- Scrollable form -->
+      <div class="form-scroll">
+
+        <!-- Hero Amount -->
+        <div class="hero-amount">
+          <div class="hero-amount-label">Amount</div>
+          <div class="hero-amount-value">$0.00</div>
+          <div class="hero-accent-line"></div>
+        </div>
+
+        <!-- Merchant -->
+        <div class="field-section">
+          <label class="field-label">Merchant</label>
+          <input type="text" class="input-field" placeholder="Enter merchant name..." readonly>
+          <div class="field-hint">Suggestions appear from history</div>
+        </div>
+
+        <!-- Category -->
+        <div class="field-section">
+          <label class="field-label">Category</label>
+          <div class="dropdown-field category-suggested">
+            <span class="dropdown-text">Groceries</span>
+            <span class="dropdown-arrow">&#9662;</span>
+          </div>
+          <div class="field-hint suggestion">Suggested from Whole Foods</div>
+        </div>
+
+        <!-- Date & Time -->
+        <div class="field-row">
+          <div class="field-section">
+            <label class="field-label">Date</label>
+            <div class="icon-input">
+              <span class="icon-input-glyph">&#9633;</span>
+              <span class="icon-input-text">Mar 21, 2026</span>
+            </div>
+          </div>
+          <div class="field-section">
+            <label class="field-label">Time</label>
+            <div class="icon-input">
+              <span class="icon-input-glyph">&#9201;</span>
+              <span class="icon-input-text">2:30 PM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paid By -->
+        <div class="field-section">
+          <label class="field-label">Paid By</label>
+          <div class="dropdown-field">
+            <div class="avatar-dropdown">
+              <div class="avatar-circle">OM</div>
+              <span class="dropdown-text">Omar</span>
+            </div>
+            <span class="dropdown-arrow">&#9662;</span>
+          </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="field-section">
+          <label class="field-label">Payment Method</label>
+          <div class="dropdown-field">
+            <div class="card-dropdown">
+              <span class="card-glyph">&#9645;</span>
+              <span class="dropdown-text">Visa 4821</span>
+            </div>
+            <span class="dropdown-arrow">&#9662;</span>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="field-section">
+          <label class="field-label">Tags</label>
+          <div class="tags-container">
+            <span class="tag-chip secondary">#groceries <span class="tag-remove">&#10005;</span></span>
+            <span class="tag-chip primary">#weekly <span class="tag-remove">&#10005;</span></span>
+            <span class="tag-placeholder">Add tag...</span>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="field-section">
+          <label class="field-label">Notes</label>
+          <textarea class="textarea-field" rows="3" placeholder="Add notes..." readonly></textarea>
+        </div>
+
+      </div>
+
+      <!-- Actions (sticky bottom) -->
+      <div class="actions">
+        <button class="btn-save">Save Expense</button>
+        <button class="btn-cancel">Cancel</button>
+      </div>
+
+    </div>
+
+    <div class="design-label">Add Expense — Mobile &middot; Design Reference</div>
+  </div>
+
+</body>
+</html>

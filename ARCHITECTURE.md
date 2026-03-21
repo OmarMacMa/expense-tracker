@@ -11,6 +11,8 @@ This document describes the **technical architecture, tech stack, API design, da
 | Frontend | Vite + React + TypeScript | Azure Static Web Apps (free tier) |
 | Routing | React Router v7 | — |
 | UI components | shadcn/ui + Tailwind CSS | — |
+| Typography | Ubuntu (Google Fonts) | — |
+| Icons | Lucide | — |
 | Charts | Recharts | — |
 | Data fetching | TanStack Query (React Query) | — |
 | Backend API | FastAPI (Python) + Pydantic | Azure App Service (Linux, B1) |

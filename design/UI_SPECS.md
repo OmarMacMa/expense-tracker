@@ -4,6 +4,77 @@ This document defines the **visual layout and component placement** for each vie
 
 Design system: **shadcn/ui + Tailwind CSS**, with **Material Design 3 (M3) as visual inspiration** — adopt M3's rounded shapes, tonal surfaces, and component patterns (FAB, segmented buttons, card elevation via tone shifts) while using shadcn/ui's copy-paste React components and Tailwind for implementation. Charts: **Recharts**. Light mode only (dark mode in V2).
 
+### Design decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Font** | Ubuntu (Google Fonts) | Distinctive, rounded, warm techy feel. Readable at all sizes. |
+| **Icons** | Lucide | shadcn/ui default. Clean outlined style. Lightweight. |
+| **Boundaries** | Tonal surface shifts only | No 1px borders. Define card boundaries through background color contrast (`#FFFFFF` cards on `#F3F1F8` surface). Simpler to implement than hybrid approach. |
+| **Elevation** | M3 solid tonal surfaces | No glassmorphism. Solid backgrounds maintain clarity for financial data. |
+| **Buttons** | Solid fill (M3 standard) | No gradients. Primary uses `primary` color with `on-primary` text. |
+| **Spacing** | Symmetric everywhere | No asymmetric margins. Predictable, responsive-friendly. |
+| **Amounts** | Positive numbers only | No minus signs. Everything is an expense (income tracking deferred to V2). |
+| **Category icons** | Colored chips only (MVP–V1) | No icons on categories until V1.5. Categories identified by name + chip color. V1.5 adds user-selectable Lucide icons per category. |
+| **Card elevation** | Subtle ambient shadow | Cards use light multi-layer shadow (`0 2px 12px rgba(29,27,32,0.04), 0 6px 24px rgba(29,27,32,0.03)`) on top of tonal shift for gentle float effect. |
+| **Content centering** | Centered with max-width | Main content area centered within available space (`max-width: 1100px`), not left-aligned. Prevents dead zones on wide monitors. |
+
+### Responsive breakpoints
+
+| Breakpoint | Layout | Navigation | Content |
+|------------|--------|------------|---------|
+| `<768px` | Mobile | Bottom tab bar + FAB | Single column, stacked cards |
+| `768–1024px` | Tablet vertical | Sidebar (narrower, 220px) | Single column (charts stack) |
+| `1024–1280px` | Small desktop | Full sidebar (248px) | 2-column grid for charts |
+| `1280px+` | Desktop | Full sidebar (248px) | 2-column grid, centered max-width |
+
+Tablet horizontal uses the desktop experience. Browser split-view gracefully collapses to the appropriate breakpoint.
+
+### Color palette — Cool Lavender + Sage
+
+**Primary group** (brand, FAB, active nav, main CTAs):
+| Token | Value | Usage |
+|-------|-------|-------|
+| `primary` | `#7C6FA0` | FAB, active nav, primary buttons, links |
+| `on-primary` | `#FFFFFF` | Text/icons on primary |
+| `primary-container` | `#E9DDFF` | Active nav pill fill, selected states, transport category chips |
+| `on-primary-container` | `#32264E` | Text on primary-container |
+
+**Secondary group** (category chips, secondary actions):
+| Token | Value | Usage |
+|-------|-------|-------|
+| `secondary` | `#8BA89A` | Secondary actions, sage accent |
+| `on-secondary` | `#FFFFFF` | Text on secondary |
+| `secondary-container` | `#D4E8DD` | Groceries/health category chips |
+| `on-secondary-container` | `#2E4A3D` | Text on secondary-container |
+
+**Tertiary group** (accent variety):
+| Token | Value | Usage |
+|-------|-------|-------|
+| `tertiary` | `#A0889C` | Tertiary accent |
+| `on-tertiary` | `#FFFFFF` | Text on tertiary |
+| `tertiary-container` | `#F2DDE9` | Dining/entertainment category chips |
+| `on-tertiary-container` | `#4A3346` | Text on tertiary-container |
+
+**Extended — Butter** (4th category chip color):
+| Token | Value | Usage |
+|-------|-------|-------|
+| `butter` | `#B5A24A` | Butter accent |
+| `butter-container` | `#F5EDCF` | Shopping/subscriptions category chips |
+| `on-butter-container` | `#4A4220` | Text on butter-container |
+
+**Surface group** (backgrounds, cards, containers):
+| Token | Value | Usage |
+|-------|-------|-------|
+| `background` | `#FAFAFE` | Page background (the "desk") |
+| `surface` | `#F3F1F8` | Section backgrounds, toggle tracks, bottom nav, progress bar tracks |
+| `surface-container` | `#FFFFFF` | Cards (sit on surface via tonal shift) |
+| `on-surface` | `#1D1B20` | Primary text (never pure `#000000`) |
+| `on-surface-variant` | `#615D69` | Secondary text, labels, placeholders |
+| `outline` | `rgba(124, 120, 133, 0.15)` | Ghost borders if accessibility requires (felt, not seen) |
+
+**Category chip color cycling**: categories are assigned one of 4 container colors in order: sage → dusty rose → lavender → butter → repeat. The mapping is deterministic based on category creation order within a space.
+
 ### Semantic status colors
 
 A consistent color system is used across all status indicators (limit progress, spending delta, alert cards):
@@ -13,7 +84,7 @@ A consistent color system is used across all status indicators (limit progress, 
 | **Healthy** | Green | `text-green-600`, `bg-green-100`, `border-green-200` | Limit progress < user's `warning_pct`; delta badge when spending is below average (↓) |
 | **Warning** | Amber | `text-amber-600`, `bg-amber-100`, `border-amber-200` | Limit progress ≥ user's `warning_pct` and < 90% |
 | **Critical** | Red | `text-red-600`, `bg-red-100`, `border-red-200` | Limit progress ≥ 90% and ≤ 100%; delta badge when spending is above average (↑) |
-| **Exceeded** | Purple | `text-purple-600`, `bg-purple-100`, `border-purple-200` | Limit progress > 100% (overflow) |
+| **Exceeded** | Purple | `text-[#2E064F]`, `bg-purple-100`, `border-purple-200` | Limit progress > 100% (overflow) |
 | **Neutral** | Gray | `text-gray-500`, `bg-gray-100` | Delta badge hidden or no comparison data available |
 
 **Limit color thresholds** are driven by a **per-limit configurable `warning_pct`** (default: 60%):
@@ -350,6 +421,7 @@ Hub-and-spoke navigation layout. Top section shows space info inline; below is a
 
 ### V1.5 additions
 - Language selector (English / Spanish).
+- Category icon picker (searchable Lucide icon grid in category create/edit form).
 
 ### V2 additions
 - Dark mode toggle.

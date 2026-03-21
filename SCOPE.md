@@ -191,6 +191,12 @@ Split purchases, beneficiaries, advanced analytics, and i18n architecture.
 - [ ] Uses space's default tax % for calculation
 - [ ] Only total is stored (pre-tax/tax not persisted)
 
+### Category icons
+- [ ] User-selectable Lucide icon per category
+- [ ] Icon stored in category model (`icon` field, optional, defaults to null)
+- [ ] Display icon alongside category name in chips, dropdowns, and legends
+- [ ] Icon picker UI in category create/edit form (searchable Lucide icon grid)
+
 ### i18n implementation
 - [ ] Spanish translations
 - [ ] Locale-aware date and number formatting
@@ -238,6 +244,7 @@ These features are intentionally excluded from the current roadmap. Do not build
 | Monthly wrap | V1 | Pre-computed analytics is a luxury |
 | Quarterly/yearly timeframes | V1 | Weekly + monthly covers 95% of use |
 | Payment method colors | V1 | Plain labels sufficient for MVP |
+| Category icons | V1.5 | Colored chips sufficient for MVP–V1 |
 | Tax calculator | V1.5 | Users can enter the total directly |
 | i18n (Spanish) | V1.5 | English-only until user base demands it |
 | Insights drill-down | V1 | Complex interaction; defer until core is stable |

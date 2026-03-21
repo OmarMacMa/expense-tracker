@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions — Desktop Design Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #7C6FA0;
+      --on-primary: #FFFFFF;
+      --primary-container: #E9DDFF;
+      --on-primary-container: #32264E;
+      --secondary: #8BA89A;
+      --secondary-container: #D4E8DD;
+      --on-secondary-container: #2E4A3D;
+      --tertiary: #A0889C;
+      --tertiary-container: #F2DDE9;
+      --on-tertiary-container: #4A3346;
+      --butter: #B5A24A;
+      --butter-container: #F5EDCF;
+      --on-butter-container: #4A4220;
+      --background: #FAFAFE;
+      --surface: #F3F1F8;
+      --surface-container: #FFFFFF;
+      --on-surface: #1D1B20;
+      --on-surface-variant: #615D69;
+      --outline: rgba(124, 120, 133, 0.15);
+    }
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Ubuntu', sans-serif;
+      background: var(--background);
+      color: var(--on-surface);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 248px;
+      background: var(--surface);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 10;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .logo-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--on-surface);
+    }
+
+    .add-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 0;
+      border-radius: 16px;
+      background: var(--primary);
+      color: #FFFFFF;
+      font-family: 'Ubuntu', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 28px;
+      letter-spacing: 0.01em;
+    }
+    .add-btn span {
+      font-size: 18px;
+      font-weight: 300;
+    }
+
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .nav-item.active {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+    }
+    .nav-icon {
+      font-size: 18px;
+      width: 24px;
+      text-align: center;
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      padding-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .sidebar-settings {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      text-decoration: none;
+    }
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+    }
+    .sidebar-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-container), var(--primary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: 0.03em;
+      flex-shrink: 0;
+    }
+    .sidebar-user-info {
+      min-width: 0;
+    }
+    .sidebar-user-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--on-surface);
+    }
+    .sidebar-user-email {
+      font-size: 12px;
+      color: var(--on-surface-variant);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Main content ── */
+    .main-wrapper {
+      flex: 1;
+      margin-left: 248px;
+      display: flex;
+      justify-content: center;
+      padding: 32px 40px;
+    }
+    .main-content {
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* ── Space selector ── */
+    .space-selector {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      margin-bottom: 16px;
+    }
+    .space-selector .arrow {
+      font-size: 10px;
+      opacity: 0.6;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      margin-bottom: 20px;
+    }
+    .page-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--on-surface);
+      margin-bottom: 4px;
+    }
+    .page-summary {
+      font-size: 0.82rem;
+      color: var(--on-surface-variant);
+      font-weight: 400;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      background: var(--surface-container);
+      border-radius: 16px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      box-shadow:
+        0 2px 12px rgba(29, 27, 32, 0.04),
+        0 6px 24px rgba(29, 27, 32, 0.03);
+    }
+    .toolbar-left {
+      flex-shrink: 0;
+    }
+    .search-input {
+      width: 280px;
+      background: var(--surface);
+      border: none;
+      border-radius: 12px;
+      padding: 9px 14px 9px 36px;
+      font-family: 'Ubuntu', sans-serif;
+      font-size: 0.82rem;
+      color: var(--on-surface);
+      outline: none;
+      position: relative;
+    }
+    .search-input::placeholder {
+      color: var(--on-surface-variant);
+      opacity: 0.65;
+    }
+    .search-field {
+      position: relative;
+      display: inline-block;
+    }
+    .search-field::before {
+      content: "⚲";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px;
+      color: var(--on-surface-variant);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .filter-pill.active {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+    }
+    .filter-pill.inactive {
+      background: var(--surface);
+      color: var(--on-surface-variant);
+    }
+    .filter-pill .arrow {
+      font-size: 9px;
+      opacity: 0.55;
+    }
+
+    /* ── Transaction table container ── */
+    .tx-table-container {
+      background: var(--surface-container);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow:
+        0 2px 12px rgba(29, 27, 32, 0.04),
+        0 6px 24px rgba(29, 27, 32, 0.03);
+    }
+
+    /* ── Table ── */
+    .tx-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    /* ── Table header ── */
+    .tx-table thead th {
+      background: var(--surface);
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 11px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .tx-table thead th:first-child {
+      padding-left: 20px;
+    }
+    .tx-table thead th:last-child {
+      text-align: right;
+      padding-right: 20px;
+    }
+
+    /* ── Group header row ── */
+    .group-header td {
+      background: var(--surface);
+      padding: 10px 20px 6px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Data rows ── */
+    .tx-table tbody tr.tx-row {
+      transition: background 0.12s ease;
+    }
+    .tx-table tbody tr.tx-row:nth-child(odd) {
+      background: var(--surface-container);
+    }
+    .tx-table tbody tr.tx-row:nth-child(even) {
+      background: rgba(243, 241, 248, 0.5);
+    }
+    .tx-table tbody tr.tx-row:hover {
+      background: var(--surface);
+    }
+
+    .tx-table tbody td {
+      padding: 12px 16px;
+      vertical-align: middle;
+      font-size: 0.85rem;
+    }
+    .tx-table tbody td:first-child {
+      padding-left: 20px;
+    }
+    .tx-table tbody td:last-child {
+      padding-right: 20px;
+    }
+
+    /* ── Merchant cell ── */
+    .merchant-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .initial-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .merchant-name {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--on-surface);
+      white-space: nowrap;
+    }
+
+    /* ── Category chip ── */
+    .category-chip {
+      display: inline-block;
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* ── Spender cell ── */
+    .spender-cell {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .spender-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #FFFFFF;
+      flex-shrink: 0;
+    }
+    .spender-avatar.omar {
+      background: linear-gradient(135deg, var(--primary-container), var(--primary));
+    }
+    .spender-avatar.diana {
+      background: linear-gradient(135deg, var(--tertiary-container), var(--tertiary));
+    }
+    .spender-name {
+      font-size: 0.82rem;
+      font-weight: 400;
+      color: var(--on-surface);
+    }
+
+    /* ── Payment method cell ── */
+    .payment-cell {
+      font-size: 0.82rem;
+      color: var(--on-surface-variant);
+      white-space: nowrap;
+    }
+
+    /* ── Date cell ── */
+    .date-cell {
+      font-size: 0.82rem;
+      color: var(--on-surface-variant);
+      white-space: nowrap;
+    }
+
+    /* ── Amount cell ── */
+    .amount-cell {
+      text-align: right;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--on-surface);
+      white-space: nowrap;
+    }
+
+    /* ── Responsive: 1024px — hide Payment Method ── */
+    @media (max-width: 1024px) {
+      .col-payment {
+        display: none;
+      }
+    }
+
+    /* ── Responsive: 768px — hide sidebar, card layout ── */
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      .main-wrapper {
+        margin-left: 0;
+        padding: 24px 16px;
+      }
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .search-input {
+        width: 100%;
+      }
+      .toolbar-right {
+        flex-wrap: wrap;
+      }
+
+      /* Hide the table header and restructure rows as cards */
+      .tx-table thead {
+        display: none;
+      }
+      .tx-table,
+      .tx-table tbody,
+      .tx-table tr,
+      .tx-table td {
+        display: block;
+        width: 100%;
+      }
+      .tx-table tbody tr.group-header {
+        background: none;
+      }
+      .tx-table tbody tr.group-header td {
+        padding: 14px 4px 6px;
+      }
+      .tx-table tbody tr.tx-row {
+        background: var(--surface-container);
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        box-shadow:
+          0 2px 12px rgba(29, 27, 32, 0.04),
+          0 6px 24px rgba(29, 27, 32, 0.03);
+      }
+      .tx-table tbody tr.tx-row:hover {
+        background: var(--surface-container);
+      }
+      .tx-table tbody tr.tx-row td {
+        padding: 0;
+      }
+      .tx-table tbody tr.tx-row td:first-child {
+        padding-left: 0;
+      }
+      .tx-table tbody tr.tx-row td:last-child {
+        padding-right: 0;
+      }
+
+      /* Merchant takes most of the row */
+      .tx-table tbody tr.tx-row td.col-merchant {
+        flex: 1;
+        min-width: 0;
+      }
+      /* Amount on the right */
+      .tx-table tbody tr.tx-row td.col-amount {
+        flex-shrink: 0;
+      }
+      /* Second line: category + spender + date */
+      .tx-table tbody tr.tx-row td.col-category,
+      .tx-table tbody tr.tx-row td.col-spender,
+      .tx-table tbody tr.tx-row td.col-date {
+        font-size: 0.78rem;
+      }
+      .col-payment {
+        display: none;
+      }
+      .amount-cell {
+        text-align: right;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">E</div>
+    <div class="logo-text">Expense Tracker</div>
+  </div>
+
+  <button class="add-btn"><span>+</span> Add Expense</button>
+
+  <nav class="nav">
+    <a class="nav-item" href="#">
+      <span class="nav-icon">⌂</span> Home
+    </a>
+    <a class="nav-item active" href="#">
+      <span class="nav-icon">☰</span> Transactions
+    </a>
+    <a class="nav-item" href="#">
+      <span class="nav-icon">◎</span> Limits
+    </a>
+    <a class="nav-item" href="#">
+      <span class="nav-icon">▦</span> Insights
+    </a>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <a class="sidebar-settings" href="#">
+      <span class="nav-icon">⚙</span> Settings
+    </a>
+    <div class="sidebar-user">
+      <div class="sidebar-avatar">OM</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">Omar M.</div>
+        <div class="sidebar-user-email">omar@example.com</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main content -->
+<div class="main-wrapper">
+  <div class="main-content">
+
+    <!-- Space selector -->
+    <div class="space-selector">
+      Omar &amp; Diana <span class="arrow">▾</span>
+    </div>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-title">Transactions</div>
+      <div class="page-summary">28 transactions · $2,847.50 total</div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="search-field">
+          <input class="search-input" type="text" placeholder="Search merchants, notes, tags…" disabled>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <div class="filter-pill active">This Month <span class="arrow">▾</span></div>
+        <div class="filter-pill inactive">All Spenders <span class="arrow">▾</span></div>
+        <div class="filter-pill inactive">All Categories <span class="arrow">▾</span></div>
+        <div class="filter-pill inactive">More Filters <span class="arrow">▾</span></div>
+      </div>
+    </div>
+
+    <!-- Transaction table -->
+    <div class="tx-table-container">
+      <table class="tx-table">
+        <thead>
+          <tr>
+            <th class="col-merchant">Merchant</th>
+            <th class="col-category">Category</th>
+            <th class="col-spender">Spender</th>
+            <th class="col-payment">Payment Method</th>
+            <th class="col-date">Date</th>
+            <th class="col-amount">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <!-- ── TODAY ── -->
+          <tr class="group-header"><td colspan="6">Today</td></tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--secondary-container); color: var(--on-secondary-container);">W</div>
+                <span class="merchant-name">Whole Foods</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--secondary-container); color: var(--on-secondary-container);">Groceries</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar omar">OM</div><span class="spender-name">Omar</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Visa 4821</span></td>
+            <td class="col-date"><span class="date-cell">12:45 PM</span></td>
+            <td class="col-amount"><span class="amount-cell">$42.30</span></td>
+          </tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--primary-container); color: var(--on-primary-container);">U</div>
+                <span class="merchant-name">Uber</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--primary-container); color: var(--on-primary-container);">Transport</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar diana">DM</div><span class="spender-name">Diana</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Cash</span></td>
+            <td class="col-date"><span class="date-cell">09:12 AM</span></td>
+            <td class="col-amount"><span class="amount-cell">$18.50</span></td>
+          </tr>
+
+          <!-- ── YESTERDAY ── -->
+          <tr class="group-header"><td colspan="6">Yesterday</td></tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--tertiary-container); color: var(--on-tertiary-container);">B</div>
+                <span class="merchant-name">The Brunch Spot</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--tertiary-container); color: var(--on-tertiary-container);">Dining</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar diana">DM</div><span class="spender-name">Diana</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Visa 4821</span></td>
+            <td class="col-date"><span class="date-cell">11:30 AM</span></td>
+            <td class="col-amount"><span class="amount-cell">$45.20</span></td>
+          </tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--butter-container); color: var(--on-butter-container);">T</div>
+                <span class="merchant-name">Target</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--butter-container); color: var(--on-butter-container);">Shopping</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar omar">OM</div><span class="spender-name">Omar</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Debit 7733</span></td>
+            <td class="col-date"><span class="date-cell">02:15 PM</span></td>
+            <td class="col-amount"><span class="amount-cell">$32.70</span></td>
+          </tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--primary-container); color: var(--on-primary-container);">N</div>
+                <span class="merchant-name">Netflix</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--primary-container); color: var(--on-primary-container);">Entertainment</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar omar">OM</div><span class="spender-name">Omar</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Visa 4821</span></td>
+            <td class="col-date"><span class="date-cell">—</span></td>
+            <td class="col-amount"><span class="amount-cell">$15.99</span></td>
+          </tr>
+
+          <!-- ── THIS WEEK ── -->
+          <tr class="group-header"><td colspan="6">This Week</td></tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--secondary-container); color: var(--on-secondary-container);">C</div>
+                <span class="merchant-name">Costco</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--secondary-container); color: var(--on-secondary-container);">Groceries</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar omar">OM</div><span class="spender-name">Omar</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Debit 7733</span></td>
+            <td class="col-date"><span class="date-cell">Mar 19</span></td>
+            <td class="col-amount"><span class="amount-cell">$128.40</span></td>
+          </tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--primary-container); color: var(--on-primary-container);">S</div>
+                <span class="merchant-name">Shell Gas</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--primary-container); color: var(--on-primary-container);">Transport</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar diana">DM</div><span class="spender-name">Diana</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Cash</span></td>
+            <td class="col-date"><span class="date-cell">Mar 19</span></td>
+            <td class="col-amount"><span class="amount-cell">$52.00</span></td>
+          </tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--tertiary-container); color: var(--on-tertiary-container);">C</div>
+                <span class="merchant-name">Chipotle</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--tertiary-container); color: var(--on-tertiary-container);">Dining</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar omar">OM</div><span class="spender-name">Omar</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Visa 4821</span></td>
+            <td class="col-date"><span class="date-cell">Mar 18</span></td>
+            <td class="col-amount"><span class="amount-cell">$14.50</span></td>
+          </tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--butter-container); color: var(--on-butter-container);">A</div>
+                <span class="merchant-name">Amazon</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--butter-container); color: var(--on-butter-container);">Shopping</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar diana">DM</div><span class="spender-name">Diana</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Visa 4821</span></td>
+            <td class="col-date"><span class="date-cell">Mar 18</span></td>
+            <td class="col-amount"><span class="amount-cell">$67.90</span></td>
+          </tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--secondary-container); color: var(--on-secondary-container);">T</div>
+                <span class="merchant-name">Trader Joe's</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--secondary-container); color: var(--on-secondary-container);">Groceries</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar omar">OM</div><span class="spender-name">Omar</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Debit 7733</span></td>
+            <td class="col-date"><span class="date-cell">Mar 17</span></td>
+            <td class="col-amount"><span class="amount-cell">$38.20</span></td>
+          </tr>
+
+          <!-- ── EARLIER ── -->
+          <tr class="group-header"><td colspan="6">Earlier</td></tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--tertiary-container); color: var(--on-tertiary-container);">S</div>
+                <span class="merchant-name">Starbucks</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--tertiary-container); color: var(--on-tertiary-container);">Dining</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar diana">DM</div><span class="spender-name">Diana</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Cash</span></td>
+            <td class="col-date"><span class="date-cell">Mar 15</span></td>
+            <td class="col-amount"><span class="amount-cell">$8.40</span></td>
+          </tr>
+
+          <tr class="tx-row">
+            <td class="col-merchant">
+              <div class="merchant-cell">
+                <div class="initial-circle" style="background: var(--butter-container); color: var(--on-butter-container);">H</div>
+                <span class="merchant-name">Home Depot</span>
+              </div>
+            </td>
+            <td class="col-category"><span class="category-chip" style="background: var(--butter-container); color: var(--on-butter-container);">Shopping</span></td>
+            <td class="col-spender"><div class="spender-cell"><div class="spender-avatar omar">OM</div><span class="spender-name">Omar</span></div></td>
+            <td class="col-payment"><span class="payment-cell">Debit 7733</span></td>
+            <td class="col-date"><span class="date-cell">Mar 14</span></td>
+            <td class="col-amount"><span class="amount-cell">$94.30</span></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

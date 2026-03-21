@@ -375,8 +375,9 @@ Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, benefi
 
 **Context**: `PRD.md` §8.0 (navigation), `ARCHITECTURE.md` §3 (frontend routes)
 
-- Desktop: left sidebar with nav links (Home, Transactions, Insights, Limits, Settings) + prominent "Add Expense" button
-- Mobile: bottom tab bar with centered FAB for "Add Expense" (Home, Transactions, [FAB], Insights, Settings)
+- Desktop: left sidebar with nav links (Home, Transactions, Limits, Insights) + prominent "Add Expense" button; Settings at bottom of sidebar
+- Mobile MVP: bottom tab bar with centered FAB for "Add Expense" (Home, Transactions, [FAB], Limits, Insights); Settings accessible from avatar profile menu
+- Mobile V0.5+: bottom tab bar (Home, Recurring [badge], [FAB], Limits, Insights); Transactions accessible from Home "View all →" and within Insights
 - Route guards: unauthenticated → redirect to landing, authenticated without space → redirect to onboarding, authenticated with space on `/` → redirect to `/home`
 - Responsive layout (Tailwind breakpoints)
 - **Verify**: navigation works on both layouts, guards redirect correctly

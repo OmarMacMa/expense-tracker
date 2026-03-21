@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transactions — Mobile Design Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #7C6FA0;
+      --on-primary: #FFFFFF;
+      --primary-container: #E9DDFF;
+      --on-primary-container: #32264E;
+      --secondary: #8BA89A;
+      --secondary-container: #D4E8DD;
+      --on-secondary-container: #2E4A3D;
+      --tertiary: #A0889C;
+      --tertiary-container: #F2DDE9;
+      --on-tertiary-container: #4A3346;
+      --butter: #B5A24A;
+      --butter-container: #F5EDCF;
+      --on-butter-container: #4A4220;
+      --background: #FAFAFE;
+      --surface: #F3F1F8;
+      --surface-container: #FFFFFF;
+      --on-surface: #1D1B20;
+      --on-surface-variant: #615D69;
+      --outline: rgba(124, 120, 133, 0.15);
+    }
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Ubuntu', sans-serif;
+      background: #1D1B20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+      color: var(--on-surface);
+    }
+
+    /* ── Phone frame ── */
+    .phone-frame {
+      width: 390px;
+      height: 844px;
+      border-radius: 44px;
+      border: 4px solid #38353F;
+      background: var(--background);
+      overflow: hidden;
+      position: relative;
+      box-shadow:
+        0 0 0 2px #2A282E,
+        0 24px 80px rgba(0,0,0,0.45);
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 126px;
+      height: 36px;
+      background: #1D1B20;
+      border-radius: 20px;
+      z-index: 10;
+    }
+
+    /* ── Scrollable content area ── */
+    .screen {
+      height: 100%;
+      overflow-y: auto;
+      padding-bottom: 88px;
+      scrollbar-width: none;
+    }
+    .screen::-webkit-scrollbar { display: none; }
+
+    /* ── Top bar ── */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 60px 20px 12px;
+    }
+
+    .space-selector {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      letter-spacing: 0.01em;
+    }
+    .space-selector .arrow {
+      font-size: 10px;
+      opacity: 0.6;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-container), var(--primary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: 0.03em;
+    }
+
+    /* ── Page title ── */
+    .page-title {
+      padding: 8px 20px 14px;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--on-surface);
+    }
+
+    /* ── Search bar ── */
+    .search-bar {
+      margin: 0 20px 14px;
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .search-bar .search-icon {
+      color: var(--on-surface-variant);
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .search-bar .placeholder {
+      color: var(--on-surface-variant);
+      font-size: 14px;
+      font-weight: 400;
+      opacity: 0.7;
+    }
+
+    /* ── Filter chips ── */
+    .filter-chips {
+      display: flex;
+      gap: 8px;
+      padding: 0 20px 16px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .filter-chips::-webkit-scrollbar { display: none; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .chip.active {
+      background: var(--primary-container);
+      color: var(--on-primary-container);
+    }
+    .chip.inactive {
+      background: var(--surface);
+      color: var(--on-surface-variant);
+    }
+    .chip .arrow {
+      font-size: 9px;
+      opacity: 0.55;
+    }
+
+    /* ── Grouped list ── */
+    .group {
+      padding: 0 20px;
+      margin-bottom: 8px;
+    }
+    .group-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 12px 0 8px;
+    }
+
+    .tx-card {
+      background: var(--surface-container);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      box-shadow:
+        0 2px 12px rgba(29, 27, 32, 0.04),
+        0 6px 24px rgba(29, 27, 32, 0.03);
+    }
+
+    .initial-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .tx-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .tx-merchant {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--on-surface);
+      margin-bottom: 4px;
+    }
+    .tx-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tx-sub {
+      font-size: 12px;
+      color: var(--on-surface-variant);
+      font-weight: 400;
+    }
+    .category-chip {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .tx-amount {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--on-surface);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Bottom tab bar ── */
+    .bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 84px;
+      background: var(--surface);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-around;
+      padding: 10px 12px 0;
+      z-index: 10;
+    }
+
+    .tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--on-surface-variant);
+      width: 56px;
+    }
+    .tab.active {
+      color: var(--primary);
+    }
+    .tab-icon {
+      font-size: 20px;
+      width: 40px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+    }
+    .tab.active .tab-icon {
+      background: var(--primary-container);
+      color: var(--primary);
+    }
+
+    .fab {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-size: 28px;
+      font-weight: 300;
+      margin-top: -14px;
+      box-shadow:
+        0 4px 16px rgba(124, 111, 160, 0.30),
+        0 1px 4px rgba(124, 111, 160, 0.20);
+    }
+  </style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="dynamic-island"></div>
+
+  <div class="screen">
+    <!-- Top bar -->
+    <div class="top-bar">
+      <div class="space-selector">
+        Omar &amp; Diana <span class="arrow">▾</span>
+      </div>
+      <div class="avatar">OM</div>
+    </div>
+
+    <!-- Page title -->
+    <div class="page-title">Transactions</div>
+
+    <!-- Search bar -->
+    <div class="search-bar">
+      <span class="search-icon">⚲</span>
+      <span class="placeholder">Search merchants, notes, tags...</span>
+    </div>
+
+    <!-- Filter chips -->
+    <div class="filter-chips">
+      <div class="chip active">This Week <span class="arrow">▾</span></div>
+      <div class="chip inactive">Spender <span class="arrow">▾</span></div>
+      <div class="chip inactive">Category <span class="arrow">▾</span></div>
+      <div class="chip inactive">Merchant <span class="arrow">▾</span></div>
+    </div>
+
+    <!-- TODAY -->
+    <div class="group">
+      <div class="group-label">Today</div>
+
+      <div class="tx-card">
+        <div class="initial-circle" style="background: var(--secondary-container); color: var(--on-secondary-container);">W</div>
+        <div class="tx-info">
+          <div class="tx-merchant">Whole Foods</div>
+          <div class="tx-meta">
+            <span class="tx-sub">12:45 PM · Omar</span>
+            <span class="category-chip" style="background: var(--secondary-container); color: var(--on-secondary-container);">Groceries</span>
+          </div>
+        </div>
+        <div class="tx-amount">$42.30</div>
+      </div>
+
+      <div class="tx-card">
+        <div class="initial-circle" style="background: var(--primary-container); color: var(--on-primary-container);">U</div>
+        <div class="tx-info">
+          <div class="tx-merchant">Uber</div>
+          <div class="tx-meta">
+            <span class="tx-sub">09:12 AM · Diana</span>
+            <span class="category-chip" style="background: var(--primary-container); color: var(--on-primary-container);">Transport</span>
+          </div>
+        </div>
+        <div class="tx-amount">$18.50</div>
+      </div>
+    </div>
+
+    <!-- YESTERDAY -->
+    <div class="group">
+      <div class="group-label">Yesterday</div>
+
+      <div class="tx-card">
+        <div class="initial-circle" style="background: var(--tertiary-container); color: var(--on-tertiary-container);">B</div>
+        <div class="tx-info">
+          <div class="tx-merchant">The Brunch Spot</div>
+          <div class="tx-meta">
+            <span class="tx-sub">Nov 22 · Diana</span>
+            <span class="category-chip" style="background: var(--tertiary-container); color: var(--on-tertiary-container);">Dining</span>
+          </div>
+        </div>
+        <div class="tx-amount">$45.20</div>
+      </div>
+
+      <div class="tx-card">
+        <div class="initial-circle" style="background: var(--butter-container); color: var(--on-butter-container);">T</div>
+        <div class="tx-info">
+          <div class="tx-merchant">Target</div>
+          <div class="tx-meta">
+            <span class="tx-sub">Nov 22 · Omar</span>
+            <span class="category-chip" style="background: var(--butter-container); color: var(--on-butter-container);">Shopping</span>
+          </div>
+        </div>
+        <div class="tx-amount">$32.70</div>
+      </div>
+    </div>
+
+    <!-- THIS WEEK -->
+    <div class="group">
+      <div class="group-label">This Week</div>
+
+      <div class="tx-card">
+        <div class="initial-circle" style="background: var(--secondary-container); color: var(--on-secondary-container);">C</div>
+        <div class="tx-info">
+          <div class="tx-merchant">Costco</div>
+          <div class="tx-meta">
+            <span class="tx-sub">Nov 20 · Omar</span>
+            <span class="category-chip" style="background: var(--secondary-container); color: var(--on-secondary-container);">Groceries</span>
+          </div>
+        </div>
+        <div class="tx-amount">$126.44</div>
+      </div>
+
+      <div class="tx-card">
+        <div class="initial-circle" style="background: var(--primary-container); color: var(--on-primary-container);">S</div>
+        <div class="tx-info">
+          <div class="tx-merchant">Shell Gas</div>
+          <div class="tx-meta">
+            <span class="tx-sub">Nov 19 · Diana</span>
+            <span class="category-chip" style="background: var(--primary-container); color: var(--on-primary-container);">Transport</span>
+          </div>
+        </div>
+        <div class="tx-amount">$52.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom tab bar -->
+  <div class="bottom-bar">
+    <div class="tab">
+      <div class="tab-icon">⌂</div>
+      <span>Home</span>
+    </div>
+    <div class="tab active">
+      <div class="tab-icon">☰</div>
+      <span>Transactions</span>
+    </div>
+    <div class="fab">+</div>
+    <div class="tab">
+      <div class="tab-icon">◎</div>
+      <span>Limits</span>
+    </div>
+    <div class="tab">
+      <div class="tab-icon">▦</div>
+      <span>Insights</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

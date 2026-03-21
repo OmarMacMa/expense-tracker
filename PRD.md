@@ -253,6 +253,8 @@ Full-page form at `/expenses/new`. Fields in order:
 ### 6.5 Categories management
 - Create/edit/delete shared categories (flat, case-insensitive dedup).
 - "Uncategorized" is always present, non-deletable, non-selectable by users.
+- **Display**: categories identified by name + auto-assigned colored chip (4-color cycle: sage, dusty rose, lavender, butter — assigned by creation order). No icons until V1.5.
+- **V1.5**: user-selectable Lucide icon per category (optional, stored in category model).
 - **Deletion**: orphaned expenses are reassigned to "Uncategorized".
 
 ### 6.6 Tags

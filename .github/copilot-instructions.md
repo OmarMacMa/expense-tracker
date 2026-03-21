@@ -4,7 +4,18 @@
 
 Multi-tenant SaaS web app for couples/families to track shared expenses. React SPA frontend + FastAPI backend + PostgreSQL. Currently in pre-code phase (MVP / V0.1) — design docs exist but source code has not been written yet.
 
-Check `SCOPE.md` before building any feature to confirm it's in scope for the current version (MVP). Key docs: `PRD.md` (what/why), `ARCHITECTURE.md` (how), `REQUIREMENTS.md` (quality bars), `CONVENTIONS.md` (how to work), `SCOPE.md` (version roadmap).
+Check `SCOPE.md` before building any feature to confirm it's in scope for the current version (MVP). Key docs: `PRD.md` (what/why), `ARCHITECTURE.md` (how), `REQUIREMENTS.md` (quality bars), `CONVENTIONS.md` (how to work), `SCOPE.md` (version roadmap), `design/UI_SPECS.md` (visual specs & design system).
+
+## Design system & frontend references
+
+The `design/` folder at project root is the single source of truth for all frontend visual decisions:
+
+- **`design/UI_SPECS.md`** — complete design system: color palette (Cool Lavender + Sage), typography (Ubuntu), component rules, responsive breakpoints, per-view layout specs by version.
+- **`design/home-mobile.html`** + **`design/home-desktop.html`** — visual reference mockups for the Home dashboard.
+- **`design/transactions-mobile.html`** + **`design/transactions-desktop.html`** — visual reference mockups for the Transaction list.
+- **`design/add-expense-mobile.html`** + **`design/add-expense-desktop.html`** — visual reference mockups for the Add Expense form.
+
+**When building any frontend view**, open the corresponding HTML reference file first to understand the exact layout, colors, spacing, and component structure expected. These mockups are the design authority — implement views to match them.
 
 ## Build, test, and lint commands
 
@@ -132,8 +143,9 @@ All time window math (week/month/quarter/year boundaries) must go through a sing
 
 ### Documentation
 
-- The 5 project docs (PRD, ARCHITECTURE, REQUIREMENTS, CONVENTIONS, SCOPE) are the source of truth. If any of them become outdated or are missing information as the product is built, update them proactively.
-- If scope grows or new documentation is strictly needed beyond the existing 5 docs, create a new document for it.
+- The 6 project docs (PRD, ARCHITECTURE, REQUIREMENTS, CONVENTIONS, SCOPE, design/UI_SPECS) are the source of truth. If any of them become outdated or are missing information as the product is built, update them proactively.
+- The `design/` folder contains UI_SPECS.md + HTML visual reference mockups. When building frontend views, consult both the specs and the mockups.
+- If scope grows or new documentation is strictly needed beyond the existing docs, create a new document for it.
 - Code comments only for non-obvious *why*, not *what*
 
 ### Business rules to watch
