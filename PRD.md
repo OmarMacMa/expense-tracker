@@ -249,6 +249,7 @@ Full-page form at `/expenses/new`. Fields in order:
 - User can override.
 - After save, future suggestions use the latest mapping.
 - Edge case: merchant used across multiple categories → suggestion uses latest; optionally show "Recent categories: …" in dropdown.
+- **V0.5**: Expand auto-fill to also suggest payment method, spender, and tags from the last expense with that merchant. All auto-filled fields are user-overridable.
 
 ### 6.5 Categories management
 - Create/edit/delete shared categories (flat, case-insensitive dedup).

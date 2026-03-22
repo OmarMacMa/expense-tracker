@@ -139,6 +139,11 @@ Add recurring expenses and shareable analytics.
 - [ ] Shareable Insights links (URL-encoded filter state)
 - [ ] Share button copies URL with current filters
 
+### Expense entry improvements
+- [ ] Merchant auto-fill: selecting a known merchant auto-fills category, payment method, spender, and tags from the last expense with that merchant
+- [ ] Backend: store `last_payment_method_id`, `last_spender_id`, `last_tags` on merchant records (migration needed)
+- [ ] Frontend: populate all fields on merchant select (user can override any)
+
 ---
 
 ## V1 — Full-featured product
