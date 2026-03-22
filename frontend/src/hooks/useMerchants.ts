@@ -15,10 +15,15 @@ interface MerchantCategory {
 
 export function useMerchantList() {
   const { currentSpace } = useAuth();
-  return useQuery<string[]>({
+  return useQuery<MerchantSuggestion[]>({
     queryKey: ['merchants', 'list', currentSpace?.id],
-    queryFn: () => api.get<string[]>(`/spaces/${currentSpace?.id}/merchants`),
+    queryFn: () =>
+      api.get<MerchantSuggestion[]>(
+        `/spaces/${currentSpace?.id}/merchants/suggest`,
+        { q: '' },
+      ),
     enabled: !!currentSpace?.id,
+    staleTime: 60_000,
   });
 }
 

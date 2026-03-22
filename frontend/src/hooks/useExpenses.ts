@@ -61,6 +61,7 @@ export function useCreateExpense() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
     },
   });
 }
@@ -75,6 +76,7 @@ export function useUpdateExpense() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expense'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
+      queryClient.invalidateQueries({ queryKey: ['tags'] });
     },
   });
 }

@@ -353,6 +353,9 @@ function ExpenseEditMode({
   const merchantInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
 
+  const [highlightedMerchant, setHighlightedMerchant] = useState(-1);
+  const [highlightedTag, setHighlightedTag] = useState(-1);
+
   // Data hooks
   const { data: merchantSuggestions } = useMerchantSuggest(merchantQuery);
   const { data: categories } = useCategories();
@@ -364,13 +367,44 @@ function ExpenseEditMode({
     setMerchantQuery(value);
     setMerchant(value);
     setMerchantOpen(value.length >= 1);
+    setHighlightedMerchant(-1);
   }, []);
 
   const handleMerchantSelect = useCallback((name: string) => {
     setMerchant(name);
     setMerchantQuery(name);
     setMerchantOpen(false);
+    setHighlightedMerchant(-1);
   }, []);
+
+  const handleMerchantKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!merchantOpen || !merchantSuggestions?.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedMerchant((prev) =>
+          prev < merchantSuggestions.length - 1 ? prev + 1 : 0,
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedMerchant((prev) =>
+          prev > 0 ? prev - 1 : merchantSuggestions.length - 1,
+        );
+      } else if (e.key === 'Enter' && highlightedMerchant >= 0) {
+        e.preventDefault();
+        handleMerchantSelect(merchantSuggestions[highlightedMerchant].name);
+      } else if (e.key === 'Escape') {
+        setMerchantOpen(false);
+        setHighlightedMerchant(-1);
+      }
+    },
+    [
+      merchantOpen,
+      merchantSuggestions,
+      highlightedMerchant,
+      handleMerchantSelect,
+    ],
+  );
 
   const handleAddTag = useCallback(
     (tag: { id: string; name: string }) => {
@@ -390,6 +424,7 @@ function ExpenseEditMode({
 
   const handleTagInput = useCallback((value: string) => {
     setTagInput(value);
+    setHighlightedTag(-1);
     if (value.startsWith('#') && value.length > 1) {
       setTagDropdownOpen(true);
     } else if (value.length === 0) {
@@ -399,6 +434,36 @@ function ExpenseEditMode({
 
   const handleTagKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const currentFilteredTags = tags?.filter((t) => {
+        const q = tagInput.replace(/^#/, '').toLowerCase();
+        return t.name.includes(q) && !selectedTags.find((st) => st.id === t.id);
+      });
+
+      if (tagDropdownOpen && currentFilteredTags?.length) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setHighlightedTag((prev) =>
+            prev < currentFilteredTags.length - 1 ? prev + 1 : 0,
+          );
+          return;
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setHighlightedTag((prev) =>
+            prev > 0 ? prev - 1 : currentFilteredTags.length - 1,
+          );
+          return;
+        } else if (e.key === 'Enter' && highlightedTag >= 0) {
+          e.preventDefault();
+          handleAddTag(currentFilteredTags[highlightedTag]);
+          setHighlightedTag(-1);
+          return;
+        } else if (e.key === 'Escape') {
+          setTagDropdownOpen(false);
+          setHighlightedTag(-1);
+          return;
+        }
+      }
+
       if (e.key === 'Enter' && tagInput.trim()) {
         e.preventDefault();
         const normalizedName = tagInput.replace(/^#/, '').toLowerCase().trim();
@@ -415,7 +480,14 @@ function ExpenseEditMode({
         setSelectedTags((prev) => prev.slice(0, -1));
       }
     },
-    [tagInput, tags, selectedTags, handleAddTag],
+    [
+      tagInput,
+      tags,
+      selectedTags,
+      handleAddTag,
+      tagDropdownOpen,
+      highlightedTag,
+    ],
   );
 
   const buildPurchaseDatetime = useCallback((): string => {
@@ -430,18 +502,13 @@ function ExpenseEditMode({
 
     const payload: Record<string, unknown> = {
       merchant: merchant.trim(),
-      total_amount: amount,
+      amount: parseFloat(String(amount)),
       purchase_datetime: buildPurchaseDatetime(),
       spender_id: spenderId,
       notes: notes.trim() || null,
       payment_method_id: paymentMethodId || null,
-      lines: [
-        {
-          amount,
-          category_id: categoryId || null,
-          tags: selectedTags.map((t) => t.name),
-        },
-      ],
+      category_id: categoryId || null,
+      tags: selectedTags.map((t) => t.name),
     };
 
     onSave(payload);
@@ -515,17 +582,21 @@ function ExpenseEditMode({
             if (merchantQuery.length >= 1) setMerchantOpen(true);
           }}
           onBlur={() => setTimeout(() => setMerchantOpen(false), 200)}
+          onKeyDown={handleMerchantKeyDown}
           className="h-12 rounded-xl border-none bg-secondary text-[0.88rem] focus:bg-[#EEEAF4]"
         />
         {merchantOpen &&
           merchantSuggestions &&
           merchantSuggestions.length > 0 && (
             <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border bg-popover p-1 shadow-md">
-              {merchantSuggestions.map((s) => (
+              {merchantSuggestions.map((s, index) => (
                 <button
                   key={s.name}
                   type="button"
-                  className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent"
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent',
+                    index === highlightedMerchant && 'bg-accent',
+                  )}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleMerchantSelect(s.name)}
                 >
@@ -805,11 +876,14 @@ function ExpenseEditMode({
         </div>
         {tagDropdownOpen && filteredTags && filteredTags.length > 0 && (
           <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border bg-popover p-1 shadow-md">
-            {filteredTags.map((tag) => (
+            {filteredTags.map((tag, index) => (
               <button
                 key={tag.id}
                 type="button"
-                className="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent"
+                className={cn(
+                  'flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent',
+                  index === highlightedTag && 'bg-accent',
+                )}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleAddTag(tag)}
               >

@@ -78,6 +78,10 @@ export default function AddExpense() {
   const [paymentMethodOpen, setPaymentMethodOpen] = useState(false);
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
 
+  // Arrow-key highlight indices for custom dropdowns
+  const [highlightedMerchant, setHighlightedMerchant] = useState(-1);
+  const [highlightedTag, setHighlightedTag] = useState(-1);
+
   // Refs
   const merchantInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
@@ -108,24 +112,49 @@ export default function AddExpense() {
 
   const handleMerchantInput = useCallback((value: string) => {
     setMerchantQuery(value);
-    setMerchant(value);
     setMerchantOpen(value.length >= 1);
+    setHighlightedMerchant(-1);
   }, []);
 
-  const handleMerchantSelect = useCallback(
-    (name: string) => {
-      setMerchant(name);
-      setMerchantQuery(name);
-      setMerchantOpen(false);
-      // Reset category suggestion for new merchant
-      if (name !== merchant) {
-        setCategoryId('');
-        setCategorySuggested(false);
-        setSuggestedFromMerchant('');
-        setLastSuggestedMerchant('');
+  const handleMerchantSelect = useCallback((name: string) => {
+    setMerchant(name);
+    setMerchantQuery(name);
+    setMerchantOpen(false);
+    setHighlightedMerchant(-1);
+    // Always reset category suggestion for proper re-triggering
+    setCategoryId('');
+    setCategorySuggested(false);
+    setSuggestedFromMerchant('');
+    setLastSuggestedMerchant('');
+  }, []);
+
+  const handleMerchantKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!merchantOpen || !merchantSuggestions?.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedMerchant((prev) =>
+          prev < merchantSuggestions.length - 1 ? prev + 1 : 0,
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedMerchant((prev) =>
+          prev > 0 ? prev - 1 : merchantSuggestions.length - 1,
+        );
+      } else if (e.key === 'Enter' && highlightedMerchant >= 0) {
+        e.preventDefault();
+        handleMerchantSelect(merchantSuggestions[highlightedMerchant].name);
+      } else if (e.key === 'Escape') {
+        setMerchantOpen(false);
+        setHighlightedMerchant(-1);
       }
     },
-    [merchant],
+    [
+      merchantOpen,
+      merchantSuggestions,
+      highlightedMerchant,
+      handleMerchantSelect,
+    ],
   );
 
   const handleCategorySelect = useCallback((id: string) => {
@@ -137,6 +166,7 @@ export default function AddExpense() {
 
   const handleTagInput = useCallback((value: string) => {
     setTagInput(value);
+    setHighlightedTag(-1);
     if (value.startsWith('#') && value.length > 1) {
       setTagDropdownOpen(true);
     } else if (value.length === 0) {
@@ -162,6 +192,36 @@ export default function AddExpense() {
 
   const handleTagKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const currentFilteredTags = tags?.filter((t) => {
+        const q = tagInput.replace(/^#/, '').toLowerCase();
+        return t.name.includes(q) && !selectedTags.find((st) => st.id === t.id);
+      });
+
+      if (tagDropdownOpen && currentFilteredTags?.length) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setHighlightedTag((prev) =>
+            prev < currentFilteredTags.length - 1 ? prev + 1 : 0,
+          );
+          return;
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setHighlightedTag((prev) =>
+            prev > 0 ? prev - 1 : currentFilteredTags.length - 1,
+          );
+          return;
+        } else if (e.key === 'Enter' && highlightedTag >= 0) {
+          e.preventDefault();
+          handleAddTag(currentFilteredTags[highlightedTag]);
+          setHighlightedTag(-1);
+          return;
+        } else if (e.key === 'Escape') {
+          setTagDropdownOpen(false);
+          setHighlightedTag(-1);
+          return;
+        }
+      }
+
       if (e.key === 'Enter' && tagInput.trim()) {
         e.preventDefault();
         const normalizedName = tagInput.replace(/^#/, '').toLowerCase().trim();
@@ -182,7 +242,14 @@ export default function AddExpense() {
         setSelectedTags((prev) => prev.slice(0, -1));
       }
     },
-    [tagInput, tags, selectedTags, handleAddTag],
+    [
+      tagInput,
+      tags,
+      selectedTags,
+      handleAddTag,
+      tagDropdownOpen,
+      highlightedTag,
+    ],
   );
 
   const buildPurchaseDatetime = useCallback((): string => {
@@ -265,7 +332,7 @@ export default function AddExpense() {
           {/* Hero amount */}
           <div className="pb-7 pt-1 text-center">
             <p className="mb-1.5 text-[0.72rem] font-medium uppercase tracking-wider text-muted-foreground">
-              Amount
+              Amount <span className="text-red-500">*</span>
             </p>
             <div className="mb-3 text-[2.5rem] font-bold leading-tight text-foreground md:text-[2.5rem]">
               {formatAmount(amount || '0')}
@@ -294,7 +361,7 @@ export default function AddExpense() {
           {/* Merchant */}
           <div className="relative mb-5">
             <Label className="mb-1.5 block text-[0.78rem] font-medium text-muted-foreground">
-              Merchant
+              Merchant <span className="text-red-500">*</span>
             </Label>
             <Input
               ref={merchantInputRef}
@@ -305,20 +372,24 @@ export default function AddExpense() {
                 if (merchantQuery.length >= 1) setMerchantOpen(true);
               }}
               onBlur={() => {
-                // Delay to allow click on suggestion
                 setTimeout(() => setMerchantOpen(false), 200);
+                setMerchant(merchantQuery);
               }}
+              onKeyDown={handleMerchantKeyDown}
               className="h-12 rounded-xl border-none bg-secondary text-[0.88rem] focus:bg-[#EEEAF4]"
             />
             {merchantOpen &&
               merchantSuggestions &&
               merchantSuggestions.length > 0 && (
                 <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border bg-popover p-1 shadow-md">
-                  {merchantSuggestions.map((s) => (
+                  {merchantSuggestions.map((s, index) => (
                     <button
                       key={s.name}
                       type="button"
-                      className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent"
+                      className={cn(
+                        'flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent',
+                        index === highlightedMerchant && 'bg-accent',
+                      )}
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => handleMerchantSelect(s.name)}
                     >
@@ -340,7 +411,7 @@ export default function AddExpense() {
             {/* Category */}
             <div className="mb-5 flex-1">
               <Label className="mb-1.5 block text-[0.78rem] font-medium text-muted-foreground">
-                Category
+                Category <span className="text-red-500">*</span>
               </Label>
               <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                 <PopoverTrigger asChild>
@@ -451,7 +522,7 @@ export default function AddExpense() {
             {/* Date */}
             <div className="mb-5 md:flex-[0_0_40%]">
               <Label className="mb-1.5 block text-[0.78rem] font-medium text-muted-foreground">
-                Date
+                Date <span className="text-red-500">*</span>
               </Label>
               <Popover open={dateOpen} onOpenChange={setDateOpen}>
                 <PopoverTrigger asChild>
@@ -501,7 +572,7 @@ export default function AddExpense() {
             {/* Paid By */}
             <div className="mb-5 md:flex-1">
               <Label className="mb-1.5 block text-[0.78rem] font-medium text-muted-foreground">
-                Paid By
+                Paid By <span className="text-red-500">*</span>
               </Label>
               <Popover open={spenderOpen} onOpenChange={setSpenderOpen}>
                 <PopoverTrigger asChild>
@@ -609,11 +680,14 @@ export default function AddExpense() {
             </div>
             {tagDropdownOpen && filteredTags && filteredTags.length > 0 && (
               <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border bg-popover p-1 shadow-md">
-                {filteredTags.map((tag) => (
+                {filteredTags.map((tag, index) => (
                   <button
                     key={tag.id}
                     type="button"
-                    className="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent"
+                    className={cn(
+                      'flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent',
+                      index === highlightedTag && 'bg-accent',
+                    )}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleAddTag(tag)}
                   >

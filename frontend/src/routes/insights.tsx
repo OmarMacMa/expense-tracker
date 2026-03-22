@@ -184,7 +184,7 @@ export default function Insights() {
         onFiltersChange={setFilters}
         spenders={members}
         categories={categories}
-        merchants={merchantList ?? []}
+        merchants={merchantList?.map((m) => m.name) ?? []}
         tags={tagList}
         paymentMethods={paymentMethodList}
         showSearch={false}

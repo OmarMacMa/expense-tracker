@@ -17,18 +17,18 @@ async def suggest_merchants(
     Ordered by use_count DESC, limited to 10 results.
     """
     normalized_query = query.strip().lower()
-    if not normalized_query:
-        return []
 
     stmt = (
         select(Merchant)
-        .where(
-            Merchant.space_id == space_id,
-            Merchant.normalized_name.startswith(normalized_query),
-        )
+        .where(Merchant.space_id == space_id)
         .order_by(Merchant.use_count.desc())
         .limit(SUGGEST_LIMIT)
     )
+
+    # Only apply prefix filter if query is non-empty
+    if normalized_query:
+        stmt = stmt.where(Merchant.normalized_name.startswith(normalized_query))
+
     result = await db.execute(stmt)
     return result.scalars().all()
 
