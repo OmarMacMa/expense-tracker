@@ -197,22 +197,14 @@ export default function AddExpense() {
 
     const payload: Record<string, unknown> = {
       merchant: merchant.trim(),
-      total_amount: amount,
+      amount: parseFloat(amount),
       purchase_datetime: buildPurchaseDatetime(),
       spender_id: effectiveSpenderId,
+      category_id: categoryId || null,
+      payment_method_id: paymentMethodId || null,
       notes: notes.trim() || null,
-      lines: [
-        {
-          amount,
-          category_id: categoryId || null,
-          tags: selectedTags.map((t) => t.name),
-        },
-      ],
+      tags: selectedTags.map((t) => t.name),
     };
-
-    if (paymentMethodId) {
-      payload.payment_method_id = paymentMethodId;
-    }
 
     try {
       await createExpense.mutateAsync(payload);
@@ -228,7 +220,6 @@ export default function AddExpense() {
     notes,
     categoryId,
     selectedTags,
-    paymentMethodId,
     createExpense,
     navigate,
   ]);

@@ -149,6 +149,18 @@ export default function Onboarding() {
   const [seedCategories, setSeedCategories] = useState(true);
 
   const [createdSpace, setCreatedSpace] = useState<Space | null>(null);
+  const [showInviteInput, setShowInviteInput] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+
+  const handleJoinWithInvite = () => {
+    let token = inviteCode.trim();
+    if (token.includes('/join/')) {
+      token = token.split('/join/').pop() || token;
+    }
+    if (token) {
+      window.location.href = `/join/${token}`;
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,6 +349,40 @@ export default function Onboarding() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Join existing space */}
+        <div className="mt-6 text-center">
+          {!showInviteInput ? (
+            <button
+              onClick={() => setShowInviteInput(true)}
+              className="text-sm text-[#7C6FA0] hover:underline cursor-pointer"
+            >
+              Have an invite link? Join an existing space →
+            </button>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-[#615D69]">
+                Paste your invite link or code:
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="https://... or invite code"
+                  className="flex-1 rounded-xl border px-3 py-2 text-sm"
+                />
+                <Button
+                  onClick={handleJoinWithInvite}
+                  variant="outline"
+                  className="cursor-pointer"
+                >
+                  Join
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
