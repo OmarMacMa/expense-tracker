@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
+import type { ApiError } from '@/lib/api-client';
 import type { PaymentMethod } from '@/types/api';
 import { useAuth } from './useAuth';
 
@@ -19,8 +21,15 @@ export function useCreatePaymentMethod() {
   return useMutation({
     mutationFn: (data: { label: string }) =>
       api.post(`/spaces/${currentSpace?.id}/payment-methods`, data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+    onSuccess: () => {
+      toast.success('Payment method created');
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error?.data?.error?.message || 'Failed to create payment method',
+      );
+    },
   });
 }
 
@@ -30,7 +39,14 @@ export function useDeletePaymentMethod() {
   return useMutation({
     mutationFn: (id: string) =>
       api.delete(`/spaces/${currentSpace?.id}/payment-methods/${id}`),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+    onSuccess: () => {
+      toast.success('Payment method deleted');
+      queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(
+        error?.data?.error?.message || 'Failed to delete payment method',
+      );
+    },
   });
 }

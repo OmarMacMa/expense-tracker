@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
+import type { ApiError } from '@/lib/api-client';
 import type { Space } from '@/types/api';
 import { useAuth } from './useAuth';
 
@@ -29,8 +31,12 @@ export function useUpdateSpace() {
         data as unknown as Record<string, unknown>,
       ),
     onSuccess: () => {
+      toast.success('Space updated');
       queryClient.invalidateQueries({ queryKey: ['space'] });
       queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(error?.data?.error?.message || 'Failed to update space');
     },
   });
 }

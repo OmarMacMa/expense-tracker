@@ -4,7 +4,9 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
+import type { ApiError } from '@/lib/api-client';
 import type { Expense, ExpenseListResponse } from '@/types/api';
 import { useAuth } from './useAuth';
 
@@ -59,9 +61,13 @@ export function useCreateExpense() {
     mutationFn: (data: Record<string, unknown>) =>
       api.post<Expense>(`/spaces/${currentSpace?.id}/expenses`, data),
     onSuccess: () => {
+      toast.success('Expense created');
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(error?.data?.error?.message || 'Failed to create expense');
     },
   });
 }
@@ -73,10 +79,14 @@ export function useUpdateExpense() {
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       api.patch<Expense>(`/spaces/${currentSpace?.id}/expenses/${id}`, data),
     onSuccess: () => {
+      toast.success('Expense updated');
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expense'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(error?.data?.error?.message || 'Failed to update expense');
     },
   });
 }
@@ -88,8 +98,12 @@ export function useDeleteExpense() {
     mutationFn: (id: string) =>
       api.delete(`/spaces/${currentSpace?.id}/expenses/${id}`),
     onSuccess: () => {
+      toast.success('Expense deleted');
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(error?.data?.error?.message || 'Failed to delete expense');
     },
   });
 }

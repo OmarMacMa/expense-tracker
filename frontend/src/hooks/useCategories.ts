@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { api } from '@/lib/api-client';
+import type { ApiError } from '@/lib/api-client';
 import type { Category } from '@/types/api';
 import { useAuth } from './useAuth';
 
@@ -19,8 +21,13 @@ export function useCreateCategory() {
   return useMutation({
     mutationFn: (data: { name: string }) =>
       api.post(`/spaces/${currentSpace?.id}/categories`, data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      toast.success('Category created');
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(error?.data?.error?.message || 'Failed to create category');
+    },
   });
 }
 
@@ -30,8 +37,13 @@ export function useUpdateCategory() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name: string } }) =>
       api.put(`/spaces/${currentSpace?.id}/categories/${id}`, data),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      toast.success('Category updated');
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(error?.data?.error?.message || 'Failed to update category');
+    },
   });
 }
 
@@ -41,7 +53,12 @@ export function useDeleteCategory() {
   return useMutation({
     mutationFn: (id: string) =>
       api.delete(`/spaces/${currentSpace?.id}/categories/${id}`),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onSuccess: () => {
+      toast.success('Category deleted');
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    },
+    onError: (error: ApiError) => {
+      toast.error(error?.data?.error?.message || 'Failed to delete category');
+    },
   });
 }

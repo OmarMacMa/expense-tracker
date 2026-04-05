@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/sonner';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { PublicRoute } from '@/components/auth/public-route';
 import { AppLayout } from '@/components/layout/app-layout';
@@ -26,6 +27,8 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 2 * 60 * 1000,
       refetchOnWindowFocus: true,
+      refetchInterval: 2 * 60 * 1000,
+      refetchIntervalInBackground: false,
     },
   },
 });
@@ -33,6 +36,7 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster position="top-right" richColors />
       <BrowserRouter>
         <Routes>
           {/* Public routes — no auth, no layout */}

@@ -1,5 +1,10 @@
 const API_BASE = '/api/v1';
 
+export interface ApiError extends Error {
+  status?: number;
+  data?: { error?: { code?: string; message?: string } };
+}
+
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: Record<string, unknown> | unknown[];
 }
@@ -64,7 +69,7 @@ class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      const error: Error & { status?: number; data?: unknown } = new Error(
+      const error: ApiError = new Error(
         errorData?.error?.message || `HTTP ${response.status}`,
       );
       error.status = response.status;

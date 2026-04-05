@@ -1,6 +1,7 @@
 import { Sidebar } from './sidebar';
 import { BottomNav } from './bottom-nav';
 import { TopBar } from './top-bar';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AppLayoutProps {
@@ -30,7 +31,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Main content */}
       <main className="md:pl-[248px]">
         <div className="mx-auto max-w-[1100px] px-4 py-6 pb-24 md:px-10 md:pb-6 md:pt-7">
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
         </div>
       </main>
 
