@@ -13,7 +13,7 @@ set -e
 # ============================================================
 # Configuration — customize these values
 # ============================================================
-RESOURCE_GROUP="expense-tracker-rg"
+RESOURCE_GROUP="et-rg-omarmacma"
 LOCATION="southcentralus"            # Texas — midpoint between Seattle and Guadalajara
 DB_SERVER_NAME="et-db-omarmacma"     # Globally unique
 DB_NAME="expense_tracker"
