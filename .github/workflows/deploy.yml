@@ -39,8 +39,9 @@ jobs:
           package: backend
 
       - name: Run migrations
+        working-directory: backend
         run: |
-          cd backend
+          source antenv/bin/activate
           alembic upgrade head
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
