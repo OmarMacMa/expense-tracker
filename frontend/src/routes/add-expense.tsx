@@ -286,6 +286,7 @@ export default function AddExpense() {
     effectiveSpenderId,
     notes,
     categoryId,
+    paymentMethodId,
     selectedTags,
     createExpense,
     navigate,
