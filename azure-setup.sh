@@ -90,7 +90,7 @@ az webapp create \
 az webapp config set \
   --resource-group "$RESOURCE_GROUP" \
   --name "$BACKEND_APP_NAME" \
-  --startup-file "gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app --chdir backend"
+  --startup-file "gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app"
 
 # ============================================================
 # 4. Static Web Apps (Standard tier, ~$9/mo — needed for linkedBackend)
