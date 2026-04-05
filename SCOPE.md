@@ -174,6 +174,17 @@ Add recurring expenses and shareable analytics.
 - [ ] Backend: store `last_payment_method_id`, `last_spender_id`, `last_tags` on merchant records (migration needed)
 - [ ] Frontend: populate all fields on merchant select (user can override any)
 
+### Technical improvements
+- [ ] Refactor services: domain exceptions instead of HTTPException (unblocks cron jobs)
+- [ ] Migrate python-jose → PyJWT (unmaintained dependency)
+- [ ] React.lazy() code splitting for routes (bundle size reduction)
+- [ ] Deduplicate add/edit expense forms (extract shared ExpenseForm component)
+- [ ] Wire filters into transaction list page (match Insights filter bar)
+- [ ] Add "Save & Add Another" button to expense form
+- [ ] Optimize spending trend: SQL GROUP BY instead of in-memory aggregation
+- [ ] Add partial index for confirmed expenses
+- [ ] Add Content Security Policy headers
+
 ---
 
 ## 2.0.0 — Full-featured product
@@ -216,6 +227,13 @@ Split purchases, beneficiaries, advanced analytics, i18n architecture, and usage
 - [ ] Self-hosted Umami for privacy-friendly usage tracking (free)
 - [ ] Page views, feature usage, user counts
 - [ ] No PII collected — anonymized metrics only
+
+### Security & access control
+- [ ] RBAC: add `role` column to SpaceMember (owner/member), restrict destructive ops to owner
+- [ ] Token revocation: add `jti` claim + server-side deny-list, or shorten access token + refresh token
+- [ ] Member removal: `DELETE /spaces/{id}/members/{member_id}` (owner-only)
+- [ ] Pagination on all list endpoints (categories, tags, payment methods, members)
+- [ ] Commit to or remove SpaceScopedRepository pattern
 
 ### Enhanced landing page & SEO
 - [ ] Richer public landing page (testimonials, screenshots, feature tour)
