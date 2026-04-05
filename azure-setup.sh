@@ -14,19 +14,19 @@ set -e
 # Configuration — customize these values
 # ============================================================
 RESOURCE_GROUP="expense-tracker-rg"
-LOCATION="eastus"                    # Change to your preferred region
-DB_SERVER_NAME="expense-tracker-db"  # Must be globally unique
+LOCATION="southcentralus"            # Texas — midpoint between Seattle and Guadalajara
+DB_SERVER_NAME="et-db-omarmacma"     # Globally unique
 DB_NAME="expense_tracker"
 DB_ADMIN_USER="etadmin"
 DB_ADMIN_PASSWORD=""                 # Will prompt if empty
-BACKEND_APP_NAME="expense-tracker-api"  # Must be globally unique
-FRONTEND_APP_NAME="expense-tracker-web" # Must be globally unique
+BACKEND_APP_NAME="et-api-omarmacma"  # Globally unique
+FRONTEND_APP_NAME="et-web-omarmacma" # Globally unique
 
 # ============================================================
 # Prompt for DB password if not set
 # ============================================================
 if [ -z "$DB_ADMIN_PASSWORD" ]; then
-  read -sp "Enter PostgreSQL admin password: " DB_ADMIN_PASSWORD
+  read -p "Enter PostgreSQL admin password: " DB_ADMIN_PASSWORD
   echo
 fi
 
