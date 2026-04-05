@@ -2,13 +2,21 @@
 
 This document defines **what is in each version** of the Expense Tracker & Budget Insights product. Agents and developers must check this document before building any feature to confirm it is in scope for the current version.
 
+### Versioning scheme
+
+Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
+
+- **MAJOR** (X.0.0): large feature release, potential breaking changes
+- **MINOR** (X.Y.0): new features, backward-compatible
+- **PATCH** (X.Y.Z): bug fixes, hotfixes
+
 ---
 
-## Current version: MVP (V0.1)
+## Current version: 1.0.0
 
 ---
 
-## MVP (V0.1) — Core expense tracking
+## 1.0.0 — Core expense tracking (MVP)
 
 Ship fast, validate the core expense-tracking loop for one couple.
 
@@ -113,9 +121,31 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - [ ] No future-dated expenses (server-side 422 + date picker restriction)
 - [ ] 10-member space limit with clear error message
 
+### Cross-cutting (Phase 15)
+- [ ] Error tracking: Sentry (free tier, 5K errors/mo) — frontend React + backend Python
+- [ ] Basic OG meta tags on landing page (title, description) for link sharing
+- [ ] React error boundaries at route level
+- [ ] Toast notifications for mutation success/error
+- [ ] Loading skeletons for data-fetching states
+- [ ] Empty states for lists with no data
+- [ ] Currency formatting via Intl.NumberFormat with space currency_code
+- [ ] CI pipeline (GitHub Actions: lint + test on PRs)
+- [ ] CD pipeline (GitHub Actions: deploy on push to main)
+- [ ] Azure deployment (Static Web Apps + App Service + PostgreSQL)
+
+### Operational
+- [ ] Rollback strategy documented:
+  - Azure App Service: swap deployment slots to revert
+  - Database: `alembic downgrade -1` for migration rollback
+  - Never modify applied migrations — create new ones
+- [ ] Azure monitoring alerts (free tier):
+  - Health check failure alert
+  - 5xx error rate spike alert
+  - Response time > 5s alert
+
 ---
 
-## V0.5 — Automation & sharing
+## 1.1.0 — Automation & sharing
 
 Add recurring expenses and shareable analytics.
 
@@ -146,9 +176,9 @@ Add recurring expenses and shareable analytics.
 
 ---
 
-## V1 — Full-featured product
+## 2.0.0 — Full-featured product
 
-Split purchases, beneficiaries, advanced analytics, and i18n architecture.
+Split purchases, beneficiaries, advanced analytics, i18n architecture, and usage analytics.
 
 ### Split purchases
 - [ ] "Split" toggle on Add Expense page reveals inline split line editor
@@ -182,14 +212,25 @@ Split purchases, beneficiaries, advanced analytics, and i18n architecture.
 - [ ] Limit progress bars (moved from Home to Insights)
 - [ ] Category bar comparison: current vs 3-month average (moved from Home to Insights)
 
+### Usage analytics
+- [ ] Self-hosted Umami for privacy-friendly usage tracking (free)
+- [ ] Page views, feature usage, user counts
+- [ ] No PII collected — anonymized metrics only
+
+### Enhanced landing page & SEO
+- [ ] Richer public landing page (testimonials, screenshots, feature tour)
+- [ ] Open Graph tags (title, description, image) for link sharing
+- [ ] sitemap.xml + robots.txt
+- [ ] Google Search Console + Bing Webmaster Tools registration
+
 ### i18n architecture
 - [ ] Externalize all user-facing strings into translation files
 - [ ] Backend error codes (frontend maps to localized messages)
-- [ ] Architecture ready for multiple languages (English only in V1)
+- [ ] Architecture ready for multiple languages (English only in 2.0.0)
 
 ---
 
-## V1.5 — Localization & polish
+## 2.1.0 — Localization & polish
 
 ### Tax convenience calculator
 - [ ] Frontend toggle: "Enter Total" (default) or "Enter Pre-tax + Tax"
@@ -208,7 +249,7 @@ Split purchases, beneficiaries, advanced analytics, and i18n architecture.
 
 ---
 
-## V2 — Platform expansion
+## 3.0.0 — Platform expansion
 
 - Installable PWA (manifest + standalone display; no offline/service worker — just "Add to Home Screen" for native-feel entry point)
 - Soft delete + audit trail (restore deleted expenses)
@@ -226,7 +267,7 @@ Split purchases, beneficiaries, advanced analytics, and i18n architecture.
 
 ---
 
-## V3 — Intelligence & reach
+## 4.0.0 — Intelligence & reach
 
 - Saved views library (personal saved filter configurations)
 - Share saved views to space
@@ -242,27 +283,31 @@ These features are intentionally excluded from the current roadmap. Do not build
 
 | Feature | Earliest version | Rationale |
 |---|---|---|
-| Split purchases | V1 | Single-line covers 90% of use cases in MVP |
-| Beneficiary | V1 | Requires split architecture; defer until V1 |
-| Recurring expenses | V0.5 | Users can manually enter for first weeks |
-| Shareable Insights | V0.5 | Partners can open Insights themselves |
-| Monthly wrap | V1 | Pre-computed analytics is a luxury |
-| Quarterly/yearly timeframes | V1 | Weekly + monthly covers 95% of use |
-| Payment method colors | V1 | Plain labels sufficient for MVP |
-| Category icons | V1.5 | Colored chips sufficient for MVP–V1 |
-| Tax calculator | V1.5 | Users can enter the total directly |
-| i18n (Spanish) | V1.5 | English-only until user base demands it |
-| Insights drill-down | V1 | Complex interaction; defer until core is stable |
-| Soft delete / audit trail | V2 | Hard delete with confirmation is acceptable |
-| Dark mode | V2 | Light mode only until platform expansion |
-| Multi-currency | V2 | Single currency per space covers MVP |
-| Income tracking | V2 | Expenses-only until platform expansion |
-| Data export (CSV) | V2 | Not needed for small-group usage |
-| Email/password auth | V2 | Google SSO covers the target audience |
-| Installable PWA (manifest only) | V2 | Minimal effort; improves mobile UX significantly |
-| Offline / full PWA (service worker) | V3 | Requires significant architecture changes |
-| Push notifications | V3 | In-app alerts are sufficient |
-| AI insights | V3 | Rule-based wrap is sufficient |
+| Split purchases | 2.0.0 | Single-line covers 90% of use cases in MVP |
+| Beneficiary | 2.0.0 | Requires split architecture; defer until 2.0.0 |
+| Recurring expenses | 1.1.0 | Users can manually enter for first weeks |
+| Shareable Insights | 1.1.0 | Partners can open Insights themselves |
+| Merchant auto-fill (full) | 1.1.0 | Category auto-fill sufficient for MVP |
+| Monthly wrap | 2.0.0 | Pre-computed analytics is a luxury |
+| Quarterly/yearly timeframes | 2.0.0 | Weekly + monthly covers 95% of use |
+| Payment method colors | 2.0.0 | Plain labels sufficient for MVP |
+| Category icons | 2.1.0 | Colored chips sufficient for MVP–2.0.0 |
+| Tax calculator | 2.1.0 | Users can enter the total directly |
+| i18n (Spanish) | 2.1.0 | English-only until user base demands it |
+| Insights drill-down | 2.0.0 | Complex interaction; defer until core is stable |
+| Usage analytics (Umami) | 2.0.0 | Not needed until real users exist |
+| Enhanced landing page + SEO | 2.0.0 | Authenticated app; word-of-mouth first |
+| Error tracking (Sentry) | 1.0.0 | Added in MVP Phase 15 |
+| Soft delete / audit trail | 3.0.0 | Hard delete with confirmation is acceptable |
+| Dark mode | 3.0.0 | Light mode only until platform expansion |
+| Multi-currency | 3.0.0 | Single currency per space covers MVP |
+| Income tracking | 3.0.0 | Expenses-only until platform expansion |
+| Data export (CSV) | 3.0.0 | Not needed for small-group usage |
+| Email/password auth | 3.0.0 | Google SSO covers the target audience |
+| Installable PWA (manifest only) | 3.0.0 | Minimal effort; improves mobile UX significantly |
+| Offline / full PWA (service worker) | 4.0.0 | Requires significant architecture changes |
+| Push notifications | 4.0.0 | In-app alerts are sufficient |
+| AI insights | 4.0.0 | Rule-based wrap is sufficient |
 | Bank sync / import | Never | Manual entry is intentional |
 | File uploads / receipts | Never | Notes-only by design |
 | Transfers | TBD | May never be needed |
@@ -274,8 +319,8 @@ These features are intentionally excluded from the current roadmap. Do not build
 
 | Version | Target concurrent users |
 |---|---|
-| MVP (V0.1) | < 5 |
-| V0.5 | < 10 |
-| V1 | < 50 |
-| V1.5 | < 100 |
-| V2 | Defined based on usage |
+| 1.0.0 (MVP) | < 5 |
+| 1.1.0 | < 10 |
+| 2.0.0 | < 50 |
+| 2.1.0 | < 100 |
+| 3.0.0 | Defined based on usage |

@@ -2,7 +2,7 @@
 
 This document defines the **visual layout and component placement** for each view in the app, organized by version. For functional requirements see `PRD.md`. For version scope see `SCOPE.md`.
 
-Design system: **shadcn/ui + Tailwind CSS**, with **Material Design 3 (M3) as visual inspiration** — adopt M3's rounded shapes, tonal surfaces, and component patterns (FAB, segmented buttons, card elevation via tone shifts) while using shadcn/ui's copy-paste React components and Tailwind for implementation. Charts: **Recharts**. Light mode only (dark mode in V2).
+Design system: **shadcn/ui + Tailwind CSS**, with **Material Design 3 (M3) as visual inspiration** — adopt M3's rounded shapes, tonal surfaces, and component patterns (FAB, segmented buttons, card elevation via tone shifts) while using shadcn/ui's copy-paste React components and Tailwind for implementation. Charts: **Recharts**. Light mode only (dark mode in 3.0.0).
 
 ### Design decisions
 
@@ -14,8 +14,8 @@ Design system: **shadcn/ui + Tailwind CSS**, with **Material Design 3 (M3) as vi
 | **Elevation** | M3 solid tonal surfaces | No glassmorphism. Solid backgrounds maintain clarity for financial data. |
 | **Buttons** | Solid fill (M3 standard) | No gradients. Primary uses `primary` color with `on-primary` text. |
 | **Spacing** | Symmetric everywhere | No asymmetric margins. Predictable, responsive-friendly. |
-| **Amounts** | Positive numbers only | No minus signs. Everything is an expense (income tracking deferred to V2). |
-| **Category icons** | Colored chips only (MVP–V1) | No icons on categories until V1.5. Categories identified by name + chip color. V1.5 adds user-selectable Lucide icons per category. |
+| **Amounts** | Positive numbers only | No minus signs. Everything is an expense (income tracking deferred to 3.0.0). |
+| **Category icons** | Colored chips only (MVP–2.0.0) | No icons on categories until 2.1.0. Categories identified by name + chip color. 2.1.0 adds user-selectable Lucide icons per category. |
 | **Card elevation** | Subtle ambient shadow | Cards use light multi-layer shadow (`0 2px 12px rgba(29,27,32,0.04), 0 6px 24px rgba(29,27,32,0.03)`) on top of tonal shift for gentle float effect. |
 | **Content centering** | Centered with max-width | Main content area centered within available space (`max-width: 1100px`), not left-aligned. Prevents dead zones on wide monitors. |
 
@@ -122,14 +122,14 @@ MVP:
 | Home | Transactions | [FAB: +] | Limits | Insights |
 ```
 
-V0.5+:
+1.1.0+:
 ```
 | Home | Recurring | [FAB: +] | Limits | Insights |
 ```
 
 - FAB is a raised circular button for "Add Expense" — visually elevated above the tab bar.
-- **MVP**: Transactions tab links to `/transactions`. Replaced by Recurring in V0.5+.
-- **V0.5+**: Recurring tab links to `/recurring` and shows a badge with pending count. Transactions accessible from Home "View all →" link and within Insights.
+- **MVP**: Transactions tab links to `/transactions`. Replaced by Recurring in 1.1.0+.
+- **1.1.0+**: Recurring tab links to `/recurring` and shows a badge with pending count. Transactions accessible from Home "View all →" link and within Insights.
 - **Settings** is accessed from the avatar profile menu (top-right), not from the tab bar.
 - Active tab highlighted with fill or underline.
 
@@ -156,7 +156,7 @@ MVP:
 └──────────────────────┘
 ```
 
-V0.5+:
+1.1.0+:
 ```
 ┌──────────────────────┐
 │  Logo / App Name     │
@@ -178,12 +178,12 @@ V0.5+:
 - "+ Add Expense" must be prominently visible at all times.
 - Space selector (top of sidebar or next to logo) only visible if user belongs to >1 space.
 - **MVP nav links**: Home, Transactions, Limits, Insights, Settings.
-- **V0.5+ nav links**: Home, Recurring (with pending badge), Limits, Insights, Settings. Transactions accessible from Home "View all →" and within Insights.
+- **1.1.0+ nav links**: Home, Recurring (with pending badge), Limits, Insights, Settings. Transactions accessible from Home "View all →" and within Insights.
 - Active item highlighted.
 
 ### Version additions
-- **V0.5**: Recurring replaces Transactions in bottom tab bar; pending count badge. Transactions accessible from Home and Insights.
-- **V2**: dark mode toggle in settings; PWA "Add to Home Screen" prompt.
+- **1.1.0**: Recurring replaces Transactions in bottom tab bar; pending count badge. Transactions accessible from Home and Insights.
+- **3.0.0**: dark mode toggle in settings; PWA "Add to Home Screen" prompt.
 
 ---
 
@@ -275,16 +275,16 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - **Mobile**: all sections stack vertically in single-column scroll.
 - **Desktop**: charts can sit in a 2-column grid (e.g., trend line + donut side by side). Leaderboard and latest transactions below.
 
-### V0.5 additions
+### 1.1.0 additions
 - **Pending recurring card** (between limit alerts and charts): shows pending items with confirm ✅ / edit ✏️ / deny ✖️ actions. Merchant name + amount per row.
 - **Merchant leaderboard**: Amount / Count toggle.
 
-### V1 additions
+### 2.0.0 additions
 - **Monthly wrap card** (top of page, first 5 days of month only): highlights from pre-computed monthly analysis — improvements, spikes, recommendations. Dismissible.
 - Limit progress bars **move to Insights**; Home keeps only the alert cards.
 - Category bar comparison (current vs 3-month avg) **moves to Insights**.
 
-### V2 additions
+### 3.0.0 additions
 - **Pin chart to Home**: user-customizable dashboard cards.
 
 ---
@@ -305,7 +305,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - **Actions**: "Save" primary button, "Cancel" / back navigation.
 - On save: navigates back to previous page; data refreshes in background.
 
-### V1 additions — Split purchase
+### 2.0.0 additions — Split purchase
 - "Split" toggle appears next to Amount field (pill-style, off by default).
 - Toggling on reveals split line editor below: each line has amount + category + beneficiary + tags.
 - "Add line" button appends rows. Running sum shown; save blocked until sum matches total.
@@ -313,7 +313,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - Beneficiary field per line (default: Shared).
 - Colored payment method chips.
 
-### V1.5 additions
+### 2.1.0 additions
 - Total / Pre-tax toggle with tax calculator using space default tax %.
 
 ---
@@ -330,7 +330,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - **Infinite scroll** (cursor-based, 20 items per page).
 - Tapping a row opens expense detail.
 
-### V1 additions
+### 2.0.0 additions
 - Beneficiary filter.
 
 ---
@@ -342,7 +342,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - **Edit button** → opens editable form (all fields editable, including purchase date).
 - **Delete button** → "Are you sure?" confirmation dialog. Hard delete.
 
-### V1 additions
+### 2.0.0 additions
 - Beneficiary per line.
 - Payment method color chip.
 - Split lines displayed with per-line category, amount, tags.
@@ -369,10 +369,10 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 
 **Transaction list**: same component as `/transactions` but filtered by Insights filters.
 
-### V0.5 additions
+### 1.1.0 additions
 - **Share button**: copies URL with encoded filter state.
 
-### V1 additions
+### 2.0.0 additions
 - **Drill-down**: clicking chart elements filters the transaction list.
 - **Limit progress bars**: moved from Home, shown as progress indicators.
 - **Category bar comparison**: current period vs 3-month average per category.
@@ -391,7 +391,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - **Delete**: confirmation dialog.
 - Only confirmed expenses count toward limits.
 
-### V1 additions
+### 2.0.0 additions
 - Timeframes: Quarterly, Yearly.
 - Expanded filters: merchant, tag, spender, beneficiary, payment method.
 
@@ -413,17 +413,17 @@ Hub-and-spoke navigation layout. Top section shows space info inline; below is a
 - **Invite >**: generate invite link (single-use, 7-day expiry), disable active link.
 - **Taxes >**: default tax % (editable).
 
-### V0.5 additions
+### 1.1.0 additions
 - **Recurring Expenses >**: shortcut to `/recurring` template management.
 
-### V1 additions
+### 2.0.0 additions
 - Payment method custom colors (hex picker + preview chip).
 
-### V1.5 additions
+### 2.1.0 additions
 - Language selector (English / Spanish).
 - Category icon picker (searchable Lucide icon grid in category create/edit form).
 
-### V2 additions
+### 3.0.0 additions
 - Dark mode toggle.
 - Data export (CSV).
 
@@ -438,13 +438,13 @@ Hub-and-spoke navigation layout. Top section shows space info inline; below is a
 
 ---
 
-## 12. Recurring (`/recurring`) — V0.5+
+## 12. Recurring (`/recurring`) — 1.1.0+
 
-### V0.5
+### 1.1.0
 - **Template list**: active/inactive toggle per template. Each row: name, schedule (weekly/monthly), default amount, category.
 - **Create / Edit form**: name, schedule, default merchant, amount, category, payment method, tags.
 - **Pending items**: list of generated pending expenses. Each row: merchant, amount, due date, with confirm ✅ / edit ✏️ / deny ✖️ actions.
 
-### V1 additions
+### 2.0.0 additions
 - Schedules: Quarterly, Yearly.
 - Beneficiary field on templates.

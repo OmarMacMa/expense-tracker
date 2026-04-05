@@ -48,4 +48,4 @@ def rate_limit_exceeded_handler(
     return response
 
 
-limiter = Limiter(key_func=_get_user_or_ip, default_limits=["100/minute"])
+limiter = Limiter(key_func=_get_user_or_ip, default_limits=["30/minute"])

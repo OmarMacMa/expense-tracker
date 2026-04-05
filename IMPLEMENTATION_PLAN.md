@@ -1,4 +1,4 @@
-# Implementation Plan — MVP (V0.1)
+# Implementation Plan — 1.0.0 (MVP)
 
 This plan describes how to go from zero to a working MVP using **agentic development**. A solo developer orchestrates AI agents (Claude Code, Copilot CLI, etc.) that write most or all code. Each phase produces a verifiable milestone. Tasks within a phase are scoped so a single agent session can complete one.
 
@@ -39,8 +39,8 @@ When handing a task to an agent, include:
 - `app/config.py` using `pydantic-settings` to load env vars from `.env`
 - `backend/.env.example` with all required vars
 - Initialize Alembic (`alembic init alembic`), configure `alembic/env.py` for async SQLAlchemy
-- Health check endpoint: `GET /api/v1/health` returning `{"status": "ok"}`
-- **Verify**: `uvicorn app.main:app --reload` starts, `curl localhost:8000/api/v1/health` returns OK, `ruff check .` and `black --check .` pass
+- Health check endpoint: `GET /api/2.0.0/health` returning `{"status": "ok"}`
+- **Verify**: `uvicorn app.main:app --reload` starts, `curl localhost:8000/api/2.0.0/health` returns OK, `ruff check .` and `black --check .` pass
 
 ### Task 1.2 — Initialize frontend skeleton
 
@@ -84,7 +84,7 @@ Create all SQLAlchemy models in `app/models/`:
 - `limit.py` — limits, limit_filters
 - `__init__.py` — re-export all models
 
-Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, beneficiary fields) so the schema doesn't need migration later.
+Include 1.1.0+ columns as nullable (recurring_template_id, scheduled_date, beneficiary fields) so the schema doesn't need migration later.
 
 - **Verify**: all models import without error, relationships are correctly defined
 
@@ -220,7 +220,7 @@ Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, benefi
 - `app/schemas/expense.py` — create request (header + single line), response
 - `app/services/expense.py` — create expense atomically: expense header + single expense_line + auto-create tags + upsert merchant (update use_count, last_category_id, last_used_at)
 - Validations: purchase_datetime ≤ now (422 if future), amount in range, max 10 tags per line, merchant/notes max lengths
-- Status always `confirmed` (pending is V0.5+)
+- Status always `confirmed` (pending is 1.1.0+)
 - After creation: trigger limit recalculation (Phase 7 will implement the logic; for now, call a stub)
 - **Verify**: create expense → expense_line exists, tags auto-created, merchant upserted, future date returns 422
 
@@ -367,7 +367,7 @@ Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, benefi
 - `lib/api-client.ts` — axios or fetch wrapper, base URL from env, credentials: include (cookies)
 - TanStack Query provider with 2-minute stale time, refetch on window focus
 - Auth context/hook: `useAuth` — calls `/auth/me`, provides user + space state, loading state
-- Google sign-in redirect to `/api/v1/auth/google`
+- Google sign-in redirect to `/api/2.0.0/auth/google`
 - Auth callback page: handles redirect after Google OAuth
 - **Verify**: sign in → redirected to Google → callback sets cookie → `/auth/me` returns user → app knows user is authenticated
 
@@ -377,7 +377,7 @@ Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, benefi
 
 - Desktop: left sidebar with nav links (Home, Transactions, Limits, Insights) + prominent "Add Expense" button; Settings at bottom of sidebar
 - Mobile MVP: bottom tab bar with centered FAB for "Add Expense" (Home, Transactions, [FAB], Limits, Insights); Settings accessible from avatar profile menu
-- Mobile V0.5+: bottom tab bar (Home, Recurring [badge], [FAB], Limits, Insights); Transactions accessible from Home "View all →" and within Insights
+- Mobile 1.1.0+: bottom tab bar (Home, Recurring [badge], [FAB], Limits, Insights); Transactions accessible from Home "View all →" and within Insights
 - Route guards: unauthenticated → redirect to landing, authenticated without space → redirect to onboarding, authenticated with space on `/` → redirect to `/home`
 - Responsive layout (Tailwind breakpoints)
 - **Verify**: navigation works on both layouts, guards redirect correctly
@@ -567,7 +567,7 @@ Include V0.5+ columns as nullable (recurring_template_id, scheduled_date, benefi
 
 ## Notes for agents
 
-- **Always read** `SCOPE.md` before implementing a feature — don't build V0.5+ or V1 features.
+- **Always read** `SCOPE.md` before implementing a feature — don't build 1.1.0+ or 2.0.0 features.
 - **Schema includes future columns** (beneficiary, recurring) as nullable — don't remove them, but don't implement logic for them.
 - **Test with the seed script** after Phase 9 — it provides realistic data for all dashboard and insights development.
 - **Commit after each task** with conventional format: `feat: ...`, `chore: ...`, etc.

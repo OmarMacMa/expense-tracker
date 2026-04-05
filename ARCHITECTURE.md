@@ -22,7 +22,7 @@ This document describes the **technical architecture, tech stack, API design, da
 | Scheduled jobs | Internal FastAPI endpoints + external cron trigger | Azure App Service (same instance) |
 | Auth | Google OAuth 2.0 → JWT in httpOnly cookies | — |
 | Rate limiting | slowapi (backed by limits library) | — |
-| i18n | react-i18next (V1+) | — |
+| i18n | react-i18next (2.0.0+) | — |
 
 ### Why these choices
 
@@ -105,8 +105,8 @@ This document describes the **technical architecture, tech stack, API design, da
 - Automated backups with 7-day retention (Azure default, no extra cost)
 
 **GitHub Actions (Cron Triggers)**
-- **Recurring generator** (daily schedule): calls `POST /api/v1/internal/cron/recurring-generate` with an internal auth token. The endpoint checks all active templates where `next_due_date <= today`, generates pending expenses (idempotent), advances `next_due_date`, backfills missed dates.
-- **Monthly wrap generator** (1st of month schedule): calls `POST /api/v1/internal/cron/wrap-generate` with an internal auth token. The endpoint pre-computes wrap summaries for eligible spaces and stores as JSONB.
+- **Recurring generator** (daily schedule): calls `POST /api/2.0.0/internal/cron/recurring-generate` with an internal auth token. The endpoint checks all active templates where `next_due_date <= today`, generates pending expenses (idempotent), advances `next_due_date`, backfills missed dates.
+- **Monthly wrap generator** (1st of month schedule): calls `POST /api/2.0.0/internal/cron/wrap-generate` with an internal auth token. The endpoint pre-computes wrap summaries for eligible spaces and stores as JSONB.
 
 ---
 
@@ -114,8 +114,8 @@ This document describes the **technical architecture, tech stack, API design, da
 
 ```
 User → "Sign in with Google" → Frontend redirects to backend
-→ GET /api/v1/auth/google → redirects to Google OAuth consent
-→ Google callback → GET /api/v1/auth/google/callback
+→ GET /api/2.0.0/auth/google → redirects to Google OAuth consent
+→ Google callback → GET /api/2.0.0/auth/google/callback
 → Backend validates OAuth token (scopes: `openid`, `email`, `profile`), creates/updates user record
 → Backend issues JWT, sets httpOnly cookie (Secure, SameSite=Lax)
 → Redirects to frontend (onboarding if new user, Home if existing)
@@ -136,10 +136,10 @@ User → "Sign in with Google" → Frontend redirects to backend
 | `/home` | Home | Dashboard (hero, charts, alerts) |
 | `/transactions` | TransactionList | Filtered, searchable, infinite scroll |
 | `/transactions/:id` | ExpenseDetail | View/edit/delete expense |
-| `/expenses/new` | AddExpense | Full-page expense entry (MVP: single-line; V1: + split) |
+| `/expenses/new` | AddExpense | Full-page expense entry (MVP: single-line; 2.0.0: + split) |
 | `/insights` | Insights | Charts + transaction split view |
 | `/limits` | Limits | Limit management + progress |
-| `/recurring` | Recurring | Templates + pending items (V0.5+) |
+| `/recurring` | Recurring | Templates + pending items (1.1.0+) |
 | `/settings` | Settings | Space + member + category management |
 | `/join/:token` | JoinSpace | Invite acceptance flow |
 
@@ -153,39 +153,39 @@ User → "Sign in with Google" → Frontend redirects to backend
 
 **RESTful API with OpenAPI auto-documentation (FastAPI built-in).**
 
-All endpoints scoped under `/api/v1/` with JWT cookie authentication. Space-scoped endpoints validate membership.
+All endpoints scoped under `/api/2.0.0/` with JWT cookie authentication. Space-scoped endpoints validate membership.
 
 ### 4.1 Health check
 ```
-GET  /api/v1/health                  → returns { "status": "ok", "db": "connected" }
+GET  /api/2.0.0/health                  → returns { "status": "ok", "db": "connected" }
 ```
 No authentication required. Returns DB connectivity status. Used by Azure App Service health probes and monitoring.
 
 ### 4.2 Auth endpoints
 ```
-GET  /api/v1/auth/google            → initiate Google OAuth
-GET  /api/v1/auth/google/callback   → handle callback, set JWT cookie
-POST /api/v1/auth/logout            → clear JWT cookie
-GET  /api/v1/auth/me                → get current user info + their space(s)
+GET  /api/2.0.0/auth/google            → initiate Google OAuth
+GET  /api/2.0.0/auth/google/callback   → handle callback, set JWT cookie
+POST /api/2.0.0/auth/logout            → clear JWT cookie
+GET  /api/2.0.0/auth/me                → get current user info + their space(s)
 ```
 
 ### 4.3 Space endpoints
 ```
-POST /api/v1/spaces                          → create space
-GET  /api/v1/spaces/{space_id}               → get space details
-PUT  /api/v1/spaces/{space_id}               → update space settings
-POST /api/v1/spaces/{space_id}/invite        → generate invite link
-POST /api/v1/spaces/join/{invite_token}      → join space via invite
-GET  /api/v1/spaces/{space_id}/members       → list members
+POST /api/2.0.0/spaces                          → create space
+GET  /api/2.0.0/spaces/{space_id}               → get space details
+PUT  /api/2.0.0/spaces/{space_id}               → update space settings
+POST /api/2.0.0/spaces/{space_id}/invite        → generate invite link
+POST /api/2.0.0/spaces/join/{invite_token}      → join space via invite
+GET  /api/2.0.0/spaces/{space_id}/members       → list members
 ```
 
 ### 4.4 Expense endpoints
 ```
-POST   /api/v1/spaces/{space_id}/expenses                → create expense (with split lines)
-GET    /api/v1/spaces/{space_id}/expenses                 → list expenses (filters, search, cursor pagination)
-GET    /api/v1/spaces/{space_id}/expenses/{expense_id}    → get expense detail
-PATCH  /api/v1/spaces/{space_id}/expenses/{expense_id}    → partial update expense (send only changed fields)
-DELETE /api/v1/spaces/{space_id}/expenses/{expense_id}    → hard delete expense
+POST   /api/2.0.0/spaces/{space_id}/expenses                → create expense (with split lines)
+GET    /api/2.0.0/spaces/{space_id}/expenses                 → list expenses (filters, search, cursor pagination)
+GET    /api/2.0.0/spaces/{space_id}/expenses/{expense_id}    → get expense detail
+PATCH  /api/2.0.0/spaces/{space_id}/expenses/{expense_id}    → partial update expense (send only changed fields)
+DELETE /api/2.0.0/spaces/{space_id}/expenses/{expense_id}    → hard delete expense
 ```
 
 **List expenses query parameters:**
@@ -195,7 +195,7 @@ DELETE /api/v1/spaces/{space_id}/expenses/{expense_id}    → hard delete expens
 &period=this_month          → time filter
 &month=2026-01              → specific month
 &spender={user_id}          → filter by spender
-&beneficiary={user_id|shared} → filter by beneficiary (V1+)
+&beneficiary={user_id|shared} → filter by beneficiary (2.0.0+)
 &category={cat_id}          → filter by category
 &merchant={name}            → filter by merchant (case-insensitive contains)
 &tag={tag_name}             → filter by tag
@@ -212,69 +212,69 @@ DELETE /api/v1/spaces/{space_id}/expenses/{expense_id}    → hard delete expens
 
 **Expense update contract (PATCH):**
 - **Single-line (MVP):** client sends changed header fields and/or `amount`. When `amount` is sent, the backend updates both `expenses.total_amount` and the sole `expense_lines.amount` atomically.
-- **Split (V1+):** client sends changed header fields and/or a full `lines` array. When `lines` is present, all existing lines are replaced (delete + re-insert). `total_amount` is recalculated from the new lines. Sum validation applies (422 if mismatch).
+- **Split (2.0.0+):** client sends changed header fields and/or a full `lines` array. When `lines` is present, all existing lines are replaced (delete + re-insert). `total_amount` is recalculated from the new lines. Sum validation applies (422 if mismatch).
 - Omitted fields are unchanged (`model.model_dump(exclude_unset=True)`).
 - If `purchase_datetime` or any amount changes, affected limits recalculate.
 
 ### 4.5 Category endpoints
 ```
-GET    /api/v1/spaces/{space_id}/categories               → list categories
-POST   /api/v1/spaces/{space_id}/categories               → create category
-PUT    /api/v1/spaces/{space_id}/categories/{cat_id}      → update category
-DELETE /api/v1/spaces/{space_id}/categories/{cat_id}      → delete (orphans → Uncategorized)
+GET    /api/2.0.0/spaces/{space_id}/categories               → list categories
+POST   /api/2.0.0/spaces/{space_id}/categories               → create category
+PUT    /api/2.0.0/spaces/{space_id}/categories/{cat_id}      → update category
+DELETE /api/2.0.0/spaces/{space_id}/categories/{cat_id}      → delete (orphans → Uncategorized)
 ```
 
 ### 4.6 Tag endpoints
 ```
-GET /api/v1/spaces/{space_id}/tags    → list tags (for autocomplete)
+GET /api/2.0.0/spaces/{space_id}/tags    → list tags (for autocomplete)
 ```
 Tags are created implicitly when expenses are saved with new tag names.
 
 ### 4.7 Payment method endpoints
 ```
-GET    /api/v1/spaces/{space_id}/payment-methods                 → list all methods in space
-POST   /api/v1/spaces/{space_id}/payment-methods                 → create method (for current user)
-PATCH  /api/v1/spaces/{space_id}/payment-methods/{method_id}     → partial update (owner only)
-DELETE /api/v1/spaces/{space_id}/payment-methods/{method_id}     → delete (owner only)
+GET    /api/2.0.0/spaces/{space_id}/payment-methods                 → list all methods in space
+POST   /api/2.0.0/spaces/{space_id}/payment-methods                 → create method (for current user)
+PATCH  /api/2.0.0/spaces/{space_id}/payment-methods/{method_id}     → partial update (owner only)
+DELETE /api/2.0.0/spaces/{space_id}/payment-methods/{method_id}     → delete (owner only)
 ```
 
 ### 4.8 Limit endpoints
 ```
-GET    /api/v1/spaces/{space_id}/limits                → list limits with current progress
-POST   /api/v1/spaces/{space_id}/limits                → create limit
-PATCH  /api/v1/spaces/{space_id}/limits/{limit_id}     → partial update limit
-DELETE /api/v1/spaces/{space_id}/limits/{limit_id}     → delete limit
+GET    /api/2.0.0/spaces/{space_id}/limits                → list limits with current progress
+POST   /api/2.0.0/spaces/{space_id}/limits                → create limit
+PATCH  /api/2.0.0/spaces/{space_id}/limits/{limit_id}     → partial update limit
+DELETE /api/2.0.0/spaces/{space_id}/limits/{limit_id}     → delete limit
 ```
 
-### 4.9 Recurring endpoints (V0.5+)
+### 4.9 Recurring endpoints (1.1.0+)
 ```
-GET    /api/v1/spaces/{space_id}/recurring                                 → list templates
-POST   /api/v1/spaces/{space_id}/recurring                                 → create template
-PATCH  /api/v1/spaces/{space_id}/recurring/{template_id}                   → partial update template
-DELETE /api/v1/spaces/{space_id}/recurring/{template_id}                   → delete template
-GET    /api/v1/spaces/{space_id}/recurring/pending                         → list pending expenses
-POST   /api/v1/spaces/{space_id}/recurring/pending/{pending_id}/confirm    → confirm pending
-POST   /api/v1/spaces/{space_id}/recurring/pending/{pending_id}/deny       → deny pending
-PATCH  /api/v1/spaces/{space_id}/recurring/pending/{pending_id}            → partial update pending
+GET    /api/2.0.0/spaces/{space_id}/recurring                                 → list templates
+POST   /api/2.0.0/spaces/{space_id}/recurring                                 → create template
+PATCH  /api/2.0.0/spaces/{space_id}/recurring/{template_id}                   → partial update template
+DELETE /api/2.0.0/spaces/{space_id}/recurring/{template_id}                   → delete template
+GET    /api/2.0.0/spaces/{space_id}/recurring/pending                         → list pending expenses
+POST   /api/2.0.0/spaces/{space_id}/recurring/pending/{pending_id}/confirm    → confirm pending
+POST   /api/2.0.0/spaces/{space_id}/recurring/pending/{pending_id}/deny       → deny pending
+PATCH  /api/2.0.0/spaces/{space_id}/recurring/pending/{pending_id}            → partial update pending
 ```
 
 ### 4.10 Insights / analytics endpoints
 ```
-GET /api/v1/spaces/{space_id}/insights/summary              → hero total + delta vs average
-GET /api/v1/spaces/{space_id}/insights/spending-trend        → cumulative trend + 3-month avg
-GET /api/v1/spaces/{space_id}/insights/category-breakdown    → category totals (bar + pie data)
-GET /api/v1/spaces/{space_id}/insights/merchant-leaderboard  → top merchants by amount (MVP); amount/count toggle (V0.5+)
-GET /api/v1/spaces/{space_id}/insights/spender-breakdown     → totals per spender
-GET /api/v1/spaces/{space_id}/insights/limit-progress        → all limits with current progress
+GET /api/2.0.0/spaces/{space_id}/insights/summary              → hero total + delta vs average
+GET /api/2.0.0/spaces/{space_id}/insights/spending-trend        → cumulative trend + 3-month avg
+GET /api/2.0.0/spaces/{space_id}/insights/category-breakdown    → category totals (bar + pie data)
+GET /api/2.0.0/spaces/{space_id}/insights/merchant-leaderboard  → top merchants by amount (MVP); amount/count toggle (1.1.0+)
+GET /api/2.0.0/spaces/{space_id}/insights/spender-breakdown     → totals per spender
+GET /api/2.0.0/spaces/{space_id}/insights/limit-progress        → all limits with current progress
 ```
 
 **Shared query parameters for all insights endpoints:**
 ```
 ?period=this_month|last_month|this_week|last_week|ytd|quarter
 &month=2026-01
-&quarter=2026-Q1              → V1+ (quarter picker)
+&quarter=2026-Q1              → 2.0.0+ (quarter picker)
 &spender={user_id}
-&beneficiary={user_id|shared} → V1+ (beneficiary filter)
+&beneficiary={user_id|shared} → 2.0.0+ (beneficiary filter)
 &category={cat_id}
 &merchant={merchant_name}
 &tag={tag_name}
@@ -283,22 +283,22 @@ GET /api/v1/spaces/{space_id}/insights/limit-progress        → all limits with
 
 ### 4.11 Merchant suggestion endpoints
 ```
-GET /api/v1/spaces/{space_id}/merchants/suggest?q={query}   → autocomplete merchant names
-GET /api/v1/spaces/{space_id}/merchants/{name}/category      → latest category for merchant
+GET /api/2.0.0/spaces/{space_id}/merchants/suggest?q={query}   → autocomplete merchant names
+GET /api/2.0.0/spaces/{space_id}/merchants/{name}/category      → latest category for merchant
 ```
 
-### 4.12 Monthly wrap endpoint (V1+)
+### 4.12 Monthly wrap endpoint (2.0.0+)
 ```
-GET /api/v1/spaces/{space_id}/wrap/{year}/{month}   → pre-computed wrap data
+GET /api/2.0.0/spaces/{space_id}/wrap/{year}/{month}   → pre-computed wrap data
 ```
 
-### 4.13 Internal cron endpoints (V0.5+)
+### 4.13 Internal cron endpoints (1.1.0+)
 
 Protected by internal auth token (not JWT cookies). Only callable by the cron trigger (GitHub Actions).
 
 ```
-POST /api/v1/internal/cron/recurring-generate   → generate pending expenses for all spaces
-POST /api/v1/internal/cron/wrap-generate         → generate monthly wraps for all eligible spaces
+POST /api/2.0.0/internal/cron/recurring-generate   → generate pending expenses for all spaces
+POST /api/2.0.0/internal/cron/wrap-generate         → generate monthly wraps for all eligible spaces
 ```
 
 Authentication: `Authorization: Bearer {INTERNAL_CRON_TOKEN}` header. The token is a shared secret between GitHub Actions and the backend, stored as environment variables in both.
@@ -362,7 +362,7 @@ payment_methods
   space_id        UUID NOT NULL REFERENCES spaces(id)
   owner_id        UUID REFERENCES users(id)  -- null for Cash (shared)
   label           TEXT NOT NULL              -- max 50 characters
-  color           TEXT                       -- hex string, e.g., "#4A90D9" (V1+; null in MVP)
+  color           TEXT                       -- hex string, e.g., "#4A90D9" (2.0.0+; null in MVP)
   is_system       BOOLEAN NOT NULL DEFAULT FALSE  -- true for Cash
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 
@@ -390,20 +390,20 @@ expenses
   spender_id            UUID NOT NULL REFERENCES users(id)
   payment_method_id     UUID REFERENCES payment_methods(id) ON DELETE SET NULL
   notes                 TEXT                    -- max 500 characters
-  status                TEXT NOT NULL CHECK (status IN ('confirmed', 'pending'))  -- 'pending' used by recurring (V0.5+)
-  -- V0.5+ columns (nullable, unused in MVP)
+  status                TEXT NOT NULL CHECK (status IN ('confirmed', 'pending'))  -- 'pending' used by recurring (1.1.0+)
+  -- 1.1.0+ columns (nullable, unused in MVP)
   recurring_template_id UUID REFERENCES recurring_templates(id) ON DELETE SET NULL
   scheduled_date        DATE                   -- for pending: the scheduled date
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
   updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 
--- Expense split lines (amount + category per line; beneficiary added in V1)
+-- Expense split lines (amount + category per line; beneficiary added in 2.0.0)
 expense_lines
   id                UUID PRIMARY KEY
   expense_id        UUID NOT NULL REFERENCES expenses(id) ON DELETE CASCADE
   amount            DECIMAL(12,2) NOT NULL CHECK (amount >= 0.01 AND amount <= 999999.99)
   category_id       UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT  -- service layer reassigns to "Uncategorized" before delete
-  -- V1+ columns (nullable, unused in MVP)
+  -- 2.0.0+ columns (nullable, unused in MVP)
   beneficiary_type  TEXT CHECK (beneficiary_type IN ('member', 'shared'))  -- null in MVP
   beneficiary_id    UUID REFERENCES users(id)  -- null when type='shared' or in MVP
   line_order        INTEGER NOT NULL
@@ -442,7 +442,7 @@ limit_filters
   filter_type   TEXT NOT NULL CHECK (filter_type IN ('category', 'merchant', 'tag', 'spender', 'beneficiary', 'payment_method'))
   filter_value  TEXT NOT NULL   -- category UUID, merchant name, tag name, user UUID, "shared", method UUID
 
--- Recurring expense templates (V0.5+)
+-- Recurring expense templates (1.1.0+)
 recurring_templates
   id                         UUID PRIMARY KEY
   space_id                   UUID NOT NULL REFERENCES spaces(id)
@@ -452,8 +452,8 @@ recurring_templates
   default_merchant           TEXT NOT NULL           -- max 100 characters
   default_category_id        UUID NOT NULL REFERENCES categories(id)
   default_spender_id         UUID NOT NULL REFERENCES users(id)
-  default_beneficiary_type   TEXT CHECK (default_beneficiary_type IN ('member', 'shared'))  -- V1+; null in V0.5
-  default_beneficiary_id     UUID REFERENCES users(id)  -- V1+; null when type='shared' or in V0.5
+  default_beneficiary_type   TEXT CHECK (default_beneficiary_type IN ('member', 'shared'))  -- 2.0.0+; null in 1.1.0
+  default_beneficiary_id     UUID REFERENCES users(id)  -- 2.0.0+; null when type='shared' or in 1.1.0
   default_payment_method_id  UUID REFERENCES payment_methods(id) ON DELETE SET NULL
   default_tags               JSONB DEFAULT '[]'          -- array of tag name strings
   next_due_date              DATE NOT NULL
@@ -495,7 +495,7 @@ CREATE INDEX idx_tags_space_name ON tags(space_id, name);
 CREATE INDEX idx_limits_space ON limits(space_id);
 CREATE INDEX idx_limit_filters_limit ON limit_filters(limit_id);
 
--- Recurring template scheduling (V0.5+)
+-- Recurring template scheduling (1.1.0+)
 CREATE INDEX idx_recurring_space_active ON recurring_templates(space_id, is_active, next_due_date);
 
 -- Payment method filter (Insights)
@@ -575,9 +575,9 @@ All computed using the **space timezone**. Datetimes stored as UTC.
 
 Scheduled jobs run as internal FastAPI endpoints triggered by GitHub Actions on a cron schedule. Each endpoint is protected by an `INTERNAL_CRON_TOKEN` — a shared secret stored as an environment variable in both GitHub Actions and the backend.
 
-### 7.1 Recurring expense generator (V0.5+)
+### 7.1 Recurring expense generator (1.1.0+)
 - **Trigger**: GitHub Actions cron, daily (e.g., 06:00 UTC)
-- **Endpoint**: `POST /api/v1/internal/cron/recurring-generate`
+- **Endpoint**: `POST /api/2.0.0/internal/cron/recurring-generate`
 - **Logic**:
   1. Query all active recurring templates across all spaces where `next_due_date <= today`
   2. For each template, for each missed date (from `next_due_date` through today):
@@ -586,9 +586,9 @@ Scheduled jobs run as internal FastAPI endpoints triggered by GitHub Actions on 
      c. Advance `next_due_date` to the next scheduled date
   3. Commit all changes in a transaction
 
-### 7.2 Monthly wrap generator (V1+)
+### 7.2 Monthly wrap generator (2.0.0+)
 - **Trigger**: GitHub Actions cron, 1st of each month (e.g., 08:00 UTC)
-- **Endpoint**: `POST /api/v1/internal/cron/wrap-generate`
+- **Endpoint**: `POST /api/2.0.0/internal/cron/wrap-generate`
 - **Logic**:
   1. Query **active spaces only**: spaces with ≥10 confirmed expenses in the previous month. Skip all others.
   2. For each active space, compute the wrap for the previous month:
@@ -626,11 +626,11 @@ Scheduled jobs run as internal FastAPI endpoints triggered by GitHub Actions on 
 - Azure PostgreSQL Flexible Server includes automated backups at no extra cost
 - Default retention: 7 days (configurable up to 35 days)
 - Point-in-time restore available within the retention window
-- No action needed for MVP; increased retention can be configured for V2+
+- No action needed for MVP; increased retention can be configured for 3.0.0+
 
 ### Connection pooling
 - SQLAlchemy async connection pool configuration:
-  - `pool_size`: 5 (MVP), scale to 10-20 for V1+
+  - `pool_size`: 5 (MVP), scale to 10-20 for 2.0.0+
   - `max_overflow`: 5 (allows burst connections beyond pool_size)
   - `pool_timeout`: 30 seconds
   - `pool_recycle`: 1800 seconds (30 minutes, prevents stale connections)

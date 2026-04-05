@@ -26,7 +26,7 @@ ExpenseTracker/
 │   │   ├── hooks/            # Custom React hooks
 │   │   ├── lib/              # Utilities, API client, constants
 │   │   ├── types/            # TypeScript type definitions
-│   │   ├── i18n/             # react-i18next config + translation files (V1+)
+│   │   ├── i18n/             # react-i18next config + translation files (2.0.0+)
 │   │   └── styles/           # Global styles, Tailwind config
 │   ├── index.html
 │   ├── vite.config.ts
@@ -48,11 +48,11 @@ ExpenseTracker/
 │   │   │   ├── tags.py
 │   │   │   ├── payment_methods.py
 │   │   │   ├── limits.py
-│   │   │   ├── recurring.py   # V0.5+
+│   │   │   ├── recurring.py   # 1.1.0+
 │   │   │   ├── insights.py
 │   │   │   ├── merchants.py
 │   │   │   ├── health.py
-│   │   │   └── internal.py    # Internal cron endpoints (V0.5+)
+│   │   │   └── internal.py    # Internal cron endpoints (1.1.0+)
 │   │   ├── services/         # Business logic layer
 │   │   ├── db/               # Database session, connection
 │   │   └── middleware/       # Auth middleware, space membership, rate limiting
@@ -67,7 +67,7 @@ ExpenseTracker/
     └── workflows/
         ├── ci.yml             # CI pipeline (test, lint, build)
         ├── deploy.yml         # CD pipeline (deploy to Azure)
-        └── cron.yml           # Scheduled job triggers (V0.5+)
+        └── cron.yml           # Scheduled job triggers (1.1.0+)
 ```
 
 ---
@@ -116,8 +116,8 @@ ExpenseTracker/
 ## 3) API conventions
 
 ### URL patterns
-- All endpoints under `/api/v1/`
-- Space-scoped: `/api/v1/spaces/{space_id}/...`
+- All endpoints under `/api/2.0.0/`
+- Space-scoped: `/api/2.0.0/spaces/{space_id}/...`
 - Resource names are **plural** (e.g., `/expenses`, `/categories`, `/limits`)
 - Use kebab-case for multi-word resources (e.g., `/payment-methods`)
 
@@ -165,14 +165,14 @@ ExpenseTracker/
 - `main` — primary development branch, always buildable
 - Feature branches: `feature/{short-description}` (e.g., `feature/expense-crud`)
 - Bug fixes: `fix/{short-description}` (e.g., `fix/limit-calculation`)
-- Release branches: `release/{version}` (e.g., `release/v0.1`, `release/v0.5`)
+- Release branches: `release/{version}` (e.g., `release/1.0.0`, `release/1.1.0`)
 - Hotfix branches: `hotfix/{short-description}` (branched from `release/*` or `main`)
 
 ### Workflow
 - Feature and fix branches are created from `main` and merged back into `main` via PR
 - When a version is ready for release, create a `release/{version}` branch from `main`
 - Release branches receive only bug fixes (cherry-picked or hotfixed)
-- Tags: `v0.1.0`, `v0.5.0`, `v1.0.0` etc. on release branch merge commits
+- Tags: `1.0.0.0`, `1.1.0.0`, `2.0.0.0.0` etc. on release branch merge commits
 
 ### Commit messages
 - Format: `type: short description`
@@ -252,7 +252,7 @@ ENVIRONMENT=development
 
 **Frontend (`frontend/.env`):**
 ```
-VITE_API_URL=http://localhost:8000/api/v1
+VITE_API_URL=http://localhost:8000/api/2.0.0
 ```
 
 ### Running the full stack locally
@@ -278,13 +278,13 @@ npm run dev                        # http://localhost:5173
 
 **Verifying the stack is running:**
 - Frontend: open `http://localhost:5173` — should show the sign-in page
-- Backend: `curl http://localhost:8000/api/v1/health` — should return `{"status": "ok", "db": "connected"}`
+- Backend: `curl http://localhost:8000/api/2.0.0/health` — should return `{"status": "ok", "db": "connected"}`
 - Database: `docker exec -it expense-db psql -U postgres -d expense_tracker -c "\dt"` — should list tables after migrations
 
 **Google OAuth local setup:**
 1. Go to Google Cloud Console → APIs & Services → Credentials
 2. Create an OAuth 2.0 Client ID (Web application)
-3. Add `http://localhost:8000/api/v1/auth/google/callback` as an authorized redirect URI
+3. Add `http://localhost:8000/api/2.0.0/auth/google/callback` as an authorized redirect URI
 4. Copy Client ID and Client Secret into `backend/.env`
 
 **Common issues:**
@@ -373,8 +373,8 @@ This provides enough data for dashboard charts, Insights filters, and limit aler
 
 ### Scheduled jobs (GitHub Actions cron)
 - Defined in `.github/workflows/cron.yml`
-- Daily trigger: calls `POST /api/v1/internal/cron/recurring-generate` (V0.5+)
-- Monthly trigger: calls `POST /api/v1/internal/cron/wrap-generate` (V1+)
+- Daily trigger: calls `POST /api/2.0.0/internal/cron/recurring-generate` (1.1.0+)
+- Monthly trigger: calls `POST /api/2.0.0/internal/cron/wrap-generate` (2.0.0+)
 - Authenticated via `INTERNAL_CRON_TOKEN` secret
 
 ### Database migrations

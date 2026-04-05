@@ -51,7 +51,7 @@ npm run dev                      # http://localhost:5173
 ### Verify
 
 - **Frontend**: Open http://localhost:5173
-- **Backend**: `curl http://localhost:8000/api/v1/health` → `{"status": "ok"}`
+- **Backend**: `curl http://localhost:8000/api/2.0.0/health` → `{"status": "ok"}`
 - **Database**: `docker exec -it expense-db psql -U postgres -d expense_tracker -c "\dt"`
 
 ### Environment Variables

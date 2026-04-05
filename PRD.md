@@ -1,6 +1,6 @@
 # Product Requirements Document — Expense Tracker & Budget Insights
 
-This document defines **what** the product does and **why**. For technical implementation details, see `ARCHITECTURE.md`. For quality constraints, see `REQUIREMENTS.md`. For version scope, see `SCOPE.md`. Features are delivered progressively across versions (MVP → V0.5 → V1 → V1.5+).
+This document defines **what** the product does and **why**. For technical implementation details, see `ARCHITECTURE.md`. For quality constraints, see `REQUIREMENTS.md`. For version scope, see `SCOPE.md`. Features are delivered progressively across versions (MVP → 1.1.0 → 2.0.0 → 2.1.0+).
 
 ---
 
@@ -34,13 +34,13 @@ A **multi-tenant web app** for couples/families (and eventually individuals) to 
 
 ### Non-goals (MVP)
 See `SCOPE.md` for the full exclusion list and version roadmap. Key non-goals for MVP:
-- Split purchases, beneficiary tracking (V1)
-- Recurring expenses (V0.5)
+- Split purchases, beneficiary tracking (2.0.0)
+- Recurring expenses (1.1.0)
 - Income tracking, transfers, file uploads, bank sync
 - Soft deletes, dark mode, multi-currency, offline/PWA
 - Real-time sync, push notifications, AI insights
-- Tax calculator (V1.5), i18n (V1.5)
-- Payment method customization (V1)
+- Tax calculator (2.1.0), i18n (2.1.0)
+- Payment method customization (2.0.0)
 
 ---
 
@@ -65,7 +65,7 @@ A financial "workspace". Focus is **Shared Space**.
 - **Personal space**: planned later (architected as another space type).
 - **Initial constraint**: a user belongs to **one space only**, but the system is designed to support multiple spaces per user in the future.
 - **Soft member limit**: 10 members per space. The invite endpoint returns a clear error when the limit is reached: *"This space has reached its member limit (10)."* Sufficient for couples, families, and roommates.
-- **No member removal** — members cannot be kicked. Space lifecycle management (archival/deprecation) is a future consideration (post-V1).
+- **No member removal** — members cannot be kicked. Space lifecycle management (archival/deprecation) is a future consideration (post-2.0.0).
 - **Timezone**: each space has a timezone setting (auto-detected from browser during setup, overridable). All time window calculations (weeks, months, quarters, years) use the space timezone. Datetimes are stored as UTC.
 - **Currency**: single currency per space, selected during creation, immutable after creation. Displayed using the currency's standard format.
 
@@ -83,7 +83,7 @@ If not split, a purchase has exactly **one** split line.
 
 ### Spender vs Beneficiary
 - **Spender**: who paid (any member). Required at purchase level. **Defaults to the logged-in user.**
-- **Beneficiary**: who it was for (any member / Shared). Required per split line. **Defaults to Shared.** — **V1+ only**; MVP does not track beneficiary.
+- **Beneficiary**: who it was for (any member / Shared). Required per split line. **Defaults to Shared.** — **2.0.0+ only**; MVP does not track beneficiary.
 
 This supports long-distance and mixed-benefit purchases (e.g., groceries shared + shampoo for Person B). In MVP, all expenses are implicitly shared.
 
@@ -108,24 +108,24 @@ A unified concept representing *how* a purchase was paid. A **single flat list o
 - **Space defaults**: every space starts with a built-in **Cash** method (shared, no owner).
 - **Member-created methods**: each member can add their own cards/accounts. Each has:
   - **Label** (user-chosen name, e.g., "Visa 4821", "Amex Gold")
-  - **Color** (user-chosen, for quick visual identification) — **V1+**; MVP uses default colors
+  - **Color** (user-chosen, for quick visual identification) — **2.0.0+**; MVP uses default colors
   - **Owner** (the member who created it)
   - **Unique ID** (two members can have methods with the same label — they are distinct records)
 - **Cross-member usage**: the spender can select **any** method in the space (including another member's card). The method's owner is preserved.
-- **Selector UX**: MVP shows a simple dropdown with method labels. V1+ renders colored chips/pills with `<name>` (or `<name> (<owner>)` when disambiguation is needed).
+- **Selector UX**: MVP shows a simple dropdown with method labels. 2.0.0+ renders colored chips/pills with `<name>` (or `<name> (<owner>)` when disambiguation is needed).
 - **Deletion behavior**: when deleted, `payment_method_id` becomes NULL on historical expenses. The frontend resolves NULL to a **"Deleted method"** display label. This is a frontend display convention — no schema change or snapshot column needed.
 - Managed per-member under Settings.
 
 ### Limit
-A weekly or monthly threshold (quarterly/yearly added in V1) applied to a combination of filters.
-- MVP supports category-only filters. V1 expands to category/tag/merchant/spender/beneficiary/payment method.
+A weekly or monthly threshold (quarterly/yearly added in 2.0.0) applied to a combination of filters.
+- MVP supports category-only filters. 2.0.0 expands to category/tag/merchant/spender/beneficiary/payment method.
 - A single expense can count toward multiple limits.
 - **Only confirmed expenses count** — pending recurring expenses do NOT affect limit calculations.
 
-### Recurring template (V0.5+)
-A rule that generates "pending expenses" on a schedule (weekly/monthly; quarterly/yearly added in V1).
+### Recurring template (1.1.0+)
+A rule that generates "pending expenses" on a schedule (weekly/monthly; quarterly/yearly added in 2.0.0).
 
-### Pending expense (V0.5+)
+### Pending expense (1.1.0+)
 An auto-generated expense instance from a recurring template that requires user action:
 - ✅ Confirm (becomes normal expense, now counts toward limits/insights)
 - ✏️ Edit (adjust fields then confirm)
@@ -144,10 +144,10 @@ Pending stays pending indefinitely until acted upon.
 - The system is **multi-tenant**.
 - MVP focuses on **one shared space per user**, but supports multiple spaces in the future.
 - All members are first-class, full transparency: can view/edit/delete any shared expenses.
-- No member removal (all versions through V1).
+- No member removal (all versions through 2.0.0).
 
 ### Data & entry
-- **Expenses-only** (no income tracking; planned for V2).
+- **Expenses-only** (no income tracking; planned for 3.0.0).
 - Single currency per space with currency-aware formatting.
 - Purchase datetime drives analytics/limits. Creation datetime is metadata shown in detail views.
 - **Hard deletes** with a simple "Are you sure?" confirmation dialog.
@@ -162,28 +162,28 @@ Pending stays pending indefinitely until acted upon.
 - Merchant search/filtering: **case-insensitive contains** matching.
 - Tags: free-form, normalized, `#`-triggered inline autocomplete.
 
-### Split purchases (V1)
+### Split purchases (2.0.0)
 - Hybrid UX: default single line; optional split.
 - Split line requires **Amount + Category + Beneficiary**.
 - **UX**: "Split" toggle on the Add Expense page switches between single-line and split mode. Same page handles both. Toggle reveals/collapses the inline split line editor.
 
-### Recurring (V0.5+)
-- Schedules: weekly, monthly (V0.5). Quarterly, yearly (V1).
+### Recurring (1.1.0+)
+- Schedules: weekly, monthly (1.1.0). Quarterly, yearly (2.0.0).
 - Generates pending expenses that users confirm/edit/deny.
 - Pending surfaced on Home and via nav badge.
 - **Backfill**: missed scheduled dates generate all missed pending entries (idempotent, no duplicates).
 
 ### Limits & insights
-- Limits: weekly, monthly (MVP). Quarterly, yearly (V1). Week starts Monday.
+- Limits: weekly, monthly (MVP). Quarterly, yearly (2.0.0). Week starts Monday.
 - Warnings/alerts on Home (2–3 max). **In-app only** (no push notifications).
 - Insights layout: desktop split view; mobile chart-first.
 - Default comparisons emphasize **vs last 3-month average**.
-- Shareable Insights links (V0.5+).
+- Shareable Insights links (1.1.0+).
 
 ### Taxes
 - Two entry modes: **Enter Total** (default) and **Enter Pre-tax + Tax** (frontend convenience calculator using space's default tax %).
 - **Only total is stored.** Pre-tax/tax is not persisted.
-- **Tax calculator is V1.5.** MVP users enter the total directly.
+- **Tax calculator is 2.1.0.** MVP users enter the total directly.
 
 ### Invites
 - Link-based invites with **7-day expiry + single-use**.
@@ -200,7 +200,7 @@ Pending stays pending indefinitely until acted upon.
 ### 6.1 Authentication & onboarding
 
 #### Authentication
-- **Google SSO only** (no email/password until V2).
+- **Google SSO only** (no email/password until 3.0.0).
 - Sign up / sign in / sign out flows.
 - Session persistence.
 
@@ -234,12 +234,12 @@ Full-page form at `/expenses/new`. Fields in order:
 - Tags (optional; `#`-triggered autocomplete; max 10 per line)
 - Notes (optional; max 500 characters)
 
-#### Add expense (split) — V1
+#### Add expense (split) — 2.0.0
 - Same page and fields, plus "Split" toggle reveals inline line editor
 - Multiple split lines, each with: Amount, Category, Beneficiary, Tags (optional)
 - **Validation**: sum of split line amounts must equal total. UI blocks saving until resolved.
 
-#### Taxes input convenience — V1.5
+#### Taxes input convenience — 2.1.0
 - Frontend toggle: "Enter Total" (default) or "Enter Pre-tax + Tax"
 - Tax calculator uses space's default tax %.
 - Only total is stored.
@@ -249,13 +249,13 @@ Full-page form at `/expenses/new`. Fields in order:
 - User can override.
 - After save, future suggestions use the latest mapping.
 - Edge case: merchant used across multiple categories → suggestion uses latest; optionally show "Recent categories: …" in dropdown.
-- **V0.5**: Expand auto-fill to also suggest payment method, spender, and tags from the last expense with that merchant. All auto-filled fields are user-overridable.
+- **1.1.0**: Expand auto-fill to also suggest payment method, spender, and tags from the last expense with that merchant. All auto-filled fields are user-overridable.
 
 ### 6.5 Categories management
 - Create/edit/delete shared categories (flat, case-insensitive dedup).
 - "Uncategorized" is always present, non-deletable, non-selectable by users.
-- **Display**: categories identified by name + auto-assigned colored chip (4-color cycle: sage, dusty rose, lavender, butter — assigned by creation order). No icons until V1.5.
-- **V1.5**: user-selectable Lucide icon per category (optional, stored in category model).
+- **Display**: categories identified by name + auto-assigned colored chip (4-color cycle: sage, dusty rose, lavender, butter — assigned by creation order). No icons until 2.1.0.
+- **2.1.0**: user-selectable Lucide icon per category (optional, stored in category model).
 - **Deletion**: orphaned expenses are reassigned to "Uncategorized".
 
 ### 6.6 Tags
@@ -267,17 +267,17 @@ Full-page form at `/expenses/new`. Fields in order:
 - MVP usage: search, filter. No tag-specific insights or default graphs by tag.
 
 ### 6.7 Limits
-- **Timeframes**: weekly / monthly (MVP). Quarterly / yearly added in V1.
-- **Filters**: category only (MVP). Full filter set (category, merchant, tag, spender, beneficiary, payment method) added in V1.
+- **Timeframes**: weekly / monthly (MVP). Quarterly / yearly added in 2.0.0.
+- **Filters**: category only (MVP). Full filter set (category, merchant, tag, spender, beneficiary, payment method) added in 2.0.0.
 - **Warning threshold**: configurable per limit via `warning_pct` (default: 60%). Colors: green below warning, amber at warning, red at 90%+, purple above 100%.
 - Only confirmed expenses count (pending excluded).
 - A transaction can count toward multiple limits.
 - **In-app alerts only** (2–3 cards on Home), no push notifications.
-- **Limit progress bars**: in Insights (V1+). Home shows limit alert cards only.
+- **Limit progress bars**: in Insights (2.0.0+). Home shows limit alert cards only.
 
-### 6.8 Recurring expenses (V0.5+)
+### 6.8 Recurring expenses (1.1.0+)
 - **Template fields**: name, schedule, default amount/merchant/category/spender/payment method/tags, next due date, active/inactive.
-- **Schedules**: weekly, monthly (V0.5). Quarterly, yearly added in V1.
+- **Schedules**: weekly, monthly (1.1.0). Quarterly, yearly added in 2.0.0.
 - **Generation**: automated daily via internal scheduled endpoint. Checks templates where `next_due_date <= today`. Idempotent. Backfills missed dates.
 - **User actions**: confirm → normal expense; edit + confirm; deny → not posted.
 - **Visibility**: Home card + nav badge with pending count.
@@ -287,13 +287,13 @@ High-signal entry point. Shows:
 1. **Hero number**: Total spent for selected window + **delta vs 3-month average** (e.g., "+12%" or "-8% vs avg").
 2. **Time toggle**: "This Week" / "This Month" — all content updates.
 3. **Alerts** (2–3 max): limits breached/near-breached.
-4. **Pending recurring**: confirmations card. — **V0.5+**
+4. **Pending recurring**: confirmations card. — **1.1.0+**
 5. **Core graphs (MVP)**:
    - Spending trend line (cumulative, current period vs 3-month avg)
    - Category distribution (pie/donut)
-   - Merchant leaderboard (top by amount only; Amount/Count toggle in V0.5+)
+   - Merchant leaderboard (top by amount only; Amount/Count toggle in 1.1.0+)
 6. **Latest transactions**: count + quick link to full list.
-7. **Monthly wrap** card (first 5 days of month). — **V1+**
+7. **Monthly wrap** card (first 5 days of month). — **2.0.0+**
 
 ### 6.10 Insights
 Analysis playground.
@@ -301,18 +301,18 @@ Analysis playground.
 **Layout**: Desktop: split view (charts + transactions side-by-side). Mobile: charts first, then transactions.
 
 **Filters** (global, apply to charts and list):
-- Time: this week/last week, this month/last month, month picker, YTD. Quarter picker added in V1.
-- Spender, category, merchant, tag, payment method. Beneficiary filter added in V1.
+- Time: this week/last week, this month/last month, month picker, YTD. Quarter picker added in 2.0.0.
+- Spender, category, merchant, tag, payment method. Beneficiary filter added in 2.0.0.
 
 **Charts (MVP)**: spending trend line, category distribution pie, merchant leaderboard (amount), spender breakdown.
 
-**Charts (V1+)**: category bar comparison (current vs 3-month avg), limit progress bars.
+**Charts (2.0.0+)**: category bar comparison (current vs 3-month avg), limit progress bars.
 
-**Drill-down** (V1+): clicking chart elements filters the transaction list.
+**Drill-down** (2.0.0+): clicking chart elements filters the transaction list.
 
-**Share** (V0.5+): "Share" button copies a URL with encoded filter state.
+**Share** (1.1.0+): "Share" button copies a URL with encoded filter state.
 
-### 6.11 Monthly wrap (V1+, non-AI)
+### 6.11 Monthly wrap (2.0.0+, non-AI)
 - **Trigger**: shown on first login of a month (or within first 5 days).
 - **Pre-computed** for instant display.
 - **Eligibility**: only generated for **active spaces** — spaces with **≥10 confirmed expenses** in the previous month. Inactive/abandoned spaces are skipped.
@@ -354,7 +354,7 @@ Analysis playground.
 - **Landing page**: public page for unauthenticated visitors. Authenticated users redirect to Home.
 - **Mobile**: bottom tab bar with centered FAB (floating action button) for "Add Expense".
   - MVP tabs: Home, Transactions, [FAB: Add], Limits, Insights.
-  - V0.5+ tabs: Home, Recurring, [FAB: Add], Limits, Insights. Transactions accessible from Home "View all" and within Insights.
+  - 1.1.0+ tabs: Home, Recurring, [FAB: Add], Limits, Insights. Transactions accessible from Home "View all" and within Insights.
   - Recurring shows a **count badge** when pending items exist.
   - Settings accessible from avatar profile menu (top-right).
 - **Desktop**: left sidebar navigation; "+ Add Expense" as a prominent button. Settings link at bottom of sidebar.
@@ -376,8 +376,8 @@ Analysis playground.
 - **Full page** (`/expenses/new`) for all expense entry (single-line and split).
 - FAB (mobile) or "+ Add Expense" button (desktop) navigates to this page.
 - **MVP fields** (in order): amount, merchant (autocomplete), category (auto-suggested), datetime (default = now), spender (default = self), payment method (dropdown), tags (`#`-triggered), notes.
-- **V1 adds**: "Split" toggle reveals inline split line editor, beneficiary (default = Shared), colored payment method chips.
-- **V1.5 adds**: total/pre-tax toggle.
+- **2.0.0 adds**: "Split" toggle reveals inline split line editor, beneficiary (default = Shared), colored payment method chips.
+- **2.1.0 adds**: total/pre-tax toggle.
 
 ### 8.5 Transaction list
 - **Grouped by date** (Today, Yesterday, This Week, Earlier…). Within each group, sorted by `purchase_datetime DESC`, then `created_at DESC` as tiebreaker.
@@ -387,7 +387,7 @@ Analysis playground.
 
 ### 8.6 Expense detail
 - All fields displayed (purchase datetime, created datetime, merchant, spender, payment method, notes, split lines with categories/tags).
-- V1 adds: beneficiary per line, payment method color.
+- 2.0.0 adds: beneficiary per line, payment method color.
 - Edit button (all fields editable).
 - Delete button ("Are you sure?" dialog).
 
@@ -425,7 +425,7 @@ Analysis playground.
 6. Optionally add payment method, tags, notes
 7. Save → navigates back, data refreshes
 
-### 9.3 Add an expense (split) — V1
+### 9.3 Add an expense (split) — 2.0.0
 1. Navigate to `/expenses/new`
 2. Tap "Split" button → split line editor appears
 3. Enter purchase header fields
@@ -433,7 +433,7 @@ Analysis playground.
 5. Running sum shown; **save blocked** until sum matches total
 6. Save
 
-### 9.4 Recurring pending confirmation — V0.5+
+### 9.4 Recurring pending confirmation — 1.1.0+
 1. Pending entries generated daily by automated job
 2. Home shows pending card; nav badge shows count
 3. User taps pending item: confirm / edit+confirm / deny
@@ -444,7 +444,7 @@ Analysis playground.
 3. Home shows alert card (up to 2–3)
 4. Click alert → Insights filtered to that limit's criteria
 
-### 9.6 Share Insights — V0.5+
+### 9.6 Share Insights — 1.1.0+
 1. Configure filters
 2. Click "Share" → link copied with encoded filter state
 3. Partner opens link → same Insights view
@@ -494,7 +494,7 @@ Analysis playground.
 
 ## 11) Acceptance criteria (what "done" looks like)
 
-### MVP (V0.1) is complete when:
+### 1.0.0 (MVP) is complete when:
 - Google SSO sign in/sign up with session persistence
 - Create shared space (name, currency, timezone) + invite link join (single-use, 7-day expiry)
 - Add/edit/delete single-line expenses (all fields editable post-creation)
@@ -513,13 +513,13 @@ Analysis playground.
 - Health check endpoint
 - Rate limiting
 
-### V0.5 adds:
+### 1.1.0 adds:
 - Recurring templates generating pending instances with confirm/edit/deny
 - Pending expenses surfaced on Home + nav badge count
 - Shareable Insights links (URL-encoded filter state)
 - Merchant leaderboard Amount/Count toggle
 
-### V1 adds:
+### 2.0.0 adds:
 - Split purchases with multiple lines
 - Beneficiary field (member or Shared) on expense lines
 - Monthly wrap card (pre-computed, rule-based)
@@ -529,7 +529,7 @@ Analysis playground.
 - Insights drill-down, limit progress bars, category bar comparison
 - i18n-ready architecture (English only)
 
-### V1.5 adds:
+### 2.1.0 adds:
 - Tax convenience calculator
 - Spanish translations, locale-aware formatting
 

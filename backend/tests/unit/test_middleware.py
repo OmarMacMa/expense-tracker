@@ -39,13 +39,13 @@ async def test_rate_limit_returns_429():
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
-        # Auth endpoints have 10/min limit
+        # Auth endpoints have 5/min limit
         responses = []
-        for _ in range(15):
+        for _ in range(8):
             r = await client.get("/api/v1/auth/google")
             responses.append(r)
 
-        # At least one should be 429 (after 10 requests)
+        # At least one should be 429 (after 5 requests)
         status_codes = [r.status_code for r in responses]
         assert 429 in status_codes, f"Expected 429 in {status_codes}"
 

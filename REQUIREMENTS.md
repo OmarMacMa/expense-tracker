@@ -17,8 +17,8 @@ This document defines the **non-functional requirements, quality bars, and testi
 ### Rate limiting
 - **Strategy**: middleware-based rate limiting using a per-user sliding window counter.
 - **Default limits**:
-  - Authenticated endpoints: 100 requests per minute per user.
-  - Auth endpoints (`/auth/google`, `/auth/google/callback`): 10 requests per minute per IP.
+  - Authenticated endpoints: 30 requests per minute per user.
+  - Auth endpoints (`/auth/google`, `/auth/google/callback`): 5 requests per minute per IP.
   - Internal cron endpoints: 5 requests per minute per token.
 - **Response**: `429 Too Many Requests` with `Retry-After` header.
 - **Implementation**: in-memory counter (MVP). Can be migrated to Redis if needed at scale.
@@ -34,7 +34,7 @@ This document defines the **non-functional requirements, quality bars, and testi
 - Developers must never write raw queries against space-scoped tables. All reads and writes go through repository methods (e.g., `repo.get_by_id(expense_id)`, `repo.list(filters)`, `repo.create(data)`) that guarantee the `space_id` filter is always present.
 - Direct UUID lookups (e.g., `GET /expenses/{expense_id}`) must always include `AND space_id = :space_id` — never fetch by primary key alone, as UUIDs can be guessed, leaked via logs, or shared via URLs.
 - **Automated guardrail**: add a test that scans all SQLAlchemy query code and fails if any space-scoped table is queried without a `space_id` condition. This catches regressions during code review and CI.
-- **Defense-in-depth (optional, recommended for V1+)**: enable PostgreSQL Row-Level Security (RLS) on space-scoped tables with a policy like `USING (space_id = current_setting('app.current_space_id')::uuid)`. Set the session variable via `SET app.current_space_id = :space_id` at the start of each request. This ensures the database itself rejects cross-space queries even if application code has a bug.
+- **Defense-in-depth (optional, recommended for 2.0.0+)**: enable PostgreSQL Row-Level Security (RLS) on space-scoped tables with a policy like `USING (space_id = current_setting('app.current_space_id')::uuid)`. Set the session variable via `SET app.current_space_id = :space_id` at the start of each request. This ensures the database itself rejects cross-space queries even if application code has a bug.
 
 ### Invite links
 - Tokens must be **cryptographically random** (e.g., `secrets.token_urlsafe(32)` in Python).
@@ -77,7 +77,7 @@ This document defines the **non-functional requirements, quality bars, and testi
 - Category deletion must atomically reassign all affected expense lines to "Uncategorized".
 - `expenses.updated_at` is set to `NOW()` by the service layer on every update. No database triggers — keeps ORM behavior predictable and testable.
 
-### Recurring expense generation (V0.5+)
+### Recurring expense generation (1.1.0+)
 - **Idempotent**: the generator must check for existing pending expenses (by template ID + scheduled date) before creating new ones. Running the function twice for the same day must produce no duplicates.
 - **Backfill**: if the function was down for multiple days, it must generate all missed pending entries on the next run.
 - **Transaction safety**: all pending expense creation and `next_due_date` advancement must happen within a database transaction.
@@ -112,11 +112,11 @@ This document defines the **non-functional requirements, quality bars, and testi
 ### Concurrent user targets
 | Version | Target concurrent users |
 |---|---|
-| MVP (V0.1) | < 5 |
-| V0.5 | < 10 |
-| V1 | < 50 |
-| V1.5 | < 100 |
-| V2 | Defined based on usage |
+| 1.0.0 (MVP) | < 5 |
+| 1.1.0 | < 10 |
+| 2.0.0 | < 50 |
+| 2.1.0 | < 100 |
+| 3.0.0 | Defined based on usage |
 
 ### API request size limits
 - **Max request body size**: 1 MB (enforced by FastAPI middleware).
@@ -167,7 +167,7 @@ This document defines the **non-functional requirements, quality bars, and testi
 - Connection pooling: see ARCHITECTURE.md §8 for pool configuration.
 
 ### Health check
-- `GET /api/v1/health` — no authentication required.
+- `GET /api/2.0.0/health` — no authentication required.
 - Returns `{ "status": "ok", "db": "connected" }` when healthy.
 - Returns `{ "status": "degraded", "db": "disconnected" }` with `503` status when DB is unreachable.
 - Used by Azure App Service health probes (configure 30-second interval, 5-second timeout, 3 consecutive failures → restart).
@@ -197,7 +197,7 @@ This document defines the **non-functional requirements, quality bars, and testi
 ### Visual
 - Minimum contrast ratio: WCAG 2.1 AA (4.5:1 for normal text, 3:1 for large text).
 - Touch targets: minimum 44x44px on mobile.
-- Light mode only through V1. Dark mode planned for V2.
+- Light mode only through 2.0.0. Dark mode planned for 3.0.0.
 
 ---
 
@@ -205,8 +205,8 @@ This document defines the **non-functional requirements, quality bars, and testi
 
 ### Architecture
 - MVP ships with **English only**. Strings may be hardcoded in components during MVP for speed.
-- **V1**: externalize all user-facing strings into translation files and make the codebase i18n-ready.
-- **V1.5**: add Spanish translations and locale-aware formatting.
+- **2.0.0**: externalize all user-facing strings into translation files and make the codebase i18n-ready.
+- **2.1.0**: add Spanish translations and locale-aware formatting.
 - Use `react-i18next` for the frontend.
 - Backend API error messages should use error codes (not human-readable strings) — the frontend maps codes to localized messages.
 
@@ -232,7 +232,7 @@ This document defines the **non-functional requirements, quality bars, and testi
 
 ### Conflict handling
 - MVP does not handle concurrent edit conflicts (last write wins).
-- This is acceptable for a small-group product (2-5 members). Conflict resolution can be added in V2 if needed.
+- This is acceptable for a small-group product (2-5 members). Conflict resolution can be added in 3.0.0 if needed.
 
 ---
 
@@ -268,7 +268,7 @@ Cover API endpoints end-to-end (with test database):
 ### Frontend testing
 - **No automated frontend tests in MVP.** UI changes too rapidly during early development.
 - Manual testing covers user flows.
-- Frontend E2E tests (Playwright/Cypress) can be added once the UI stabilizes (V0.5+).
+- Frontend E2E tests (Playwright/Cypress) can be added once the UI stabilizes (1.1.0+).
 
 ### Testing principles
 - Tests must be deterministic (no flaky tests from timing, randomness, or external dependencies).
@@ -377,6 +377,6 @@ Cover API endpoints end-to-end (with test database):
 
 ### Monitoring
 - Azure App Service built-in monitoring for uptime, response times, and error rates
-- Health check endpoint (`GET /api/v1/health`) polled by Azure health probes
+- Health check endpoint (`GET /api/2.0.0/health`) polled by Azure health probes
 - Recommended Azure Monitor alerts: health check failures (3 consecutive), error rate > 5%, avg response time > 5s
-- No external monitoring services required in V1. Azure Monitor is sufficient.
+- No external monitoring services required in 2.0.0. Azure Monitor is sufficient.

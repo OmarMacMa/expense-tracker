@@ -27,7 +27,7 @@ STATE_COOKIE_MAX_AGE = 300  # 5 minutes
 
 
 @router.get("/google")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def google_login(request: Request) -> RedirectResponse:
     """Redirect to Google OAuth consent page."""
     redirect_uri = str(request.url_for("google_callback"))
@@ -47,7 +47,7 @@ async def google_login(request: Request) -> RedirectResponse:
 
 
 @router.get("/google/callback")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def google_callback(
     request: Request,
     code: str | None = None,

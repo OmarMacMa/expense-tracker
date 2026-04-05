@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Multi-tenant SaaS web app for couples/families to track shared expenses. React SPA frontend + FastAPI backend + PostgreSQL. Currently in pre-code phase (MVP / V0.1) — design docs exist but source code has not been written yet.
+Multi-tenant SaaS web app for couples/families to track shared expenses. React SPA frontend + FastAPI backend + PostgreSQL. Currently in pre-code phase (MVP / 1.0.0) — design docs exist but source code has not been written yet.
 
 Check `SCOPE.md` before building any feature to confirm it's in scope for the current version (MVP). Key docs: `PRD.md` (what/why), `ARCHITECTURE.md` (how), `REQUIREMENTS.md` (quality bars), `CONVENTIONS.md` (how to work), `SCOPE.md` (version roadmap), `design/UI_SPECS.md` (visual specs & design system).
 
@@ -97,7 +97,7 @@ Every space-scoped query **must** include `space_id` in the WHERE clause. Use th
 
 ### API design
 
-- All endpoints under `/api/v1/`, space-scoped under `/api/v1/spaces/{space_id}/...`
+- All endpoints under `/api/2.0.0/`, space-scoped under `/api/2.0.0/spaces/{space_id}/...`
 - Plural resource names, kebab-case for multi-word (`/payment-methods`)
 - Use PATCH for most updates (with `model.model_dump(exclude_unset=True)`); PUT only for full replacements (space settings, category rename)
 - Cursor-based pagination: `{ "data": [...], "next_cursor": "..." }`
