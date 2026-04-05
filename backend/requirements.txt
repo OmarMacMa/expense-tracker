@@ -10,3 +10,5 @@ httpx==0.28.1
 structlog==25.1.0
 slowapi==0.1.9
 tzdata==2025.2
+sentry-sdk[fastapi]==2.57.0
+gunicorn==23.0.0  # Linux-only; not installed on Windows dev

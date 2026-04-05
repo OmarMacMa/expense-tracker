@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
+    SENTRY_DSN: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

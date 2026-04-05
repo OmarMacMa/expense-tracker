@@ -1,9 +1,11 @@
+import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
 from app.auth.router import router as auth_router
+from app.config import settings
 from app.middleware.correlation import CorrelationIdMiddleware
 from app.middleware.logging import RequestLoggingMiddleware, setup_logging
 from app.middleware.rate_limit import limiter, rate_limit_exceeded_handler
@@ -18,6 +20,13 @@ from app.routers.spaces import router as spaces_router
 from app.routers.tags import router as tags_router
 
 setup_logging()
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=0.1,
+        environment=settings.ENVIRONMENT,
+    )
 
 app = FastAPI(title="Expense Tracker API", version="0.1.0")
 
