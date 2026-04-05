@@ -74,6 +74,12 @@ class ApiClient {
       );
       error.status = response.status;
       error.data = errorData;
+
+      if (response.status === 401) {
+        window.location.href = '/';
+        throw error;
+      }
+
       throw error;
     }
 

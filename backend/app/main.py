@@ -1,8 +1,10 @@
 import sentry_sdk
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.auth.router import router as auth_router
 from app.config import settings
@@ -28,21 +30,34 @@ if settings.SENTRY_DSN:
         environment=settings.ENVIRONMENT,
     )
 
-app = FastAPI(title="Expense Tracker API", version="0.1.0")
+app = FastAPI(
+    title="Expense Tracker API",
+    version="0.1.0",
+    docs_url="/docs" if settings.ENVIRONMENT == "development" else None,
+    redoc_url="/redoc" if settings.ENVIRONMENT == "development" else None,
+    openapi_url="/openapi.json" if settings.ENVIRONMENT == "development" else None,
+)
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Return validation errors in standard format."""
+    """Return validation errors in standard format, sanitized."""
+    sanitized_errors = [
+        {
+            "field": ".".join(str(loc) for loc in e.get("loc", [])),
+            "message": e.get("msg", ""),
+        }
+        for e in exc.errors()
+    ]
     return JSONResponse(
         status_code=422,
         content={
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
-                "details": exc.errors(),
+                "details": sanitized_errors,
             }
         },
     )
@@ -50,8 +65,16 @@ async def validation_exception_handler(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-app.add_middleware(RequestLoggingMiddleware)  # Added first → runs second (inner)
-app.add_middleware(CorrelationIdMiddleware)  # Added second → runs first (outer)
+app.add_middleware(SlowAPIMiddleware)  # Added first → runs last (innermost: after auth)
+app.add_middleware(RequestLoggingMiddleware)  # Added second → runs second (inner)
+app.add_middleware(CorrelationIdMiddleware)  # Added third → runs first (outer)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.FRONTEND_URL],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(health_router)
 app.include_router(auth_router)

@@ -13,7 +13,7 @@ from app.services.time_window import TimeWindowResolver
 
 def _escape_like(value: str) -> str:
     """Escape SQL LIKE/ILIKE special characters."""
-    return value.replace("%", r"\%").replace("_", r"\_")
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 PERIOD_LABELS = {
@@ -92,7 +92,9 @@ async def _sum_expenses_in_window(
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
     if merchant:
         stmt = stmt.where(
-            Expense.merchant_normalized.ilike(f"%{_escape_like(merchant.lower())}%")
+            Expense.merchant_normalized.ilike(
+                f"%{_escape_like(merchant.lower())}%", escape="\\"
+            )
         )
     if category_id:
         stmt = stmt.where(
@@ -262,7 +264,7 @@ async def _daily_amounts(
     if filters.get("merchant"):
         stmt = stmt.where(
             Expense.merchant_normalized.ilike(
-                f"%{_escape_like(filters['merchant'].lower())}%"
+                f"%{_escape_like(filters['merchant'].lower())}%", escape="\\"
             )
         )
     if filters.get("category_id"):
@@ -362,7 +364,9 @@ async def get_category_breakdown(
         stmt = stmt.where(Expense.spender_id == spender_id)
     if merchant:
         stmt = stmt.where(
-            Expense.merchant_normalized.ilike(f"%{_escape_like(merchant.lower())}%")
+            Expense.merchant_normalized.ilike(
+                f"%{_escape_like(merchant.lower())}%", escape="\\"
+            )
         )
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
@@ -499,7 +503,9 @@ async def get_spender_breakdown(
     )
     if merchant:
         stmt = stmt.where(
-            Expense.merchant_normalized.ilike(f"%{_escape_like(merchant.lower())}%")
+            Expense.merchant_normalized.ilike(
+                f"%{_escape_like(merchant.lower())}%", escape="\\"
+            )
         )
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)

@@ -5,7 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Category
-from app.models.expense import ExpenseLine
+from app.models.expense import Expense, ExpenseLine
 from app.schemas.category import CategoryCreate, CategoryUpdate
 
 
@@ -119,7 +119,12 @@ async def delete_category(
     # Reassign expense lines then delete — single transaction
     await db.execute(
         update(ExpenseLine)
-        .where(ExpenseLine.category_id == cat_id)
+        .where(
+            ExpenseLine.category_id == cat_id,
+            ExpenseLine.expense_id.in_(
+                select(Expense.id).where(Expense.space_id == space_id)
+            ),
+        )
         .values(category_id=uncategorized.id)
     )
     await db.delete(category)

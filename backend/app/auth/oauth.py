@@ -40,7 +40,12 @@ async def exchange_code_for_user(code: str, redirect_uri: str) -> dict:
                 "grant_type": "authorization_code",
             },
         )
-        token_response.raise_for_status()
+        try:
+            token_response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise ValueError(
+                f"Failed to exchange OAuth code: {e.response.status_code}"
+            ) from e
         tokens = token_response.json()
 
         # Fetch user info
@@ -48,8 +53,16 @@ async def exchange_code_for_user(code: str, redirect_uri: str) -> dict:
             GOOGLE_USERINFO_URL,
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
         )
-        userinfo_response.raise_for_status()
+        try:
+            userinfo_response.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            raise ValueError(
+                f"Failed to fetch user info: {e.response.status_code}"
+            ) from e
         userinfo = userinfo_response.json()
+
+    if not userinfo.get("email_verified", False):
+        raise ValueError("Google email is not verified")
 
     return {
         "google_id": userinfo["sub"],

@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -60,7 +60,15 @@ async def update_limit_endpoint(
     for lim in limits:
         if lim["id"] == limit_id:
             return LimitResponse(**lim)
-    raise  # should not reach here
+    raise HTTPException(
+        status_code=404,
+        detail={
+            "error": {
+                "code": "NOT_FOUND",
+                "message": "Limit not found after creation",
+            }
+        },
+    )
 
 
 @router.delete("/limits/{limit_id}", status_code=204)

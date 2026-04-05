@@ -2,7 +2,6 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app.auth.jwt import COOKIE_NAME, decode_access_token
 
@@ -14,7 +13,8 @@ def _get_user_or_ip(request) -> str:
         payload = decode_access_token(token)
         if payload and "sub" in payload:
             return payload["sub"]
-    return get_remote_address(request)
+    # Use direct client IP, don't trust X-Forwarded-For
+    return request.client.host if request.client else "unknown"
 
 
 def rate_limit_exceeded_handler(

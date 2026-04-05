@@ -27,7 +27,12 @@ async def suggest_merchants(
 
     # Only apply prefix filter if query is non-empty
     if normalized_query:
-        stmt = stmt.where(Merchant.normalized_name.startswith(normalized_query))
+        escaped = (
+            normalized_query.replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
+        stmt = stmt.where(Merchant.normalized_name.like(f"{escaped}%", escape="\\"))
 
     result = await db.execute(stmt)
     return result.scalars().all()

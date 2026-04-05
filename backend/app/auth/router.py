@@ -77,7 +77,13 @@ async def google_callback(
         )
 
     redirect_uri = str(request.url_for("google_callback"))
-    google_user = await exchange_code_for_user(code, redirect_uri)
+    try:
+        google_user = await exchange_code_for_user(code, redirect_uri)
+    except ValueError:
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/?error=oauth_exchange_failed",
+            status_code=302,
+        )
 
     # Upsert user by google_id
     stmt = select(User).where(User.google_id == google_user["google_id"])

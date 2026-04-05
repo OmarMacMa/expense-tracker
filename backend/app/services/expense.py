@@ -25,7 +25,7 @@ from app.services.tag import ensure_tags
 
 def _escape_like(value: str) -> str:
     """Escape SQL LIKE/ILIKE special characters."""
-    return value.replace("%", r"\%").replace("_", r"\_")
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 async def create_expense(
@@ -220,6 +220,11 @@ async def list_expenses(
     """
     stmt = (
         select(Expense)
+        .options(
+            selectinload(Expense.spender),
+            selectinload(Expense.lines).selectinload(ExpenseLine.tags),
+            selectinload(Expense.lines).selectinload(ExpenseLine.category),
+        )
         .where(Expense.space_id == space_id)
         .order_by(Expense.purchase_datetime.desc(), Expense.id.desc())
         .limit(limit + 1)
@@ -260,7 +265,9 @@ async def list_expenses(
 
     if merchant:
         stmt = stmt.where(
-            Expense.merchant_normalized.ilike(f"%{_escape_like(merchant.lower())}%")
+            Expense.merchant_normalized.ilike(
+                f"%{_escape_like(merchant.lower())}%", escape="\\"
+            )
         )
 
     if category_id:
@@ -295,49 +302,35 @@ async def list_expenses(
                 ExpenseLine.id == expense_line_tags.c.expense_line_id,
             )
             .join(Tag, expense_line_tags.c.tag_id == Tag.id)
-            .where(Tag.name.ilike(search_term))
+            .where(Tag.name.ilike(search_term, escape="\\"))
         )
         stmt = stmt.where(
             or_(
-                Expense.merchant_normalized.ilike(search_term),
-                func.lower(Expense.notes).ilike(search_term),
+                Expense.merchant_normalized.ilike(search_term, escape="\\"),
+                func.lower(Expense.notes).ilike(search_term, escape="\\"),
                 Expense.id.in_(tag_subquery),
             )
         )
 
-    # Period/month filters (Phase 7 TimeWindowResolver will handle properly)
-    if month:
-        try:
-            year, m = month.split("-")
-            start = datetime(int(year), int(m), 1, tzinfo=UTC)
-            if int(m) == 12:
-                end = datetime(int(year) + 1, 1, 1, tzinfo=UTC)
-            else:
-                end = datetime(int(year), int(m) + 1, 1, tzinfo=UTC)
-            stmt = stmt.where(
-                Expense.purchase_datetime >= start,
-                Expense.purchase_datetime < end,
-            )
-        except (ValueError, IndexError):
-            pass
+    # Period/month filters via TimeWindowResolver
+    if period or month:
+        from app.models import Space
+        from app.services.insight import _resolve_ref_date, _resolve_timeframe
+        from app.services.time_window import TimeWindowResolver
 
-    if period:
-        now = datetime.now(UTC)
-        if period == "this_month":
-            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-            stmt = stmt.where(Expense.purchase_datetime >= start)
-        elif period == "last_month":
-            first_of_this = now.replace(
-                day=1, hour=0, minute=0, second=0, microsecond=0
-            )
-            if now.month == 1:
-                first_of_last = first_of_this.replace(year=now.year - 1, month=12)
-            else:
-                first_of_last = first_of_this.replace(month=now.month - 1)
-            stmt = stmt.where(
-                Expense.purchase_datetime >= first_of_last,
-                Expense.purchase_datetime < first_of_this,
-            )
+        space_stmt = select(Space).where(Space.id == space_id)
+        space_result = await db.execute(space_stmt)
+        space = space_result.scalar_one()
+
+        resolver = TimeWindowResolver(space.timezone)
+        timeframe = _resolve_timeframe(period)
+        ref_date = _resolve_ref_date(period, month, resolver)
+        start_utc, end_utc = resolver.get_current_window(timeframe, ref_date)
+
+        stmt = stmt.where(
+            Expense.purchase_datetime >= start_utc,
+            Expense.purchase_datetime <= end_utc,
+        )
 
     result = await db.execute(stmt)
     expenses = result.scalars().all()
@@ -348,8 +341,36 @@ async def list_expenses(
 
     data = []
     for exp in expenses:
-        response = await build_expense_response(db, exp)
-        data.append(response)
+        data.append(
+            {
+                "id": exp.id,
+                "space_id": exp.space_id,
+                "merchant": exp.merchant,
+                "purchase_datetime": exp.purchase_datetime,
+                "total_amount": exp.total_amount,
+                "spender": {
+                    "id": exp.spender.id,
+                    "display_name": exp.spender.display_name,
+                    "email": exp.spender.email,
+                },
+                "payment_method_id": exp.payment_method_id,
+                "notes": exp.notes,
+                "status": exp.status,
+                "lines": [
+                    {
+                        "id": line.id,
+                        "amount": line.amount,
+                        "category_id": line.category_id,
+                        "category_name": line.category.name if line.category else None,
+                        "line_order": line.line_order,
+                        "tags": [{"id": t.id, "name": t.name} for t in line.tags],
+                    }
+                    for line in exp.lines
+                ],
+                "created_at": exp.created_at,
+                "updated_at": exp.updated_at,
+            }
+        )
 
     next_cursor = None
     if has_more and expenses:

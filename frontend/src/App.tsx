@@ -21,6 +21,7 @@ import SettingsMembers from '@/routes/settings/members';
 import SettingsInvite from '@/routes/settings/invite';
 import SettingsTaxes from '@/routes/settings/taxes';
 import JoinSpace from '@/routes/join-space';
+import NotFound from '@/routes/not-found';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -185,6 +186,9 @@ function App() {
               </AuthGuard>
             }
           />
+
+          {/* Catch-all 404 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
