@@ -606,11 +606,11 @@ Scheduled jobs run as internal FastAPI endpoints triggered by GitHub Actions on 
 ### Estimated monthly cost (Azure — all-in-one cloud)
 | Service | Tier | Est. cost |
 |---|---|---|
-| Static Web Apps (Frontend) | Free | $0 |
+| Static Web Apps (Frontend) | Standard | ~$9/mo |
 | App Service (API) | Linux B1 | ~$13/mo |
 | PostgreSQL Flexible | Burstable B1ms | ~$15-25/mo |
 | GitHub Actions (Cron) | Free tier | $0 |
-| **Total** | | **~$28-38/mo** |
+| **Total** | | **~$37-47/mo** |
 
 ### Environment strategy
 - **Production**: Azure Static Web Apps (frontend) + Azure App Service (backend + scheduled jobs) + Azure PostgreSQL

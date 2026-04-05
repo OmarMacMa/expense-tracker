@@ -14,7 +14,7 @@ set -e
 # Configuration — customize these values
 # ============================================================
 RESOURCE_GROUP="et-rg-omarmacma"
-LOCATION="southcentralus"            # Texas — midpoint between Seattle and Guadalajara
+LOCATION="centralus"            # Texas — midpoint between Seattle and Guadalajara
 DB_SERVER_NAME="et-db-omarmacma"     # Globally unique
 DB_NAME="expense_tracker"
 DB_ADMIN_USER="etadmin"
@@ -93,14 +93,14 @@ az webapp config set \
   --startup-file "gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app --chdir backend"
 
 # ============================================================
-# 4. Static Web Apps (Free tier, $0)
+# 4. Static Web Apps (Standard tier, ~$9/mo — needed for linkedBackend)
 # ============================================================
 echo "🌐 Creating Static Web App: $FRONTEND_APP_NAME"
 az staticwebapp create \
   --resource-group "$RESOURCE_GROUP" \
   --name "$FRONTEND_APP_NAME" \
   --location "$LOCATION" \
-  --sku Free
+  --sku Standard
 
 # ============================================================
 # Output connection info
