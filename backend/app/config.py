@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
     SENTRY_DSN: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -75,8 +75,15 @@ class ApiClient {
       error.status = response.status;
       error.data = errorData;
 
+      // Redirect to landing on 401, but skip for /auth/me (expected when
+      // unauthenticated) and when already on the landing page to avoid
+      // infinite reload loops.
       if (response.status === 401) {
-        window.location.href = '/';
+        const isAuthCheck = url.includes('/auth/me');
+        const isOnLanding = window.location.pathname === '/';
+        if (!isAuthCheck && !isOnLanding) {
+          window.location.href = '/';
+        }
         throw error;
       }
 

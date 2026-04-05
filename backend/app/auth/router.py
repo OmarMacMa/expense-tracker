@@ -26,11 +26,22 @@ STATE_COOKIE_NAME = "oauth_state"
 STATE_COOKIE_MAX_AGE = 300  # 5 minutes
 
 
+def _oauth_redirect_uri(request: Request) -> str:
+    """Return the OAuth callback URI.
+
+    Uses GOOGLE_REDIRECT_URI env var when set (production behind proxy),
+    otherwise derives from the current request (local development).
+    """
+    if settings.GOOGLE_REDIRECT_URI:
+        return settings.GOOGLE_REDIRECT_URI
+    return str(request.url_for("google_callback"))
+
+
 @router.get("/google")
 @limiter.limit("5/minute")
 async def google_login(request: Request) -> RedirectResponse:
     """Redirect to Google OAuth consent page."""
-    redirect_uri = str(request.url_for("google_callback"))
+    redirect_uri = _oauth_redirect_uri(request)
     state = secrets.token_urlsafe(32)
     auth_url = get_google_auth_url(redirect_uri, state)
     response = RedirectResponse(url=auth_url)
@@ -76,7 +87,7 @@ async def google_callback(
             status_code=302,
         )
 
-    redirect_uri = str(request.url_for("google_callback"))
+    redirect_uri = _oauth_redirect_uri(request)
     try:
         google_user = await exchange_code_for_user(code, redirect_uri)
     except ValueError:
@@ -147,7 +158,9 @@ async def logout() -> JSONResponse:
 
 
 @router.get("/me")
+@limiter.limit("60/minute")
 async def get_me(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
