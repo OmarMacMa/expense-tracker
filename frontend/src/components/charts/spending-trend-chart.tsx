@@ -28,7 +28,7 @@ export function SpendingTrendChart({
     return {
       day: point.day,
       current: parseFloat(point.cumulative),
-      average: avgPoint ? parseFloat(avgPoint.cumulative) : null,
+      ...(avgPoint ? { average: parseFloat(avgPoint.cumulative) } : {}),
     };
   });
 
