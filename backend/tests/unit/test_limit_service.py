@@ -18,6 +18,7 @@ from app.services.limit import (
     list_limits_with_progress,
     update_limit,
 )
+from app.services.time_window import TimeWindowResolver
 
 
 async def _get_uncategorized_id(db, space_id):
@@ -26,6 +27,13 @@ async def _get_uncategorized_id(db, space_id):
     )
     result = await db.execute(stmt)
     return result.scalar_one().id
+
+
+def _mid_window_timestamp(timeframe: str = "monthly") -> datetime:
+    """Return a UTC timestamp safely in the middle of the current time window."""
+    resolver = TimeWindowResolver("UTC")
+    start_utc, end_utc = resolver.get_current_window(timeframe)
+    return start_utc + (end_utc - start_utc) / 2
 
 
 @pytest.mark.asyncio
@@ -234,14 +242,18 @@ async def test_limit_with_category_filter_excludes_other_categories(
     await create_limit(db_session, test_space.id, limit_data)
 
     # Add an expense in the Dining category (should NOT count)
-    dining_expense = ExpenseCreate(
-        merchant="Restaurant",
-        purchase_datetime=datetime.now(UTC) - timedelta(hours=1),
-        amount=Decimal("80.00"),
-        category_id=dining.id,
-        spender_id=test_user.id,
+    await create_expense(
+        db_session,
+        test_space.id,
+        ExpenseCreate(
+            merchant="Restaurant",
+            purchase_datetime=_mid_window_timestamp(),
+            amount=Decimal("80.00"),
+            category_id=dining.id,
+            spender_id=test_user.id,
+        ),
+        test_user.id,
     )
-    await create_expense(db_session, test_space.id, dining_expense, test_user.id)
 
     limits = await list_limits_with_progress(db_session, test_space.id)
     grocery_limit = [lim for lim in limits if lim["name"] == "Grocery Budget"][0]
@@ -274,13 +286,15 @@ async def test_limit_with_category_filter_includes_only_matching_expenses(
     )
     await create_limit(db_session, test_space.id, limit_data)
 
+    mid_window = _mid_window_timestamp()
+
     # Expense in Groceries (should count)
     await create_expense(
         db_session,
         test_space.id,
         ExpenseCreate(
             merchant="Supermarket",
-            purchase_datetime=datetime.now(UTC) - timedelta(hours=2),
+            purchase_datetime=mid_window,
             amount=Decimal("50.00"),
             category_id=groceries.id,
             spender_id=test_user.id,
@@ -294,7 +308,7 @@ async def test_limit_with_category_filter_includes_only_matching_expenses(
         test_space.id,
         ExpenseCreate(
             merchant="Restaurant",
-            purchase_datetime=datetime.now(UTC) - timedelta(hours=1),
+            purchase_datetime=mid_window,
             amount=Decimal("70.00"),
             category_id=dining.id,
             spender_id=test_user.id,
@@ -309,3 +323,99 @@ async def test_limit_with_category_filter_includes_only_matching_expenses(
     assert grocery_limit["spent"] == Decimal("50.00")
     assert grocery_limit["progress"] == Decimal("0.2500")
     assert grocery_limit["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_update_limit_filters(db_session, test_user, test_space):
+    """Updating filters replaces old filters with new ones."""
+    groceries = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Groceries")
+    )
+    dining = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Dining")
+    )
+
+    # Create limit scoped to Groceries
+    limit_data = LimitCreate(
+        name="Food Budget",
+        timeframe="monthly",
+        threshold_amount=Decimal("300"),
+        filters=[
+            {"filter_type": "category", "filter_value": str(groceries.id)},
+        ],
+    )
+    limit = await create_limit(db_session, test_space.id, limit_data)
+
+    mid_window = _mid_window_timestamp()
+
+    # Add expense in Dining
+    await create_expense(
+        db_session,
+        test_space.id,
+        ExpenseCreate(
+            merchant="Restaurant",
+            purchase_datetime=mid_window,
+            amount=Decimal("90.00"),
+            category_id=dining.id,
+            spender_id=test_user.id,
+        ),
+        test_user.id,
+    )
+
+    # Before update: Dining expense should NOT count (filter is Groceries)
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    food_limit = [lim for lim in limits if lim["name"] == "Food Budget"][0]
+    assert food_limit["spent"] == Decimal("0")
+
+    # Update filter from Groceries → Dining
+    await update_limit(
+        db_session,
+        test_space.id,
+        limit.id,
+        LimitUpdate(
+            filters=[
+                {"filter_type": "category", "filter_value": str(dining.id)},
+            ]
+        ),
+    )
+
+    # After update: Dining expense SHOULD count now
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    food_limit = [lim for lim in limits if lim["name"] == "Food Budget"][0]
+    assert food_limit["spent"] == Decimal("90.00")
+    assert food_limit["progress"] == Decimal("0.3000")
+
+
+@pytest.mark.asyncio
+async def test_update_limit_clear_filters(db_session, test_user, test_space):
+    """Sending an empty filters list removes all category filters."""
+    groceries = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Groceries")
+    )
+
+    limit_data = LimitCreate(
+        name="Scoped Limit",
+        timeframe="monthly",
+        threshold_amount=Decimal("500"),
+        filters=[
+            {"filter_type": "category", "filter_value": str(groceries.id)},
+        ],
+    )
+    limit = await create_limit(db_session, test_space.id, limit_data)
+
+    # Verify filter was created
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    assert len(limits[0]["filters"]) == 1
+
+    # Clear filters
+    await update_limit(
+        db_session,
+        test_space.id,
+        limit.id,
+        LimitUpdate(filters=[]),
+    )
+
+    # After update: no filters remain
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    scoped_limit = [lim for lim in limits if lim["name"] == "Scoped Limit"][0]
+    assert len(scoped_limit["filters"]) == 0

@@ -107,6 +107,21 @@ async def update_limit(
         limit.threshold_amount = update_data["threshold_amount"]
     if "warning_pct" in update_data:
         limit.warning_pct = update_data["warning_pct"]
+    if "filters" in update_data:
+        # Replace all existing filters with new ones
+        stmt = select(LimitFilter).where(LimitFilter.limit_id == limit.id)
+        result = await db.execute(stmt)
+        for old_filter in result.scalars().all():
+            await db.delete(old_filter)
+        await db.flush()
+
+        for f in data.filters:
+            lf = LimitFilter(
+                limit_id=limit.id,
+                filter_type=f.filter_type,
+                filter_value=f.filter_value,
+            )
+            db.add(lf)
 
     await db.commit()
     await db.refresh(limit)
