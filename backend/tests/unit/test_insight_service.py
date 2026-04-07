@@ -8,6 +8,8 @@ from app.models import Category
 from app.schemas.expense import ExpenseCreate
 from app.services.expense import create_expense
 from app.services.insight import (
+    _average_series,
+    _to_cumulative,
     get_category_breakdown,
     get_merchant_leaderboard,
     get_spender_breakdown,
@@ -161,3 +163,57 @@ async def test_spending_trend_returns_series(db_session, test_user, test_space):
     assert isinstance(result["current_series"], list)
     # Should have at least one point
     assert len(result["current_series"]) >= 1
+
+
+def test_to_cumulative_fills_gaps():
+    """Cumulative series must include non-spending days with carried-forward values."""
+    daily = {0: Decimal("100"), 2: Decimal("50"), 5: Decimal("30")}
+    result = _to_cumulative(daily)
+
+    # Must have entries for every day 0..5
+    assert list(result.keys()) == [0, 1, 2, 3, 4, 5]
+
+    # Day 0: 100, Day 1: still 100 (no spend), Day 2: 150, etc.
+    assert result[0] == Decimal("100")
+    assert result[1] == Decimal("100")
+    assert result[2] == Decimal("150")
+    assert result[3] == Decimal("150")
+    assert result[4] == Decimal("150")
+    assert result[5] == Decimal("180")
+
+
+def test_to_cumulative_empty():
+    """Empty input returns empty output."""
+    assert _to_cumulative({}) == {}
+
+
+def test_to_cumulative_single_day():
+    """Single day input returns single entry."""
+    result = _to_cumulative({3: Decimal("42")})
+    assert list(result.keys()) == [0, 1, 2, 3]
+    assert result[0] == Decimal("0")
+    assert result[3] == Decimal("42")
+
+
+def test_average_series_with_filled_cumulative():
+    """Average series uses dense cumulative data from all periods."""
+    series1 = _to_cumulative({0: Decimal("100"), 2: Decimal("50")})
+    # series1 → {0: 100, 1: 100, 2: 150}
+    series2 = _to_cumulative({0: Decimal("80"), 1: Decimal("40")})
+    # series2 → {0: 80, 1: 120}
+    series3 = _to_cumulative({0: Decimal("60"), 2: Decimal("90")})
+    # series3 → {0: 60, 1: 60, 2: 150}
+
+    avg = _average_series([series1, series2, series3])
+
+    # All series have days 0 and 1; only series1 and series3 have day 2
+    assert 0 in avg
+    assert 1 in avg
+    assert 2 in avg
+
+    # Day 0: (100 + 80 + 60) / 3 = 80
+    assert avg[0] == Decimal("80")
+    # Day 1: (100 + 120 + 60) / 3
+    assert avg[1] == (Decimal("100") + Decimal("120") + Decimal("60")) / 3
+    # Day 2: (150 + 150) / 2 = 150  (series2 ends at day 1)
+    assert avg[2] == Decimal("150")

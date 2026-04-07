@@ -301,13 +301,18 @@ async def _daily_amounts(
 
 
 def _to_cumulative(daily: dict[int, Decimal]) -> dict[int, Decimal]:
-    """Convert daily amounts to cumulative series."""
+    """Convert daily amounts to cumulative series.
+
+    Fills every day from 0 to max_day so non-spending days carry forward
+    the previous cumulative value instead of being omitted.
+    """
     if not daily:
         return {}
     cumulative = {}
     running = Decimal("0")
-    for day in sorted(daily.keys()):
-        running += daily[day]
+    max_day = max(daily.keys())
+    for day in range(max_day + 1):
+        running += daily.get(day, Decimal("0"))
         cumulative[day] = running
     return cumulative
 
