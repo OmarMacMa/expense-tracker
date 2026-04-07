@@ -45,7 +45,7 @@ function buildInitialForm(limit?: LimitProgress | null): LimitFormData {
     warning_pct: String(Math.round(parseFloat(limit.warning_pct) * 100)),
     category_ids: limit.filters
       .filter((f) => f.filter_type === 'category')
-      .map((f) => f.id),
+      .map((f) => f.filter_value),
   };
 }
 
@@ -107,7 +107,10 @@ function LimitFormInner({
       warning_pct: parseFloat(form.warning_pct) / 100,
     };
     if (form.category_ids.length > 0) {
-      payload.category_ids = form.category_ids;
+      payload.filters = form.category_ids.map((id) => ({
+        filter_type: 'category',
+        filter_value: id,
+      }));
     }
     onSubmit(payload);
   }

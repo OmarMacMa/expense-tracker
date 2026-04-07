@@ -202,3 +202,114 @@ def test_limit_update_accepts_decimal_warning_pct():
     """LimitUpdate should accept 0-1 range."""
     data = LimitUpdate(warning_pct=Decimal("0.75"))
     assert data.warning_pct == Decimal("0.75")
+
+
+# ── Category-filter tests ──
+
+
+@pytest.mark.asyncio
+async def test_limit_category_filter_only_counts_matching(
+    db_session, test_user, test_space
+):
+    """A limit with a category filter must only count expenses in that category."""
+    from app.schemas.category import CategoryCreate
+    from app.services.category import create_category
+
+    # Create two categories
+    groceries = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Groceries")
+    )
+    dining = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Dining")
+    )
+
+    # Limit scoped to Groceries only
+    limit_data = LimitCreate(
+        name="Grocery Budget",
+        timeframe="monthly",
+        threshold_amount=Decimal("200"),
+        filters=[
+            {"filter_type": "category", "filter_value": str(groceries.id)},
+        ],
+    )
+    await create_limit(db_session, test_space.id, limit_data)
+
+    # Add an expense in the Dining category (should NOT count)
+    dining_expense = ExpenseCreate(
+        merchant="Restaurant",
+        purchase_datetime=datetime.now(UTC) - timedelta(hours=1),
+        amount=Decimal("80.00"),
+        category_id=dining.id,
+        spender_id=test_user.id,
+    )
+    await create_expense(db_session, test_space.id, dining_expense, test_user.id)
+
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    grocery_limit = [lim for lim in limits if lim["name"] == "Grocery Budget"][0]
+
+    # Dining expense should be excluded → spent must be 0
+    assert grocery_limit["spent"] == Decimal("0")
+    assert grocery_limit["progress"] == Decimal("0")
+    assert grocery_limit["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_limit_category_filter_counts_only_matching_category(
+    db_session, test_user, test_space
+):
+    """Expenses in the matching category are counted; others are ignored."""
+    from app.schemas.category import CategoryCreate
+    from app.services.category import create_category
+
+    groceries = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Groceries")
+    )
+    dining = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Dining")
+    )
+
+    limit_data = LimitCreate(
+        name="Grocery Budget",
+        timeframe="monthly",
+        threshold_amount=Decimal("200"),
+        filters=[
+            {"filter_type": "category", "filter_value": str(groceries.id)},
+        ],
+    )
+    await create_limit(db_session, test_space.id, limit_data)
+
+    # Expense in Groceries (should count)
+    await create_expense(
+        db_session,
+        test_space.id,
+        ExpenseCreate(
+            merchant="Supermarket",
+            purchase_datetime=datetime.now(UTC) - timedelta(hours=2),
+            amount=Decimal("50.00"),
+            category_id=groceries.id,
+            spender_id=test_user.id,
+        ),
+        test_user.id,
+    )
+
+    # Expense in Dining (should NOT count)
+    await create_expense(
+        db_session,
+        test_space.id,
+        ExpenseCreate(
+            merchant="Restaurant",
+            purchase_datetime=datetime.now(UTC) - timedelta(hours=1),
+            amount=Decimal("70.00"),
+            category_id=dining.id,
+            spender_id=test_user.id,
+        ),
+        test_user.id,
+    )
+
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    grocery_limit = [lim for lim in limits if lim["name"] == "Grocery Budget"][0]
+
+    # Only the $50 grocery expense should count
+    assert grocery_limit["spent"] == Decimal("50.00")
+    assert grocery_limit["progress"] == Decimal("0.2500")
+    assert grocery_limit["status"] == "ok"
