@@ -42,7 +42,7 @@ function buildInitialForm(limit?: LimitProgress | null): LimitFormData {
     name: limit.name,
     timeframe: limit.timeframe,
     threshold_amount: limit.threshold_amount,
-    warning_pct: limit.warning_pct,
+    warning_pct: String(Math.round(parseFloat(limit.warning_pct) * 100)),
     category_ids: limit.filters
       .filter((f) => f.filter_type === 'category')
       .map((f) => f.id),
@@ -104,7 +104,7 @@ function LimitFormInner({
       name: form.name.trim(),
       timeframe: form.timeframe,
       threshold_amount: parseFloat(form.threshold_amount),
-      warning_pct: parseFloat(form.warning_pct),
+      warning_pct: parseFloat(form.warning_pct) / 100,
     };
     if (form.category_ids.length > 0) {
       payload.category_ids = form.category_ids;
