@@ -1,6 +1,13 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, CalendarIcon, Clock, X, ChevronDown } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarIcon,
+  Clock,
+  X,
+  ChevronDown,
+  Plus,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -164,16 +171,6 @@ export default function AddExpense() {
     setCategoryOpen(false);
   }, []);
 
-  const handleTagInput = useCallback((value: string) => {
-    setTagInput(value);
-    setHighlightedTag(-1);
-    if (value.startsWith('#') && value.length > 1) {
-      setTagDropdownOpen(true);
-    } else if (value.length === 0) {
-      setTagDropdownOpen(false);
-    }
-  }, []);
-
   const handleAddTag = useCallback(
     (tag: { id: string; name: string }) => {
       if (!selectedTags.find((t) => t.id === tag.id)) {
@@ -189,6 +186,46 @@ export default function AddExpense() {
   const handleRemoveTag = useCallback((tagId: string) => {
     setSelectedTags((prev) => prev.filter((t) => t.id !== tagId));
   }, []);
+
+  const commitTagFromInput = useCallback(
+    (input: string) => {
+      const normalizedName = input.replace(/^#/, '').toLowerCase().trim();
+      if (!normalizedName) return;
+
+      const existingTag = tags?.find((t) => t.name === normalizedName);
+      if (existingTag) {
+        handleAddTag(existingTag);
+      } else {
+        handleAddTag({
+          id: `new-${normalizedName}`,
+          name: normalizedName,
+        });
+      }
+    },
+    [tags, handleAddTag],
+  );
+
+  const handleTagInput = useCallback(
+    (value: string) => {
+      // Treat comma as a tag separator (mobile-friendly)
+      if (value.endsWith(',')) {
+        const stripped = value.slice(0, -1);
+        if (stripped.trim()) {
+          commitTagFromInput(stripped);
+        }
+        return;
+      }
+
+      setTagInput(value);
+      setHighlightedTag(-1);
+      if (value.startsWith('#') && value.length > 1) {
+        setTagDropdownOpen(true);
+      } else if (value.length === 0) {
+        setTagDropdownOpen(false);
+      }
+    },
+    [commitTagFromInput],
+  );
 
   const handleTagKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -224,19 +261,7 @@ export default function AddExpense() {
 
       if (e.key === 'Enter' && tagInput.trim()) {
         e.preventDefault();
-        const normalizedName = tagInput.replace(/^#/, '').toLowerCase().trim();
-        if (!normalizedName) return;
-
-        const existingTag = tags?.find((t) => t.name === normalizedName);
-        if (existingTag) {
-          handleAddTag(existingTag);
-        } else {
-          // Add as a new tag (temporary id)
-          handleAddTag({
-            id: `new-${normalizedName}`,
-            name: normalizedName,
-          });
-        }
+        commitTagFromInput(tagInput);
       }
       if (e.key === 'Backspace' && tagInput === '' && selectedTags.length > 0) {
         setSelectedTags((prev) => prev.slice(0, -1));
@@ -246,6 +271,7 @@ export default function AddExpense() {
       tagInput,
       tags,
       selectedTags,
+      commitTagFromInput,
       handleAddTag,
       tagDropdownOpen,
       highlightedTag,
@@ -672,12 +698,32 @@ export default function AddExpense() {
                     setTagDropdownOpen(true);
                   }
                 }}
-                onBlur={() => setTimeout(() => setTagDropdownOpen(false), 200)}
+                onBlur={() =>
+                  setTimeout(() => {
+                    setTagDropdownOpen(false);
+                    if (tagInput.trim()) {
+                      commitTagFromInput(tagInput);
+                    }
+                  }, 200)
+                }
                 placeholder={
-                  selectedTags.length === 0 ? 'Type # to add tags...' : ''
+                  selectedTags.length === 0
+                    ? 'Type # to add tags (comma to add)...'
+                    : ''
                 }
                 className="min-w-[100px] flex-1 bg-transparent text-[0.82rem] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
               />
+              {tagInput.replace(/^#/, '').trim() && (
+                <button
+                  type="button"
+                  aria-label="Add tag"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => commitTagFromInput(tagInput)}
+                  className="ml-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  <Plus className="size-3.5" />
+                </button>
+              )}
             </div>
             {tagDropdownOpen && filteredTags && filteredTags.length > 0 && (
               <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-xl border bg-popover p-1 shadow-md">
