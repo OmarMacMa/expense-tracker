@@ -3,6 +3,7 @@ from decimal import Decimal
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.models import Category, Limit
@@ -138,3 +139,66 @@ async def test_limit_exceeded_status(db_session, test_user, test_space):
     limits = await list_limits_with_progress(db_session, test_space.id)
     assert limits[0]["status"] == "exceeded"
     assert limits[0]["progress"] > Decimal("1")
+
+
+# ── Schema-level validation tests ──
+
+
+def test_limit_create_rejects_warning_pct_over_1():
+    """warning_pct is a 0-1 decimal fraction; values > 1 are invalid."""
+    with pytest.raises(ValidationError):
+        LimitCreate(
+            name="Bad",
+            timeframe="weekly",
+            threshold_amount=Decimal("100"),
+            warning_pct=Decimal("1.01"),
+        )
+
+
+def test_limit_create_rejects_negative_warning_pct():
+    """Negative percentages are invalid."""
+    with pytest.raises(ValidationError):
+        LimitCreate(
+            name="Bad",
+            timeframe="weekly",
+            threshold_amount=Decimal("100"),
+            warning_pct=Decimal("-0.01"),
+        )
+
+
+def test_limit_create_accepts_decimal_warning_pct():
+    """Frontend must send warning_pct as a 0-1 decimal (e.g. 0.60 for 60%)."""
+    data = LimitCreate(
+        name="Weekly Budget",
+        timeframe="weekly",
+        threshold_amount=Decimal("200"),
+        warning_pct=Decimal("0.60"),
+    )
+    assert data.warning_pct == Decimal("0.60")
+
+
+def test_limit_create_accepts_boundary_1():
+    """warning_pct=1 (100% threshold) is valid."""
+    data = LimitCreate(
+        name="Strict",
+        timeframe="monthly",
+        threshold_amount=Decimal("500"),
+        warning_pct=Decimal("1"),
+    )
+    assert data.warning_pct == Decimal("1")
+
+
+def test_limit_create_default_warning_pct():
+    """Default warning_pct should be 0.6 (i.e. 60%)."""
+    data = LimitCreate(
+        name="Default",
+        timeframe="monthly",
+        threshold_amount=Decimal("300"),
+    )
+    assert data.warning_pct == Decimal("0.6000")
+
+
+def test_limit_update_accepts_decimal_warning_pct():
+    """LimitUpdate should accept 0-1 range."""
+    data = LimitUpdate(warning_pct=Decimal("0.75"))
+    assert data.warning_pct == Decimal("0.75")
