@@ -7,8 +7,10 @@ from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.models import Category, Limit
+from app.schemas.category import CategoryCreate
 from app.schemas.expense import ExpenseCreate
 from app.schemas.limit import LimitCreate, LimitUpdate
+from app.services.category import create_category
 from app.services.expense import create_expense
 from app.services.limit import (
     create_limit,
@@ -208,13 +210,10 @@ def test_limit_update_accepts_decimal_warning_pct():
 
 
 @pytest.mark.asyncio
-async def test_limit_category_filter_only_counts_matching(
+async def test_limit_with_category_filter_excludes_other_categories(
     db_session, test_user, test_space
 ):
     """A limit with a category filter must only count expenses in that category."""
-    from app.schemas.category import CategoryCreate
-    from app.services.category import create_category
-
     # Create two categories
     groceries = await create_category(
         db_session, test_space.id, CategoryCreate(name="Groceries")
@@ -254,13 +253,10 @@ async def test_limit_category_filter_only_counts_matching(
 
 
 @pytest.mark.asyncio
-async def test_limit_category_filter_counts_only_matching_category(
+async def test_limit_with_category_filter_includes_only_matching_expenses(
     db_session, test_user, test_space
 ):
     """Expenses in the matching category are counted; others are ignored."""
-    from app.schemas.category import CategoryCreate
-    from app.services.category import create_category
-
     groceries = await create_category(
         db_session, test_space.id, CategoryCreate(name="Groceries")
     )
