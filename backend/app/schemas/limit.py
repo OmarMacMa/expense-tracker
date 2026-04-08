@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class LimitFilterCreate(BaseModel):
@@ -19,6 +19,13 @@ class LimitCreate(BaseModel):
     )
     filters: list[LimitFilterCreate] = Field(default_factory=list)
 
+    @field_validator("warning_pct")
+    @classmethod
+    def normalize_warning_pct(cls, v: Decimal) -> Decimal:
+        """Round to 2 decimal places so UI round-trip
+        (0-100 int ↔ 0-1 decimal) is lossless."""
+        return v.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
 
 class LimitUpdate(BaseModel):
     """PATCH — partial update."""
@@ -28,6 +35,13 @@ class LimitUpdate(BaseModel):
         None, ge=Decimal("0.01"), le=Decimal("999999.99")
     )
     warning_pct: Decimal | None = Field(None, ge=Decimal("0"), le=Decimal("1"))
+
+    @field_validator("warning_pct")
+    @classmethod
+    def normalize_warning_pct(cls, v: Decimal | None) -> Decimal | None:
+        if v is None:
+            return v
+        return v.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 class LimitFilterResponse(BaseModel):

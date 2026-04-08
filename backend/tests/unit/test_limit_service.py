@@ -202,3 +202,21 @@ def test_limit_update_accepts_decimal_warning_pct():
     """LimitUpdate should accept 0-1 range."""
     data = LimitUpdate(warning_pct=Decimal("0.75"))
     assert data.warning_pct == Decimal("0.75")
+
+
+def test_warning_pct_normalizes_excess_precision_on_create():
+    """Excess decimal places are rounded to 2 so UI round-trip is lossless.
+    E.g., 0.3333 → 0.33 prevents silent corruption when editing a limit."""
+    data = LimitCreate(
+        name="Precise",
+        timeframe="weekly",
+        threshold_amount=Decimal("100"),
+        warning_pct=Decimal("0.3333"),
+    )
+    assert data.warning_pct == Decimal("0.33")
+
+
+def test_warning_pct_normalizes_excess_precision_on_update():
+    """LimitUpdate should also normalize precision."""
+    data = LimitUpdate(warning_pct=Decimal("0.8567"))
+    assert data.warning_pct == Decimal("0.86")
