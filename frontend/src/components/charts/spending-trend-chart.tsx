@@ -28,7 +28,9 @@ export function SpendingTrendChart({
     return {
       day: point.day,
       current: parseFloat(point.cumulative),
-      ...(avgPoint ? { average: parseFloat(avgPoint.cumulative) } : {}),
+      ...(avgPoint
+        ? { average: parseFloat(avgPoint.cumulative) }
+        : { average: null }),
     };
   });
 
@@ -80,7 +82,7 @@ export function SpendingTrendChart({
                       currencyCode,
                     )}
                   </p>
-                  {payload[1] && (
+                  {payload[1] && payload[1].value != null && (
                     <p className="text-sm text-muted-foreground">
                       Average:{' '}
                       {formatCurrency(
@@ -108,6 +110,7 @@ export function SpendingTrendChart({
             strokeDasharray="6 4"
             strokeOpacity={0.4}
             dot={false}
+            connectNulls
           />
         </ComposedChart>
       </ResponsiveContainer>

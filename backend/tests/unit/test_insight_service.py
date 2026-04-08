@@ -217,3 +217,15 @@ def test_average_series_with_filled_cumulative():
     assert avg[1] == (Decimal("100") + Decimal("120") + Decimal("60")) / 3
     # Day 2: (150 + 150) / 2 = 150  (series2 ends at day 1)
     assert avg[2] == Decimal("150")
+
+
+def test_average_series_skips_empty_period():
+    """When one prior period had zero expenses, _to_cumulative returns {}
+    and _average_series averages over only the periods that had data."""
+    series_with_data = _to_cumulative({0: Decimal("100"), 2: Decimal("50")})
+    empty_period = _to_cumulative({})  # month with zero expenses → {}
+
+    avg = _average_series([series_with_data, empty_period])
+
+    # Empty dict contributes nothing — average is just the one series
+    assert avg == series_with_data
