@@ -162,17 +162,42 @@ ExpenseTracker/
 ## 4) Git workflow
 
 ### Branch strategy
-- `main` — primary development branch, always buildable
-- Feature branches: `feature/{short-description}` (e.g., `feature/expense-crud`)
-- Bug fixes: `fix/{short-description}` (e.g., `fix/limit-calculation`)
-- Release branches: `release/{version}` (e.g., `release/1.0.0`, `release/1.1.0`)
-- Hotfix branches: `hotfix/{short-description}` (branched from `release/*` or `main`)
+
+- **`main`** — always equals the latest tagged release. No direct pushes. Only updated via release branch merges.
+- **`release/X.Y.x`** — long-lived release branch per minor version (e.g., `release/1.0.x` for all `1.0.*` patches). Created from `main` after a version tag. Accumulates 2–3 changes (fix/\*, chore/\*), then merges to `main` with a new patch tag. Stays open until the next minor version begins (e.g., `release/1.0.x` is retired when `release/1.1.x` is created).
+- **`fix/{short-description}`** — bug fix branches. Created from and merged into the current `release/X.Y.x` branch via PR (e.g., `fix/limit-calculation`).
+- **`chore/{short-description}`** — infrastructure, docs, or tooling changes. Created from and merged into the current `release/X.Y.x` branch via PR.
+- **`feature/{short-description}`** — feature branches for new minor/major versions. Created from `main` and merged into `main` or a new release branch.
+- **`hotfix/{short-description}`** — urgent fixes that cannot wait for the normal release cycle. Created from `main`, merged to both `main` and the active release branch.
 
 ### Workflow
-- Feature and fix branches are created from `main` and merged back into `main` via PR
-- When a version is ready for release, create a `release/{version}` branch from `main`
-- Release branches receive only bug fixes (cherry-picked or hotfixed)
-- Tags: `1.0.0.0`, `1.1.0.0`, `2.0.0.0.0` etc. on release branch merge commits
+
+```
+main (v1.0.0)
+  └── release/1.0.x
+        ├── fix/some-bug       → PR into release/1.0.x
+        ├── fix/another-bug    → PR into release/1.0.x
+        ├── chore/update-docs  → PR into release/1.0.x
+        └── (2-3 changes ready)
+              → PR release/1.0.x → main
+              → tag v1.0.1 + GitHub Release
+              → deploy (automatic)
+```
+
+- `fix/*` and `chore/*` branches are created **from** the active release branch and PRs target that release branch.
+- When 2–3 changes accumulate on the release branch, open a PR from `release/X.Y.x` → `main`. Squash merge, tag the merge commit (e.g., `v1.0.1`), and create a GitHub Release with notes describing the bundled changes.
+- The release branch stays open after merging — future patches continue on it.
+- Deploy is triggered automatically when `main` receives a push (via `deploy.yml`).
+
+### Version bump advisory
+
+If a change on a `fix/*` or `chore/*` branch is significant enough to warrant a **minor** (new feature) or **major** (breaking change) version bump rather than a patch, the developer or agent must flag this before merging. The change should be moved to a `feature/*` branch targeting a new release cycle instead.
+
+### Tags and GitHub Releases
+
+- Tags follow SemVer with `v` prefix: `v1.0.0`, `v1.0.1`, `v1.1.0`, `v2.0.0`.
+- Every tag gets a **GitHub Release** with a description of what's included (2–3 bullet points per bundled change).
+- Tags are created on `main` merge commits only.
 
 ### Commit messages
 - Format: `type: short description`
@@ -185,11 +210,13 @@ ExpenseTracker/
 - Keep commits atomic — one logical change per commit
 
 ### Pull requests
-- PRs should target `main`
+- PRs from `fix/*` and `chore/*` branches target `release/X.Y.x`
+- PRs from `release/X.Y.x` target `main` (for version releases)
+- PRs from `feature/*` branches target `main` or a new release branch
 - PR title follows the same format as commit messages
 - PR description should explain *what* and *why*, not much of the *how*. And should include a design specified behind the PR content (if applies).
 - All tests must pass before merge
-- Squash merge preferred (clean history on `main`)
+- Squash merge preferred (clean history)
 
 ---
 
