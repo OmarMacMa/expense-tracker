@@ -105,8 +105,9 @@ async def list_limits_with_progress(
                         "filter_value": f.filter_value,
                         "filter_display_name": (
                             category_names.get(
-                                _try_parse_uuid(f.filter_value), ""
+                                _try_parse_uuid(f.filter_value)
                             )
+                            or f.filter_value
                             if f.filter_type == "category"
                             else f.filter_value
                         ),

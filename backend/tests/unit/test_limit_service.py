@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -293,8 +294,6 @@ async def test_limit_category_filter_only_counts_matching(
 
 def test_limit_filter_response_has_display_name_field():
     """LimitFilterResponse must expose filter_display_name for UI label resolution."""
-    import uuid
-
     resp = LimitFilterResponse(
         id=uuid.uuid4(),
         filter_type="category",
@@ -306,8 +305,6 @@ def test_limit_filter_response_has_display_name_field():
 
 def test_limit_filter_response_display_name_defaults_to_empty():
     """filter_display_name defaults to empty string when not supplied."""
-    import uuid
-
     resp = LimitFilterResponse(
         id=uuid.uuid4(),
         filter_type="category",
