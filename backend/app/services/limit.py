@@ -74,10 +74,9 @@ async def list_limits_with_progress(
     for limit in limits:
         for f in limit.filters:
             if f.filter_type == "category":
-                try:
-                    all_category_ids.add(uuid.UUID(f.filter_value))
-                except ValueError:
-                    pass
+                uid = _try_parse_uuid(f.filter_value)
+                if uid is not None:
+                    all_category_ids.add(uid)
 
     category_names: dict[uuid.UUID, str] = {}
     if all_category_ids:
@@ -105,7 +104,9 @@ async def list_limits_with_progress(
                         "filter_type": f.filter_type,
                         "filter_value": f.filter_value,
                         "filter_display_name": (
-                            category_names.get(uuid.UUID(f.filter_value), "")
+                            category_names.get(
+                                _try_parse_uuid(f.filter_value), ""
+                            )
                             if f.filter_type == "category"
                             else f.filter_value
                         ),
@@ -209,7 +210,11 @@ async def _calculate_progress(
     # Apply category filters if any
     category_filters = [f for f in limit.filters if f.filter_type == "category"]
     if category_filters:
-        category_ids = [uuid.UUID(f.filter_value) for f in category_filters]
+        category_ids = [
+            uid
+            for f in category_filters
+            if (uid := _try_parse_uuid(f.filter_value)) is not None
+        ]
         amount_query = amount_query.where(ExpenseLine.category_id.in_(category_ids))
 
     result = await db.execute(amount_query)
@@ -237,3 +242,11 @@ async def _calculate_progress(
         "days_remaining": days_remaining,
         "status": status,
     }
+
+
+def _try_parse_uuid(value: str) -> uuid.UUID | None:
+    """Return parsed UUID or None if the string is not a valid UUID."""
+    try:
+        return uuid.UUID(value)
+    except ValueError:
+        return None
