@@ -197,6 +197,9 @@ async def get_spending_trend(
 
     start_utc, end_utc = resolver.get_current_window(timeframe, ref_date)
 
+    # Compute the total days in this period for the current series
+    period_days = resolver.get_day_of_period(end_utc, timeframe)
+
     current_daily = await _daily_amounts(
         db,
         space_id,
@@ -210,7 +213,7 @@ async def get_spending_trend(
         tag=tag,
         payment_method_id=payment_method_id,
     )
-    current_series = _to_cumulative(current_daily)
+    current_series = _to_cumulative(current_daily, period_days=period_days)
 
     # Previous windows for average
     prev_windows = resolver.get_previous_windows(timeframe, count=3, ref_date=ref_date)
@@ -300,18 +303,24 @@ async def _daily_amounts(
     return dict(daily)
 
 
-def _to_cumulative(daily: dict[int, Decimal]) -> dict[int, Decimal]:
-    """Convert daily amounts to cumulative series.
+def _to_cumulative(
+    daily: dict[int, Decimal], period_days: int | None = None
+) -> dict[int, Decimal]:
+    """Convert daily amounts to cumulative series (1-based days).
 
-    Fills every day from 0 to max_day so non-spending days carry forward
-    the previous cumulative value instead of being omitted.
+    If period_days is given, the series extends to cover the full period
+    even if no expenses exist on later days.
     """
-    if not daily:
+    if not daily and period_days is None:
+        return {}
+    max_day = max(daily.keys()) if daily else 0
+    if period_days is not None:
+        max_day = period_days
+    if max_day < 1:
         return {}
     cumulative = {}
     running = Decimal("0")
-    max_day = max(daily.keys())
-    for day in range(max_day + 1):
+    for day in range(1, max_day + 1):
         running += daily.get(day, Decimal("0"))
         cumulative[day] = running
     return cumulative

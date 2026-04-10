@@ -167,19 +167,19 @@ async def test_spending_trend_returns_series(db_session, test_user, test_space):
 
 def test_to_cumulative_fills_gaps():
     """Cumulative series must include non-spending days with carried-forward values."""
-    daily = {0: Decimal("100"), 2: Decimal("50"), 5: Decimal("30")}
+    daily = {1: Decimal("100"), 3: Decimal("50"), 6: Decimal("30")}
     result = _to_cumulative(daily)
 
-    # Must have entries for every day 0..5
-    assert list(result.keys()) == [0, 1, 2, 3, 4, 5]
+    # Must have entries for every day 1..6
+    assert list(result.keys()) == [1, 2, 3, 4, 5, 6]
 
-    # Day 0: 100, Day 1: still 100 (no spend), Day 2: 150, etc.
-    assert result[0] == Decimal("100")
+    # Day 1: 100, Day 2: still 100 (no spend), Day 3: 150, etc.
     assert result[1] == Decimal("100")
-    assert result[2] == Decimal("150")
+    assert result[2] == Decimal("100")
     assert result[3] == Decimal("150")
     assert result[4] == Decimal("150")
-    assert result[5] == Decimal("180")
+    assert result[5] == Decimal("150")
+    assert result[6] == Decimal("180")
 
 
 def test_to_cumulative_empty():
@@ -188,44 +188,62 @@ def test_to_cumulative_empty():
 
 
 def test_to_cumulative_single_day():
-    """Single day input returns single entry."""
+    """Single day input fills from 1 to max key."""
     result = _to_cumulative({3: Decimal("42")})
-    assert list(result.keys()) == [0, 1, 2, 3]
-    assert result[0] == Decimal("0")
+    assert list(result.keys()) == [1, 2, 3]
+    assert result[1] == Decimal("0")
+    assert result[2] == Decimal("0")
     assert result[3] == Decimal("42")
 
 
 def test_average_series_with_filled_cumulative():
     """Average series uses dense cumulative data from all periods."""
-    series1 = _to_cumulative({0: Decimal("100"), 2: Decimal("50")})
-    # series1 → {0: 100, 1: 100, 2: 150}
-    series2 = _to_cumulative({0: Decimal("80"), 1: Decimal("40")})
-    # series2 → {0: 80, 1: 120}
-    series3 = _to_cumulative({0: Decimal("60"), 2: Decimal("90")})
-    # series3 → {0: 60, 1: 60, 2: 150}
+    series1 = _to_cumulative({1: Decimal("100"), 3: Decimal("50")})
+    # series1 → {1: 100, 2: 100, 3: 150}
+    series2 = _to_cumulative({1: Decimal("80"), 2: Decimal("40")})
+    # series2 → {1: 80, 2: 120}
+    series3 = _to_cumulative({1: Decimal("60"), 3: Decimal("90")})
+    # series3 → {1: 60, 2: 60, 3: 150}
 
     avg = _average_series([series1, series2, series3])
 
-    # All series have days 0 and 1; only series1 and series3 have day 2
-    assert 0 in avg
+    # All series have days 1 and 2; only series1 and series3 have day 3
     assert 1 in avg
     assert 2 in avg
+    assert 3 in avg
 
-    # Day 0: (100 + 80 + 60) / 3 = 80
-    assert avg[0] == Decimal("80")
-    # Day 1: (100 + 120 + 60) / 3
-    assert avg[1] == (Decimal("100") + Decimal("120") + Decimal("60")) / 3
-    # Day 2: (150 + 150) / 2 = 150  (series2 ends at day 1)
-    assert avg[2] == Decimal("150")
+    # Day 1: (100 + 80 + 60) / 3 = 80
+    assert avg[1] == Decimal("80")
+    # Day 2: (100 + 120 + 60) / 3
+    assert avg[2] == (Decimal("100") + Decimal("120") + Decimal("60")) / 3
+    # Day 3: (150 + 150) / 2 = 150  (series2 ends at day 2)
+    assert avg[3] == Decimal("150")
 
 
 def test_average_series_skips_empty_period():
     """When one prior period had zero expenses, _to_cumulative returns {}
     and _average_series averages over only the periods that had data."""
-    series_with_data = _to_cumulative({0: Decimal("100"), 2: Decimal("50")})
+    series_with_data = _to_cumulative({1: Decimal("100"), 3: Decimal("50")})
     empty_period = _to_cumulative({})  # month with zero expenses → {}
 
     avg = _average_series([series_with_data, empty_period])
 
     # Empty dict contributes nothing — average is just the one series
     assert avg == series_with_data
+
+
+def test_to_cumulative_extends_to_period_days():
+    """With period_days, series extends beyond last expense day."""
+    daily = {1: Decimal("100"), 3: Decimal("50")}
+    result = _to_cumulative(daily, period_days=7)
+    assert list(result.keys()) == [1, 2, 3, 4, 5, 6, 7]
+    assert result[1] == Decimal("100")
+    assert result[3] == Decimal("150")
+    assert result[7] == Decimal("150")  # carried forward
+
+
+def test_to_cumulative_empty_with_period_days():
+    """Empty daily data with period_days returns all zeros."""
+    result = _to_cumulative({}, period_days=5)
+    assert list(result.keys()) == [1, 2, 3, 4, 5]
+    assert all(v == Decimal("0") for v in result.values())

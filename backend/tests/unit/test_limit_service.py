@@ -220,3 +220,64 @@ def test_warning_pct_normalizes_excess_precision_on_update():
     """LimitUpdate should also normalize precision."""
     data = LimitUpdate(warning_pct=Decimal("0.8567"))
     assert data.warning_pct == Decimal("0.86")
+
+
+@pytest.mark.asyncio
+async def test_limit_category_filter_only_counts_matching(
+    db_session, test_user, test_space
+):
+    """Limit with a category filter should only count expenses in that category."""
+    from app.schemas.category import CategoryCreate
+    from app.schemas.limit import LimitFilterCreate
+    from app.services.category import create_category
+
+    # Create a "Groceries" category
+    groceries = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Groceries")
+    )
+    uncat_id = await _get_uncategorized_id(db_session, test_space.id)
+
+    # Create limit filtered to Groceries only
+    limit_data = LimitCreate(
+        name="Grocery Budget",
+        timeframe="monthly",
+        threshold_amount=Decimal("200"),
+        filters=[
+            LimitFilterCreate(filter_type="category", filter_value=str(groceries.id))
+        ],
+    )
+    await create_limit(db_session, test_space.id, limit_data)
+
+    # Expense in Groceries ($60) — should count
+    await create_expense(
+        db_session,
+        test_space.id,
+        ExpenseCreate(
+            merchant="Supermart",
+            purchase_datetime=datetime.now(UTC) - timedelta(hours=1),
+            amount=Decimal("60.00"),
+            category_id=groceries.id,
+            spender_id=test_user.id,
+        ),
+        test_user.id,
+    )
+
+    # Expense in Uncategorized ($40) — should NOT count
+    await create_expense(
+        db_session,
+        test_space.id,
+        ExpenseCreate(
+            merchant="Random Shop",
+            purchase_datetime=datetime.now(UTC) - timedelta(hours=1),
+            amount=Decimal("40.00"),
+            category_id=uncat_id,
+            spender_id=test_user.id,
+        ),
+        test_user.id,
+    )
+
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    assert len(limits) == 1
+    assert limits[0]["spent"] == Decimal("60.00")
+    assert limits[0]["progress"] == Decimal("0.3000")  # 60/200
+    assert limits[0]["status"] == "ok"
