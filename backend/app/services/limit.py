@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Expense, ExpenseLine, Limit, LimitFilter, Space
+from app.models import Category, Expense, ExpenseLine, Limit, LimitFilter, Space
 from app.services.time_window import TimeWindowResolver
 
 VALID_TIMEFRAMES_MVP = {"weekly", "monthly"}
@@ -68,6 +68,26 @@ async def list_limits_with_progress(
     result = await db.execute(stmt)
     limits = result.scalars().all()
 
+    # Collect all category UUIDs referenced by filters so we can resolve them
+    # to display names in a single query.
+    all_category_ids: set[uuid.UUID] = set()
+    for limit in limits:
+        for f in limit.filters:
+            if f.filter_type == "category":
+                uid = _try_parse_uuid(f.filter_value)
+                if uid is not None:
+                    all_category_ids.add(uid)
+
+    category_names: dict[uuid.UUID, str] = {}
+    if all_category_ids:
+        cat_stmt = select(Category).where(
+            Category.id.in_(all_category_ids),
+            Category.space_id == space_id,
+        )
+        cat_result = await db.execute(cat_stmt)
+        for cat in cat_result.scalars().all():
+            category_names[cat.id] = cat.name
+
     results = []
     for limit in limits:
         progress_data = await _calculate_progress(db, space_id, limit, resolver)
@@ -83,6 +103,14 @@ async def list_limits_with_progress(
                         "id": f.id,
                         "filter_type": f.filter_type,
                         "filter_value": f.filter_value,
+                        "filter_display_name": (
+                            category_names.get(
+                                _try_parse_uuid(f.filter_value)
+                            )
+                            or f.filter_value
+                            if f.filter_type == "category"
+                            else f.filter_value
+                        ),
                     }
                     for f in limit.filters
                 ],
@@ -97,7 +125,13 @@ async def list_limits_with_progress(
 async def update_limit(
     db: AsyncSession, space_id: uuid.UUID, limit_id: uuid.UUID, data
 ) -> Limit:
-    """Partial update a limit."""
+    """Partial update a limit.
+
+    When ``filters`` is supplied (even as an empty list), all existing
+    LimitFilter rows are deleted and replaced with the new set.  If
+    ``filters`` is absent from the payload the existing filters are left
+    untouched.
+    """
     limit = await _get_limit(db, space_id, limit_id)
     update_data = data.model_dump(exclude_unset=True)
 
@@ -107,6 +141,22 @@ async def update_limit(
         limit.threshold_amount = update_data["threshold_amount"]
     if "warning_pct" in update_data:
         limit.warning_pct = update_data["warning_pct"]
+
+    if "filters" in update_data:
+        # Delete existing filters then insert replacements within the same tx.
+        from sqlalchemy import delete as sa_delete
+
+        await db.execute(
+            sa_delete(LimitFilter).where(LimitFilter.limit_id == limit_id)
+        )
+        for f in update_data["filters"]:
+            db.add(
+                LimitFilter(
+                    limit_id=limit_id,
+                    filter_type=f["filter_type"],
+                    filter_value=f["filter_value"],
+                )
+            )
 
     await db.commit()
     await db.refresh(limit)
@@ -161,7 +211,11 @@ async def _calculate_progress(
     # Apply category filters if any
     category_filters = [f for f in limit.filters if f.filter_type == "category"]
     if category_filters:
-        category_ids = [uuid.UUID(f.filter_value) for f in category_filters]
+        category_ids = [
+            uid
+            for f in category_filters
+            if (uid := _try_parse_uuid(f.filter_value)) is not None
+        ]
         amount_query = amount_query.where(ExpenseLine.category_id.in_(category_ids))
 
     result = await db.execute(amount_query)
@@ -189,3 +243,11 @@ async def _calculate_progress(
         "days_remaining": days_remaining,
         "status": status,
     }
+
+
+def _try_parse_uuid(value: str) -> uuid.UUID | None:
+    """Return parsed UUID or None if the string is not a valid UUID."""
+    try:
+        return uuid.UUID(value)
+    except ValueError:
+        return None
