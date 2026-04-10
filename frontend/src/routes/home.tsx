@@ -30,7 +30,7 @@ function LimitAlertCard({
   limit: LimitProgress;
   currencyCode: string;
 }) {
-  const pct = parseFloat(limit.progress);
+  const pct = parseFloat(limit.progress) * 100;
   const barWidth = Math.min(pct, 100);
 
   const statusConfig: Record<

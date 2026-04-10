@@ -2,12 +2,25 @@ import uuid
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class LimitFilterCreate(BaseModel):
     filter_type: str  # "category" in MVP
     filter_value: str  # category UUID as string
+
+    @model_validator(mode="after")
+    def validate_filter_value(self) -> "LimitFilterCreate":
+        """Ensure category filter values are valid UUIDs."""
+        if self.filter_type == "category":
+            try:
+                uuid.UUID(self.filter_value)
+            except ValueError:
+                raise ValueError(
+                    f"filter_value must be a valid UUID for category filters, "
+                    f"got: {self.filter_value!r}"
+                )
+        return self
 
 
 class LimitCreate(BaseModel):
@@ -35,6 +48,7 @@ class LimitUpdate(BaseModel):
         None, ge=Decimal("0.01"), le=Decimal("999999.99")
     )
     warning_pct: Decimal | None = Field(None, ge=Decimal("0"), le=Decimal("1"))
+    filters: list[LimitFilterCreate] | None = None
 
     @field_validator("warning_pct")
     @classmethod
@@ -48,6 +62,7 @@ class LimitFilterResponse(BaseModel):
     id: uuid.UUID
     filter_type: str
     filter_value: str
+    filter_display_name: str = ""
 
     model_config = {"from_attributes": True}
 

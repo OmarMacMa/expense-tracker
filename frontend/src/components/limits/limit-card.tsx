@@ -53,8 +53,8 @@ interface LimitCardProps {
 export function LimitCard({ limit, onEdit, onDelete }: LimitCardProps) {
   const colors = getStatusColor(limit.status);
   const { format } = useCurrency();
-  const progressPct = Math.min(parseFloat(limit.progress), 100);
-  const displayPct = parseFloat(limit.progress);
+  const progressPct = Math.min(parseFloat(limit.progress) * 100, 100);
+  const displayPct = parseFloat(limit.progress) * 100;
 
   return (
     <div className="rounded-lg border bg-card p-4 shadow-[var(--shadow-card)] sm:p-5">
@@ -70,7 +70,9 @@ export function LimitCard({ limit, onEdit, onDelete }: LimitCardProps) {
           </div>
           {limit.filters.length > 0 && (
             <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              {limit.filters.map((f) => f.filter_value).join(', ')}
+              {limit.filters
+                .map((f) => f.filter_display_name || f.filter_value)
+                .join(', ')}
             </p>
           )}
         </div>
