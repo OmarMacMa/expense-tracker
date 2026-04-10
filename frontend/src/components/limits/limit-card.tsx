@@ -70,7 +70,9 @@ export function LimitCard({ limit, onEdit, onDelete }: LimitCardProps) {
           </div>
           {limit.filters.length > 0 && (
             <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              {limit.filters.map((f) => f.filter_display_name || f.filter_value).join(', ')}
+              {limit.filters
+                .map((f) => f.filter_display_name || f.filter_value)
+                .join(', ')}
             </p>
           )}
         </div>

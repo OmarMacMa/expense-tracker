@@ -482,9 +482,7 @@ async def test_list_limits_returns_filter_display_name(
             timeframe="monthly",
             threshold_amount=Decimal("100"),
             filters=[
-                LimitFilterCreate(
-                    filter_type="category", filter_value=str(cat.id)
-                )
+                LimitFilterCreate(filter_type="category", filter_value=str(cat.id))
             ],
         ),
     )
