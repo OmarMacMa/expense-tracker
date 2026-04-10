@@ -111,6 +111,8 @@ function LimitFormInner({
         filter_type: 'category',
         filter_value: id,
       }));
+    } else if (editingLimit) {
+      payload.filters = [];
     }
     onSubmit(payload);
   }
