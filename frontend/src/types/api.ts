@@ -88,7 +88,7 @@ export interface LimitProgress {
   timeframe: string;
   threshold_amount: string;
   warning_pct: string;
-  filters: { id: string; filter_type: string; filter_value: string }[];
+  filters: { id: string; filter_type: string; filter_value: string; filter_display_name: string }[];
   created_at: string;
   spent: string;
   progress: string;

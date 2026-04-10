@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -8,7 +9,12 @@ from sqlalchemy import select
 
 from app.models import Category, Limit
 from app.schemas.expense import ExpenseCreate
-from app.schemas.limit import LimitCreate, LimitUpdate
+from app.schemas.limit import (
+    LimitCreate,
+    LimitFilterCreate,
+    LimitFilterResponse,
+    LimitUpdate,
+)
 from app.services.expense import create_expense
 from app.services.limit import (
     create_limit,
@@ -281,3 +287,212 @@ async def test_limit_category_filter_only_counts_matching(
     assert limits[0]["spent"] == Decimal("60.00")
     assert limits[0]["progress"] == Decimal("0.3000")  # 60/200
     assert limits[0]["status"] == "ok"
+
+
+# ── filter_display_name tests ──
+
+
+def test_limit_filter_response_has_display_name_field():
+    """LimitFilterResponse must expose filter_display_name for UI label resolution."""
+    resp = LimitFilterResponse(
+        id=uuid.uuid4(),
+        filter_type="category",
+        filter_value=str(uuid.uuid4()),
+        filter_display_name="Groceries",
+    )
+    assert resp.filter_display_name == "Groceries"
+
+
+def test_limit_filter_response_display_name_defaults_to_empty():
+    """filter_display_name defaults to empty string when not supplied."""
+    resp = LimitFilterResponse(
+        id=uuid.uuid4(),
+        filter_type="category",
+        filter_value=str(uuid.uuid4()),
+    )
+    assert resp.filter_display_name == ""
+
+
+# ── LimitUpdate.filters schema tests ──
+
+
+def test_limit_update_accepts_filters_field():
+    """LimitUpdate must accept an optional filters list for category replacement."""
+    cat_uuid = str(uuid.uuid4())
+    data = LimitUpdate(
+        filters=[LimitFilterCreate(filter_type="category", filter_value=cat_uuid)]
+    )
+    assert data.filters is not None
+    assert len(data.filters) == 1
+    assert data.filters[0].filter_value == cat_uuid
+
+
+def test_limit_update_filters_defaults_to_none():
+    """When not supplied, filters is None (not set → not replaced)."""
+    data = LimitUpdate(name="No filter change")
+    assert data.filters is None
+
+
+def test_limit_update_accepts_empty_filters_list():
+    """Empty filters list means clear all category filters on edit."""
+    data = LimitUpdate(filters=[])
+    assert data.filters == []
+
+
+# ── service-level filter replacement tests (require DB) ──
+
+
+@pytest.mark.asyncio
+async def test_update_limit_replaces_filters(db_session, test_user, test_space):
+    """Updating a limit with new filters replaces the old ones entirely."""
+    from app.schemas.category import CategoryCreate
+    from app.services.category import create_category
+
+    cat_a = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Cat A")
+    )
+    cat_b = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Cat B")
+    )
+
+    # Create limit initially filtered to Cat A only
+    limit = await create_limit(
+        db_session,
+        test_space.id,
+        LimitCreate(
+            name="My Limit",
+            timeframe="monthly",
+            threshold_amount=Decimal("100"),
+            filters=[
+                LimitFilterCreate(filter_type="category", filter_value=str(cat_a.id))
+            ],
+        ),
+    )
+
+    # Now update to replace filters with Cat B only
+    updated = await update_limit(
+        db_session,
+        test_space.id,
+        limit.id,
+        LimitUpdate(
+            filters=[
+                LimitFilterCreate(filter_type="category", filter_value=str(cat_b.id))
+            ]
+        ),
+    )
+
+    # Reload filters
+    await db_session.refresh(updated, ["filters"])
+    assert len(updated.filters) == 1
+    assert updated.filters[0].filter_value == str(cat_b.id)
+
+
+@pytest.mark.asyncio
+async def test_update_limit_clears_filters_when_empty_list(
+    db_session, test_user, test_space
+):
+    """Passing filters=[] removes all category filters from the limit."""
+    from app.schemas.category import CategoryCreate
+    from app.services.category import create_category
+
+    cat = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Dining")
+    )
+
+    limit = await create_limit(
+        db_session,
+        test_space.id,
+        LimitCreate(
+            name="Dining Budget",
+            timeframe="monthly",
+            threshold_amount=Decimal("150"),
+            filters=[
+                LimitFilterCreate(filter_type="category", filter_value=str(cat.id))
+            ],
+        ),
+    )
+
+    updated = await update_limit(
+        db_session,
+        test_space.id,
+        limit.id,
+        LimitUpdate(filters=[]),
+    )
+
+    await db_session.refresh(updated, ["filters"])
+    assert updated.filters == []
+
+
+@pytest.mark.asyncio
+async def test_update_limit_without_filters_field_preserves_existing(
+    db_session, test_user, test_space
+):
+    """PATCH without the filters key must leave existing filters untouched."""
+    from app.schemas.category import CategoryCreate
+    from app.services.category import create_category
+
+    cat = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Travel")
+    )
+
+    limit = await create_limit(
+        db_session,
+        test_space.id,
+        LimitCreate(
+            name="Travel Budget",
+            timeframe="monthly",
+            threshold_amount=Decimal("500"),
+            filters=[
+                LimitFilterCreate(filter_type="category", filter_value=str(cat.id))
+            ],
+        ),
+    )
+
+    # Update only name — filters should be untouched
+    updated = await update_limit(
+        db_session,
+        test_space.id,
+        limit.id,
+        LimitUpdate(name="Renamed Budget"),
+    )
+
+    await db_session.refresh(updated, ["filters"])
+    assert len(updated.filters) == 1
+    assert updated.filters[0].filter_value == str(cat.id)
+
+
+@pytest.mark.asyncio
+async def test_list_limits_returns_filter_display_name(
+    db_session, test_user, test_space
+):
+    """list_limits_with_progress resolves category UUID to its name in
+    filter_display_name."""
+    from app.schemas.category import CategoryCreate
+    from app.services.category import create_category
+
+    cat = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Entertainment")
+    )
+
+    await create_limit(
+        db_session,
+        test_space.id,
+        LimitCreate(
+            name="Fun Limit",
+            timeframe="monthly",
+            threshold_amount=Decimal("100"),
+            filters=[
+                LimitFilterCreate(
+                    filter_type="category", filter_value=str(cat.id)
+                )
+            ],
+        ),
+    )
+
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    assert len(limits) == 1
+    filters = limits[0]["filters"]
+    assert len(filters) == 1
+    assert filters[0]["filter_display_name"] == "Entertainment"
+    # filter_value must still hold the UUID (needed by edit form)
+    assert filters[0]["filter_value"] == str(cat.id)
