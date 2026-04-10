@@ -35,6 +35,7 @@ class LimitUpdate(BaseModel):
         None, ge=Decimal("0.01"), le=Decimal("999999.99")
     )
     warning_pct: Decimal | None = Field(None, ge=Decimal("0"), le=Decimal("1"))
+    filters: list[LimitFilterCreate] | None = None
 
     @field_validator("warning_pct")
     @classmethod
@@ -48,6 +49,7 @@ class LimitFilterResponse(BaseModel):
     id: uuid.UUID
     filter_type: str
     filter_value: str
+    filter_display_name: str = ""
 
     model_config = {"from_attributes": True}
 
