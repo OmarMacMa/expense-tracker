@@ -519,7 +519,7 @@ All time-based analytics depend on correctly computing window boundaries in the 
 |---|---|---|---|
 | `get_current_window(timeframe, ref_date?)` | `timeframe`: weekly/monthly/quarterly/yearly; `ref_date`: defaults to today in space TZ | `(start_utc, end_utc)` | UTC-converted boundaries of the current period |
 | `get_previous_windows(timeframe, count=3, ref_date?)` | Same + `count` | `list[(start_utc, end_utc)]` | N prior comparable windows for average computation. Returns fewer if insufficient history. |
-| `get_day_of_period(dt, timeframe)` | UTC datetime + timeframe | `int` (0-based) | Day index within the period, for cumulative trend alignment |
+| `get_day_of_period(dt, timeframe)` | UTC datetime + timeframe | `int` (1-based) | Day index within the period, for cumulative trend alignment |
 | `localize_for_display(dt_utc)` | UTC datetime | Localized datetime | Convert UTC to space timezone for UI display |
 
 **Required test coverage (minimum):**

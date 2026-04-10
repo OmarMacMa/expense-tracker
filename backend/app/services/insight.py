@@ -198,9 +198,7 @@ async def get_spending_trend(
     start_utc, end_utc = resolver.get_current_window(timeframe, ref_date)
 
     # Compute the total days in this period for the current series
-    period_end_local = resolver._resolve_local_date(end_utc)
-    period_start_local = resolver._resolve_local_date(start_utc)
-    period_days = (period_end_local - period_start_local).days + 1
+    period_days = resolver.get_day_of_period(end_utc, timeframe)
 
     current_daily = await _daily_amounts(
         db,
@@ -317,7 +315,7 @@ def _to_cumulative(
         return {}
     max_day = max(daily.keys()) if daily else 0
     if period_days is not None:
-        max_day = max(max_day, period_days)
+        max_day = period_days
     if max_day < 1:
         return {}
     cumulative = {}
