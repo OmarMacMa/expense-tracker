@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, TrendingDown, TrendingUp } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Link } from 'react-router';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useExpenseList, type ExpenseFilters } from '@/hooks/useExpenses';
 import {
   useInsightsSummary,
@@ -82,7 +83,6 @@ export default function Insights() {
   const [filters, setFilters] = useState<ExpenseFilters>({
     period: 'this_month',
   });
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const { format, currencyCode } = useCurrency();
 
   // Filter data sources
@@ -104,39 +104,14 @@ export default function Insights() {
     useSpenderBreakdown(filters);
 
   // Transaction list (same filters)
-  const {
-    data: expensePages,
-    isLoading: expensesLoading,
-    isFetchingNextPage,
-    hasNextPage,
-    fetchNextPage,
-  } = useExpenseList(filters);
+  const { data: expensePages, isLoading: expensesLoading } =
+    useExpenseList(filters);
 
   const allExpenses = useMemo(
-    () => expensePages?.pages.flatMap((page) => page.data) ?? [],
+    () => expensePages?.pages[0]?.data ?? [],
     [expensePages],
   );
   const groups = useMemo(() => groupExpensesByDate(allExpenses), [allExpenses]);
-
-  // Infinite scroll
-  const handleIntersect = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  );
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(handleIntersect, {
-      rootMargin: '200px',
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [handleIntersect]);
 
   const deltaSign = summary?.delta_pct
     ? summary.delta_pct > 0
@@ -280,15 +255,19 @@ export default function Insights() {
               </div>
             )}
 
-            {/* Infinite scroll sentinel */}
-            <div ref={sentinelRef} className="h-px" />
-
-            {isFetchingNextPage && (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="ml-2 text-sm text-muted-foreground">
-                  Loading more…
-                </span>
+            {groups.length > 0 && (
+              <div className="mt-3 text-center">
+                <Link
+                  to={`/transactions?${new URLSearchParams(
+                    Object.entries(filters).filter(([, v]) => v) as [
+                      string,
+                      string,
+                    ][],
+                  ).toString()}`}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  View all transactions →
+                </Link>
               </div>
             )}
           </div>
