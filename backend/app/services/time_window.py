@@ -73,7 +73,7 @@ class TimeWindowResolver:
         """Return the 0-based day index of *dt* within its period."""
         local_date = self._resolve_local_date(dt)
         start_local, _ = self._window_boundaries(timeframe, local_date)
-        return (local_date - start_local.date()).days
+        return (local_date - start_local.date()).days + 1
 
     def localize_for_display(self, dt_utc: datetime) -> datetime:
         """Convert a UTC datetime to the space timezone for display."""

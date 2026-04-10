@@ -128,12 +128,12 @@ class TestDayOfPeriod:
     def test_first_day(self):
         r = TimeWindowResolver("UTC")
         ref = datetime(2026, 3, 1, 12, 0, tzinfo=UTC)
-        assert r.get_day_of_period(ref, "monthly") == 0
+        assert r.get_day_of_period(ref, "monthly") == 1
 
     def test_mid_month(self):
         r = TimeWindowResolver("UTC")
         ref = datetime(2026, 3, 15, 12, 0, tzinfo=UTC)
-        assert r.get_day_of_period(ref, "monthly") == 14
+        assert r.get_day_of_period(ref, "monthly") == 15
 
 
 class TestEdgeTimezones:
