@@ -9,12 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import Category, Expense, ExpenseLine, Limit, LimitFilter, Space
+from app.schemas.limit import LimitCreate, LimitUpdate
 from app.services.time_window import TimeWindowResolver
 
 VALID_TIMEFRAMES_MVP = {"weekly", "monthly"}
 
 
-async def create_limit(db: AsyncSession, space_id: uuid.UUID, data) -> Limit:
+async def create_limit(
+    db: AsyncSession, space_id: uuid.UUID, data: LimitCreate
+) -> Limit:
     """Create a limit with optional category filters."""
     if data.timeframe not in VALID_TIMEFRAMES_MVP:
         raise HTTPException(
@@ -119,7 +122,7 @@ async def list_limits_with_progress(
 
 
 async def update_limit(
-    db: AsyncSession, space_id: uuid.UUID, limit_id: uuid.UUID, data
+    db: AsyncSession, space_id: uuid.UUID, limit_id: uuid.UUID, data: LimitUpdate
 ) -> Limit:
     """Partial update a limit.
 
@@ -220,6 +223,9 @@ async def _calculate_progress(
         ]
         if category_ids:
             amount_query = amount_query.where(ExpenseLine.category_id.in_(category_ids))
+        else:
+            # All filter values were malformed — match nothing, not everything
+            amount_query = amount_query.where(False)
 
     result = await db.execute(amount_query)
     spent = result.scalar_one() or Decimal("0")

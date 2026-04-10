@@ -494,3 +494,56 @@ async def test_list_limits_returns_filter_display_name(
     assert filters[0]["filter_display_name"] == "Entertainment"
     # filter_value must still hold the UUID (needed by edit form)
     assert filters[0]["filter_value"] == str(cat.id)
+
+
+def test_limit_filter_create_rejects_invalid_uuid():
+    """Category filter_value must be a valid UUID; garbage is rejected."""
+    with pytest.raises(ValidationError):
+        LimitFilterCreate(filter_type="category", filter_value="not-a-uuid")
+
+
+@pytest.mark.asyncio
+async def test_update_limit_rejects_null_filters(db_session, test_user, test_space):
+    """Sending filters=null returns 422, not a crash."""
+    data = LimitCreate(
+        name="Test", timeframe="monthly", threshold_amount=Decimal("100")
+    )
+    limit = await create_limit(db_session, test_space.id, data)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await update_limit(
+            db_session,
+            test_space.id,
+            limit.id,
+            LimitUpdate.model_construct(filters=None, **{"name": "X"}),
+        )
+    assert exc_info.value.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_deleted_category_shows_fallback_display_name(
+    db_session, test_user, test_space
+):
+    """When a category is deleted, its limit filter shows 'Deleted category'."""
+    from app.schemas.category import CategoryCreate
+    from app.services.category import create_category, delete_category
+
+    cat = await create_category(db_session, test_space.id, CategoryCreate(name="Temp"))
+    await create_limit(
+        db_session,
+        test_space.id,
+        LimitCreate(
+            name="Will Orphan",
+            timeframe="monthly",
+            threshold_amount=Decimal("100"),
+            filters=[
+                LimitFilterCreate(filter_type="category", filter_value=str(cat.id))
+            ],
+        ),
+    )
+
+    await delete_category(db_session, test_space.id, cat.id)
+
+    limits = await list_limits_with_progress(db_session, test_space.id)
+    assert len(limits) == 1
+    assert limits[0]["filters"][0]["filter_display_name"] == "Deleted category"
