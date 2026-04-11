@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useExpenseList, type ExpenseFilters } from '@/hooks/useExpenses';
+import { usePeriod } from '@/hooks/usePeriod';
 import { FilterBar } from '@/components/expenses/filter-bar';
 import {
   TransactionGroup,
@@ -46,8 +47,18 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 }
 
 export default function TransactionList() {
-  const [filters, setFilters] = useState<ExpenseFilters>({});
+  const { period: globalPeriod } = usePeriod();
+  const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // For the data query: use local period if set, otherwise fall back to global
+  const queryFilters = useMemo<ExpenseFilters>(() => {
+    const active = Object.fromEntries(
+      Object.entries(localFilters).filter(([, v]) => v),
+    );
+    if (!active.period) active.period = globalPeriod;
+    return active;
+  }, [globalPeriod, localFilters]);
 
   const {
     data,
@@ -56,7 +67,7 @@ export default function TransactionList() {
     hasNextPage,
     fetchNextPage,
     isError,
-  } = useExpenseList(filters);
+  } = useExpenseList(queryFilters);
 
   const allExpenses = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
@@ -64,7 +75,8 @@ export default function TransactionList() {
   );
   const groups = useMemo(() => groupExpensesByDate(allExpenses), [allExpenses]);
 
-  const hasFilters = Object.values(filters).some(Boolean);
+  // Only user-set overrides count as "active filters" for empty-state messaging
+  const hasFilters = Object.values(localFilters).some(Boolean);
 
   // Infinite scroll via IntersectionObserver
   const handleIntersect = useCallback(
@@ -103,7 +115,7 @@ export default function TransactionList() {
       </div>
 
       {/* Filters */}
-      <FilterBar filters={filters} onFiltersChange={setFilters} />
+      <FilterBar filters={localFilters} onFiltersChange={setLocalFilters} />
 
       {/* Content */}
       {isLoading ? (
