@@ -221,7 +221,11 @@ export default function Home() {
           {trendLoading ? (
             <Skeleton className="h-[200px] w-full" />
           ) : trend ? (
-            <SpendingTrendChart data={trend} currencyCode={currencyCode} />
+            <SpendingTrendChart
+              data={trend}
+              periodLabel={period}
+              currencyCode={currencyCode}
+            />
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">
               No trend data available

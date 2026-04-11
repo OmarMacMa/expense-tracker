@@ -177,6 +177,7 @@ export default function Insights() {
             ) : (
               <SpendingTrendChart
                 data={trendData}
+                periodLabel={filters.period ?? 'this_month'}
                 currencyCode={currencyCode}
               />
             )}

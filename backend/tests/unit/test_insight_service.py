@@ -166,6 +166,15 @@ async def test_spending_trend_returns_series(db_session, test_user, test_space):
     assert len(result["current_series"]) >= 1
 
 
+@pytest.mark.asyncio
+async def test_spending_trend_yearly_skips_average(db_session, test_user, test_space):
+    """YTD trend returns current series but no average (too expensive)."""
+    result = await get_spending_trend(db_session, test_space.id, period="ytd")
+    assert result["timeframe"] == "yearly"
+    assert result["average_series"] == []
+    assert isinstance(result["current_series"], list)
+
+
 def test_to_cumulative_fills_gaps():
     """Cumulative series must include non-spending days with carried-forward values."""
     daily = {1: Decimal("100"), 3: Decimal("50"), 6: Decimal("30")}

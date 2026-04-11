@@ -215,26 +215,29 @@ async def get_spending_trend(
     )
     current_series = _to_cumulative(current_daily, period_days=period_days)
 
-    # Previous windows for average
-    prev_windows = resolver.get_previous_windows(timeframe, count=3, ref_date=ref_date)
-    all_prev_dailies = []
-    for p_start, p_end in prev_windows:
-        daily = await _daily_amounts(
-            db,
-            space_id,
-            p_start,
-            p_end,
-            resolver,
-            timeframe,
-            spender_id=spender_id,
-            category_id=category_id,
-            merchant=merchant,
-            tag=tag,
-            payment_method_id=payment_method_id,
+    # Previous windows for average (skip for yearly — too expensive and not useful)
+    avg_series: dict[int, Decimal] = {}
+    if timeframe != "yearly":
+        prev_windows = resolver.get_previous_windows(
+            timeframe, count=3, ref_date=ref_date
         )
-        all_prev_dailies.append(_to_cumulative(daily, period_days=period_days))
-
-    avg_series = _average_series(all_prev_dailies)
+        all_prev_dailies = []
+        for p_start, p_end in prev_windows:
+            daily = await _daily_amounts(
+                db,
+                space_id,
+                p_start,
+                p_end,
+                resolver,
+                timeframe,
+                spender_id=spender_id,
+                category_id=category_id,
+                merchant=merchant,
+                tag=tag,
+                payment_method_id=payment_method_id,
+            )
+            all_prev_dailies.append(_to_cumulative(daily, period_days=period_days))
+        avg_series = _average_series(all_prev_dailies)
 
     return {
         "current_series": [
@@ -338,7 +341,8 @@ def _average_series(
         for day, value in series.items():
             combined[day].append(value)
 
-    return {day: sum(values) / len(values) for day, values in sorted(combined.items())}
+    n = len(all_series)
+    return {day: sum(values) / n for day, values in sorted(combined.items())}
 
 
 async def get_category_breakdown(
