@@ -304,3 +304,18 @@ def test_average_series_divides_by_total_count():
     assert avg[1] == Decimal("50")
     assert avg[2] == Decimal("50")
     assert avg[3] == Decimal("50")
+
+
+def test_average_series_carries_forward_for_short_series():
+    """If a series is shorter than others, its last cumulative value
+    is carried forward so the average never decreases."""
+    long_series = {1: Decimal("100"), 2: Decimal("200"), 3: Decimal("300")}
+    short_series = {1: Decimal("50"), 2: Decimal("80")}
+    # short_series missing day 3 — should carry forward 80
+
+    avg = _average_series([long_series, short_series])
+
+    # Day 3: (300 + 80) / 2 = 190 (not 300/1 = 300 or 300/2 = 150)
+    assert avg[3] == Decimal("190")
+    # Must never decrease
+    assert avg[1] <= avg[2] <= avg[3]

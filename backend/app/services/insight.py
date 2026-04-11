@@ -333,15 +333,36 @@ def _to_cumulative(
 def _average_series(
     all_series: list[dict[int, Decimal]],
 ) -> dict[int, Decimal]:
-    """Average multiple cumulative series by day index."""
+    """Average multiple cumulative series by day index.
+
+    Each series is expected to be cumulative (non-decreasing). If a series
+    is shorter than others, missing trailing days are filled by carrying
+    forward its last known value. This guarantees the average never
+    decreases even if a caller passes un-normalized series.
+    """
     if not all_series:
         return {}
+
+    # Determine the full day range across all series
+    all_days: set[int] = set()
+    for series in all_series:
+        all_days.update(series.keys())
+    if not all_days:
+        return {}
+
+    min_day = min(all_days)
+    max_day = max(all_days)
+    n = len(all_series)
+
+    # Build a dense value per (series, day), carrying forward last known value
     combined: dict[int, list[Decimal]] = defaultdict(list)
     for series in all_series:
-        for day, value in series.items():
-            combined[day].append(value)
+        last_value = Decimal("0")
+        for day in range(min_day, max_day + 1):
+            if day in series:
+                last_value = series[day]
+            combined[day].append(last_value)
 
-    n = len(all_series)
     return {day: sum(values) / n for day, values in sorted(combined.items())}
 
 
