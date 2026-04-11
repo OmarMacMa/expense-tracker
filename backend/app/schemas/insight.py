@@ -21,6 +21,7 @@ class TrendPoint(BaseModel):
 class SpendingTrendResponse(BaseModel):
     current_series: list[TrendPoint]
     average_series: list[TrendPoint]
+    timeframe: str
 
 
 class CategoryBreakdownItem(BaseModel):

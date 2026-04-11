@@ -23,6 +23,8 @@ export function SpendingTrendChart({
   currencyCode = 'USD',
 }: SpendingTrendChartProps) {
   const symbol = getCurrencySymbol(currencyCode);
+  const isWeekly = data.timeframe === 'weekly';
+  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const chartData = data.current_series.map((point) => {
     const avgPoint = data.average_series.find((a) => a.day === point.day);
     return {
@@ -57,7 +59,9 @@ export function SpendingTrendChart({
             tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v) => `${v}`}
+            tickFormatter={(v) =>
+              isWeekly ? weekdays[(v - 1) % 7] || `${v}` : `${v}`
+            }
           />
           <YAxis
             tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
@@ -73,7 +77,9 @@ export function SpendingTrendChart({
               return (
                 <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-[var(--shadow-card)]">
                   <p className="mb-1 text-xs font-medium text-muted-foreground">
-                    Day {label}
+                    {isWeekly
+                      ? weekdays[(label as number) - 1] || `Day ${label}`
+                      : `Day ${label}`}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     Current:{' '}
@@ -121,7 +127,7 @@ export function SpendingTrendChart({
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground opacity-40" />
-          3-month avg
+          {isWeekly ? '3-week avg' : '3-month avg'}
         </span>
       </div>
     </div>

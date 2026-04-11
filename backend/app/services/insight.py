@@ -232,7 +232,7 @@ async def get_spending_trend(
             tag=tag,
             payment_method_id=payment_method_id,
         )
-        all_prev_dailies.append(_to_cumulative(daily))
+        all_prev_dailies.append(_to_cumulative(daily, period_days=period_days))
 
     avg_series = _average_series(all_prev_dailies)
 
@@ -241,6 +241,7 @@ async def get_spending_trend(
             {"day": d, "cumulative": v} for d, v in current_series.items()
         ],
         "average_series": [{"day": d, "cumulative": v} for d, v in avg_series.items()],
+        "timeframe": timeframe,
     }
 
 
