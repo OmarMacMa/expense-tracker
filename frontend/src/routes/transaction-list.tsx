@@ -51,13 +51,13 @@ export default function TransactionList() {
   const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Merge shared period with local overrides; strip cleared values so
-  // deselecting a chip falls back to globalPeriod instead of undefined.
-  const filters = useMemo<ExpenseFilters>(() => {
+  // For the data query: use local period if set, otherwise fall back to global
+  const queryFilters = useMemo<ExpenseFilters>(() => {
     const active = Object.fromEntries(
       Object.entries(localFilters).filter(([, v]) => v),
     );
-    return { period: globalPeriod, ...active };
+    if (!active.period) active.period = globalPeriod;
+    return active;
   }, [globalPeriod, localFilters]);
 
   const {
@@ -67,7 +67,7 @@ export default function TransactionList() {
     hasNextPage,
     fetchNextPage,
     isError,
-  } = useExpenseList(filters);
+  } = useExpenseList(queryFilters);
 
   const allExpenses = useMemo(
     () => data?.pages.flatMap((page) => page.data) ?? [],
@@ -115,7 +115,7 @@ export default function TransactionList() {
       </div>
 
       {/* Filters */}
-      <FilterBar filters={filters} onFiltersChange={setLocalFilters} />
+      <FilterBar filters={localFilters} onFiltersChange={setLocalFilters} />
 
       {/* Content */}
       {isLoading ? (

@@ -85,13 +85,13 @@ export default function Insights() {
   const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
   const { format, currencyCode } = useCurrency();
 
-  // Merge shared period with local overrides; strip cleared values so
-  // deselecting a chip falls back to globalPeriod instead of undefined.
-  const filters = useMemo<ExpenseFilters>(() => {
+  // For data queries: use local period if set, otherwise fall back to global
+  const queryFilters = useMemo<ExpenseFilters>(() => {
     const active = Object.fromEntries(
       Object.entries(localFilters).filter(([, v]) => v),
     );
-    return { period: globalPeriod, ...active };
+    if (!active.period) active.period = globalPeriod;
+    return active;
   }, [globalPeriod, localFilters]);
 
   // Filter data sources
@@ -102,19 +102,19 @@ export default function Insights() {
   const { data: merchantList } = useMerchantList();
 
   // Insights data
-  const { data: summary } = useInsightsSummary(filters);
+  const { data: summary } = useInsightsSummary(queryFilters);
   const { data: trendData, isLoading: trendLoading } =
-    useSpendingTrend(filters);
+    useSpendingTrend(queryFilters);
   const { data: categoryData, isLoading: categoryLoading } =
-    useCategoryBreakdown(filters);
+    useCategoryBreakdown(queryFilters);
   const { data: merchantData, isLoading: merchantLoading } =
-    useMerchantLeaderboard(filters);
+    useMerchantLeaderboard(queryFilters);
   const { data: spenderData, isLoading: spenderLoading } =
-    useSpenderBreakdown(filters);
+    useSpenderBreakdown(queryFilters);
 
   // Transaction list (same filters)
   const { data: expensePages, isLoading: expensesLoading } =
-    useExpenseList(filters);
+    useExpenseList(queryFilters);
 
   const allExpenses = useMemo(
     () => (expensePages?.pages[0]?.data ?? []).slice(0, 15),
@@ -164,7 +164,7 @@ export default function Insights() {
 
       {/* Filter bar */}
       <FilterBar
-        filters={filters}
+        filters={localFilters}
         onFiltersChange={setLocalFilters}
         spenders={members}
         categories={categories}
@@ -186,7 +186,7 @@ export default function Insights() {
             ) : (
               <SpendingTrendChart
                 data={trendData}
-                periodLabel={filters.period ?? 'this_month'}
+                periodLabel={queryFilters.period ?? 'this_month'}
                 currencyCode={currencyCode}
               />
             )}
