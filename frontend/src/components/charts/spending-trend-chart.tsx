@@ -8,12 +8,29 @@ import {
   Line,
   ComposedChart,
 } from 'recharts';
-import type { SpendingTrend } from '@/hooks/useInsights';
+import type {
+  SpendingTrend,
+  SpendingTrendTimeframe,
+} from '@/hooks/useInsights';
 import { formatCurrency, getCurrencySymbol } from '@/lib/expense-utils';
+
+const PERIOD_DISPLAY: Record<string, string> = {
+  this_week: 'This week',
+  last_week: 'Last week',
+  this_month: 'This month',
+  last_month: 'Last month',
+  ytd: 'Year to date',
+};
+
+const AVG_LABEL: Partial<Record<SpendingTrendTimeframe, string>> = {
+  weekly: '3-week avg',
+  monthly: '3-month avg',
+  quarterly: '3-quarter avg',
+};
 
 interface SpendingTrendChartProps {
   data: SpendingTrend;
-  periodLabel: string;
+  periodLabel?: string;
   currencyCode?: string;
 }
 
@@ -23,6 +40,10 @@ export function SpendingTrendChart({
   currencyCode = 'USD',
 }: SpendingTrendChartProps) {
   const symbol = getCurrencySymbol(currencyCode);
+  const isWeekly = data.timeframe === 'weekly';
+  const hasAverage = data.average_series.length > 0;
+  const avgLabel = AVG_LABEL[data.timeframe];
+  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const chartData = data.current_series.map((point) => {
     const avgPoint = data.average_series.find((a) => a.day === point.day);
     return {
@@ -57,7 +78,9 @@ export function SpendingTrendChart({
             tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v) => `${v}`}
+            tickFormatter={(v) =>
+              isWeekly ? weekdays[(v - 1) % 7] || `${v}` : `${v}`
+            }
           />
           <YAxis
             tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
@@ -73,7 +96,9 @@ export function SpendingTrendChart({
               return (
                 <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-[var(--shadow-card)]">
                   <p className="mb-1 text-xs font-medium text-muted-foreground">
-                    Day {label}
+                    {isWeekly
+                      ? weekdays[(label as number) - 1] || `Day ${label}`
+                      : `Day ${label}`}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     Current:{' '}
@@ -102,27 +127,31 @@ export function SpendingTrendChart({
             strokeWidth={2.5}
             fill="url(#areaGradient)"
           />
-          <Line
-            type="monotone"
-            dataKey="average"
-            stroke="var(--muted-foreground)"
-            strokeWidth={2}
-            strokeDasharray="6 4"
-            strokeOpacity={0.4}
-            dot={false}
-            connectNulls
-          />
+          {hasAverage && (
+            <Line
+              type="monotone"
+              dataKey="average"
+              stroke="var(--muted-foreground)"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              strokeOpacity={0.4}
+              dot={false}
+              connectNulls
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
       <div className="mt-2.5 flex gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full bg-[#7C6FA0]" />
-          {periodLabel === 'this_week' ? 'This week' : 'This month'}
+          {PERIOD_DISPLAY[periodLabel ?? ''] ?? 'Current period'}
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground opacity-40" />
-          3-month avg
-        </span>
+        {hasAverage && avgLabel && (
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground opacity-40" />
+            {avgLabel}
+          </span>
+        )}
       </div>
     </div>
   );

@@ -215,32 +215,36 @@ async def get_spending_trend(
     )
     current_series = _to_cumulative(current_daily, period_days=period_days)
 
-    # Previous windows for average
-    prev_windows = resolver.get_previous_windows(timeframe, count=3, ref_date=ref_date)
-    all_prev_dailies = []
-    for p_start, p_end in prev_windows:
-        daily = await _daily_amounts(
-            db,
-            space_id,
-            p_start,
-            p_end,
-            resolver,
-            timeframe,
-            spender_id=spender_id,
-            category_id=category_id,
-            merchant=merchant,
-            tag=tag,
-            payment_method_id=payment_method_id,
+    # Previous windows for average (skip for yearly — too expensive and not useful)
+    avg_series: dict[int, Decimal] = {}
+    if timeframe != "yearly":
+        prev_windows = resolver.get_previous_windows(
+            timeframe, count=3, ref_date=ref_date
         )
-        all_prev_dailies.append(_to_cumulative(daily))
-
-    avg_series = _average_series(all_prev_dailies)
+        all_prev_dailies = []
+        for p_start, p_end in prev_windows:
+            daily = await _daily_amounts(
+                db,
+                space_id,
+                p_start,
+                p_end,
+                resolver,
+                timeframe,
+                spender_id=spender_id,
+                category_id=category_id,
+                merchant=merchant,
+                tag=tag,
+                payment_method_id=payment_method_id,
+            )
+            all_prev_dailies.append(_to_cumulative(daily, period_days=period_days))
+        avg_series = _average_series(all_prev_dailies)
 
     return {
         "current_series": [
             {"day": d, "cumulative": v} for d, v in current_series.items()
         ],
         "average_series": [{"day": d, "cumulative": v} for d, v in avg_series.items()],
+        "timeframe": timeframe,
     }
 
 
@@ -329,15 +333,37 @@ def _to_cumulative(
 def _average_series(
     all_series: list[dict[int, Decimal]],
 ) -> dict[int, Decimal]:
-    """Average multiple cumulative series by day index."""
+    """Average multiple cumulative series by day index.
+
+    Each series is expected to be cumulative (non-decreasing). If a series
+    is shorter than others, missing trailing days are filled by carrying
+    forward its last known value. This guarantees the average never
+    decreases even if a caller passes un-normalized series.
+    """
     if not all_series:
         return {}
+
+    # Determine the full day range across all series
+    all_days: set[int] = set()
+    for series in all_series:
+        all_days.update(series.keys())
+    if not all_days:
+        return {}
+
+    min_day = min(all_days)
+    max_day = max(all_days)
+    n = len(all_series)
+
+    # Build a dense value per (series, day), carrying forward last known value
     combined: dict[int, list[Decimal]] = defaultdict(list)
     for series in all_series:
-        for day, value in series.items():
-            combined[day].append(value)
+        last_value = Decimal("0")
+        for day in range(min_day, max_day + 1):
+            if day in series:
+                last_value = series[day]
+            combined[day].append(last_value)
 
-    return {day: sum(values) / len(values) for day, values in sorted(combined.items())}
+    return {day: sum(values) / n for day, values in sorted(combined.items())}
 
 
 async def get_category_breakdown(

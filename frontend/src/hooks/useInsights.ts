@@ -9,9 +9,16 @@ interface TrendPoint {
   cumulative: string;
 }
 
+export type SpendingTrendTimeframe =
+  | 'weekly'
+  | 'monthly'
+  | 'quarterly'
+  | 'yearly';
+
 export interface SpendingTrend {
   current_series: TrendPoint[];
   average_series: TrendPoint[];
+  timeframe: SpendingTrendTimeframe;
 }
 
 export interface CategoryBreakdown {

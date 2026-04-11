@@ -160,9 +160,19 @@ async def test_spending_trend_returns_series(db_session, test_user, test_space):
     result = await get_spending_trend(db_session, test_space.id, period="this_month")
     assert "current_series" in result
     assert "average_series" in result
+    assert result["timeframe"] == "monthly"
     assert isinstance(result["current_series"], list)
     # Should have at least one point
     assert len(result["current_series"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_spending_trend_yearly_skips_average(db_session, test_user, test_space):
+    """YTD trend returns current series but no average (too expensive)."""
+    result = await get_spending_trend(db_session, test_space.id, period="ytd")
+    assert result["timeframe"] == "yearly"
+    assert result["average_series"] == []
+    assert isinstance(result["current_series"], list)
 
 
 def test_to_cumulative_fills_gaps():
@@ -197,39 +207,41 @@ def test_to_cumulative_single_day():
 
 
 def test_average_series_with_filled_cumulative():
-    """Average series uses dense cumulative data from all periods."""
-    series1 = _to_cumulative({1: Decimal("100"), 3: Decimal("50")})
+    """Average series divides by total series count, not per-day count."""
+    series1 = _to_cumulative({1: Decimal("100"), 3: Decimal("50")}, period_days=3)
     # series1 → {1: 100, 2: 100, 3: 150}
-    series2 = _to_cumulative({1: Decimal("80"), 2: Decimal("40")})
-    # series2 → {1: 80, 2: 120}
-    series3 = _to_cumulative({1: Decimal("60"), 3: Decimal("90")})
+    series2 = _to_cumulative({1: Decimal("80"), 2: Decimal("40")}, period_days=3)
+    # series2 → {1: 80, 2: 120, 3: 120}
+    series3 = _to_cumulative({1: Decimal("60"), 3: Decimal("90")}, period_days=3)
     # series3 → {1: 60, 2: 60, 3: 150}
 
     avg = _average_series([series1, series2, series3])
 
-    # All series have days 1 and 2; only series1 and series3 have day 3
-    assert 1 in avg
-    assert 2 in avg
-    assert 3 in avg
+    assert len(avg) == 3
 
     # Day 1: (100 + 80 + 60) / 3 = 80
     assert avg[1] == Decimal("80")
-    # Day 2: (100 + 120 + 60) / 3
+    # Day 2: (100 + 120 + 60) / 3 ≈ 93.33
     assert avg[2] == (Decimal("100") + Decimal("120") + Decimal("60")) / 3
-    # Day 3: (150 + 150) / 2 = 150  (series2 ends at day 2)
-    assert avg[3] == Decimal("150")
+    # Day 3: (150 + 120 + 150) / 3 = 140
+    assert avg[3] == (Decimal("150") + Decimal("120") + Decimal("150")) / 3
 
 
-def test_average_series_skips_empty_period():
-    """When one prior period had zero expenses, _to_cumulative returns {}
-    and _average_series averages over only the periods that had data."""
-    series_with_data = _to_cumulative({1: Decimal("100"), 3: Decimal("50")})
-    empty_period = _to_cumulative({})  # month with zero expenses → {}
+def test_average_series_includes_empty_period_as_zeros():
+    """When one prior period had zero expenses but is extended via period_days,
+    it contributes zeros to the average (lowering it), not being excluded."""
+    series_with_data = _to_cumulative(
+        {1: Decimal("100"), 3: Decimal("50")}, period_days=3
+    )
+    # → {1: 100, 2: 100, 3: 150}
+    empty_period = _to_cumulative({}, period_days=3)
+    # → {1: 0, 2: 0, 3: 0}
 
     avg = _average_series([series_with_data, empty_period])
 
-    # Empty dict contributes nothing — average is just the one series
-    assert avg == series_with_data
+    # Divides by 2 (total series), not just the one with data
+    assert avg[1] == Decimal("50")  # (100 + 0) / 2
+    assert avg[3] == Decimal("75")  # (150 + 0) / 2
 
 
 def test_to_cumulative_extends_to_period_days():
@@ -247,3 +259,63 @@ def test_to_cumulative_empty_with_period_days():
     result = _to_cumulative({}, period_days=5)
     assert list(result.keys()) == [1, 2, 3, 4, 5]
     assert all(v == Decimal("0") for v in result.values())
+
+
+def test_average_series_normalized_never_decreases():
+    """Average of cumulative series must never decrease, even when
+    historical periods have different lengths (e.g., Feb 28 vs Mar 31).
+
+    All series should be extended to the same period_days before averaging,
+    and averaging should divide by total series count (not per-day count).
+    """
+    # Simulate 3 prior months all normalized to 31 days
+    feb = _to_cumulative({1: Decimal("100"), 15: Decimal("200")}, period_days=31)
+    mar = _to_cumulative({1: Decimal("80"), 20: Decimal("300")}, period_days=31)
+    jan = _to_cumulative({1: Decimal("50"), 10: Decimal("150")}, period_days=31)
+
+    avg = _average_series([feb, mar, jan])
+
+    # All 3 series have 31 entries, so avg should have 31 entries
+    assert len(avg) == 31
+
+    # Cumulative average must never decrease
+    prev = Decimal("0")
+    for day in range(1, 32):
+        assert avg[day] >= prev, f"Average decreased at day {day}: {avg[day]} < {prev}"
+        prev = avg[day]
+
+
+def test_average_series_divides_by_total_count():
+    """_average_series must divide by total number of series, not by
+    the number of series that contributed to each day.
+
+    When all series are extended to the same period_days, this is
+    inherently correct since every series has every day."""
+    s1 = _to_cumulative({1: Decimal("90")}, period_days=3)
+    # s1 → {1: 90, 2: 90, 3: 90}
+    s2 = _to_cumulative({1: Decimal("60")}, period_days=3)
+    # s2 → {1: 60, 2: 60, 3: 60}
+    s3 = _to_cumulative({}, period_days=3)
+    # s3 → {1: 0, 2: 0, 3: 0}
+
+    avg = _average_series([s1, s2, s3])
+
+    # Day 1: (90 + 60 + 0) / 3 = 50
+    assert avg[1] == Decimal("50")
+    assert avg[2] == Decimal("50")
+    assert avg[3] == Decimal("50")
+
+
+def test_average_series_carries_forward_for_short_series():
+    """If a series is shorter than others, its last cumulative value
+    is carried forward so the average never decreases."""
+    long_series = {1: Decimal("100"), 2: Decimal("200"), 3: Decimal("300")}
+    short_series = {1: Decimal("50"), 2: Decimal("80")}
+    # short_series missing day 3 — should carry forward 80
+
+    avg = _average_series([long_series, short_series])
+
+    # Day 3: (300 + 80) / 2 = 190 (not 300/1 = 300 or 300/2 = 150)
+    assert avg[3] == Decimal("190")
+    # Must never decrease
+    assert avg[1] <= avg[2] <= avg[3]
