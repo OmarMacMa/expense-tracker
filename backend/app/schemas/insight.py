@@ -1,8 +1,11 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel
+
+Timeframe = Literal["weekly", "monthly", "quarterly", "yearly"]
 
 
 class SummaryResponse(BaseModel):
@@ -14,14 +17,14 @@ class SummaryResponse(BaseModel):
 
 
 class TrendPoint(BaseModel):
-    day: int  # 0-based day of period
+    day: int  # 1-based day of period
     cumulative: Decimal
 
 
 class SpendingTrendResponse(BaseModel):
     current_series: list[TrendPoint]
     average_series: list[TrendPoint]
-    timeframe: str
+    timeframe: Timeframe
 
 
 class CategoryBreakdownItem(BaseModel):

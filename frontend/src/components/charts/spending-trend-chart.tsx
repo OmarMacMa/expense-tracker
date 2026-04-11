@@ -13,13 +13,11 @@ import { formatCurrency, getCurrencySymbol } from '@/lib/expense-utils';
 
 interface SpendingTrendChartProps {
   data: SpendingTrend;
-  periodLabel: string;
   currencyCode?: string;
 }
 
 export function SpendingTrendChart({
   data,
-  periodLabel,
   currencyCode = 'USD',
 }: SpendingTrendChartProps) {
   const symbol = getCurrencySymbol(currencyCode);
@@ -123,7 +121,7 @@ export function SpendingTrendChart({
       <div className="mt-2.5 flex gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full bg-[#7C6FA0]" />
-          {periodLabel === 'this_week' ? 'This week' : 'This month'}
+          {isWeekly ? 'This week' : 'This month'}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground opacity-40" />

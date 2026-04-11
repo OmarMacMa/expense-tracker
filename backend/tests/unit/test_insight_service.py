@@ -218,7 +218,7 @@ def test_average_series_with_filled_cumulative():
     assert avg[3] == (Decimal("150") + Decimal("120") + Decimal("150")) / 3
 
 
-def test_average_series_skips_empty_period():
+def test_average_series_includes_empty_period_as_zeros():
     """When one prior period had zero expenses but is extended via period_days,
     it contributes zeros to the average (lowering it), not being excluded."""
     series_with_data = _to_cumulative(
