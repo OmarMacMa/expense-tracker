@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
 import {
   useInsightsSummary,
@@ -15,9 +14,8 @@ import { SpendingTrendChart } from '@/components/charts/spending-trend-chart';
 import { CategoryDonutChart } from '@/components/charts/category-donut-chart';
 import { MerchantLeaderboard } from '@/components/charts/merchant-leaderboard';
 import { TransactionItem } from '@/components/expenses/transaction-item';
+import { usePeriod } from '@/hooks/usePeriod';
 import type { LimitProgress } from '@/types/api';
-
-type Period = 'this_week' | 'this_month';
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn('animate-pulse rounded-lg bg-muted', className)} />;
@@ -97,7 +95,7 @@ function LimitAlertCard({
 }
 
 export default function Home() {
-  const [period, setPeriod] = useState<Period>('this_month');
+  const { period, setPeriod } = usePeriod();
   const { format, currencyCode } = useCurrency();
 
   const { data: summary, isLoading: summaryLoading } = useInsightsSummary({

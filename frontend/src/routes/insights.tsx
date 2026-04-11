@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useExpenseList, type ExpenseFilters } from '@/hooks/useExpenses';
+import { usePeriod } from '@/hooks/usePeriod';
 import {
   useInsightsSummary,
   useSpendingTrend,
@@ -80,10 +81,18 @@ function TransactionListSkeleton() {
 }
 
 export default function Insights() {
-  const [filters, setFilters] = useState<ExpenseFilters>({
-    period: 'this_month',
-  });
+  const { period: globalPeriod } = usePeriod();
+  const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
   const { format, currencyCode } = useCurrency();
+
+  // Merge shared period with local overrides; strip cleared values so
+  // deselecting a chip falls back to globalPeriod instead of undefined.
+  const filters = useMemo<ExpenseFilters>(() => {
+    const active = Object.fromEntries(
+      Object.entries(localFilters).filter(([, v]) => v),
+    );
+    return { period: globalPeriod, ...active };
+  }, [globalPeriod, localFilters]);
 
   // Filter data sources
   const { data: members } = useMembers();
@@ -108,7 +117,7 @@ export default function Insights() {
     useExpenseList(filters);
 
   const allExpenses = useMemo(
-    () => expensePages?.pages[0]?.data ?? [],
+    () => (expensePages?.pages[0]?.data ?? []).slice(0, 15),
     [expensePages],
   );
   const groups = useMemo(() => groupExpensesByDate(allExpenses), [allExpenses]);
@@ -156,7 +165,7 @@ export default function Insights() {
       {/* Filter bar */}
       <FilterBar
         filters={filters}
-        onFiltersChange={setFilters}
+        onFiltersChange={setLocalFilters}
         spenders={members}
         categories={categories}
         merchants={merchantList?.map((m) => m.name) ?? []}
@@ -258,12 +267,7 @@ export default function Insights() {
             {groups.length > 0 && (
               <div className="mt-3 text-center">
                 <Link
-                  to={`/transactions?${new URLSearchParams(
-                    Object.entries(filters).filter(([, v]) => v) as [
-                      string,
-                      string,
-                    ][],
-                  ).toString()}`}
+                  to="/transactions"
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   View all transactions →

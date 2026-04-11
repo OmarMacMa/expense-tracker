@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
+import { PeriodProvider } from '@/hooks/usePeriod';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { PublicRoute } from '@/components/auth/public-route';
 import { AppLayout } from '@/components/layout/app-layout';
@@ -37,160 +38,162 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Toaster position="top-right" richColors />
-      <BrowserRouter>
-        <Routes>
-          {/* Public routes — no auth, no layout */}
-          <Route
-            path="/"
-            element={
-              <PublicRoute>
-                <Landing />
-              </PublicRoute>
-            }
-          />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/join/:token" element={<JoinSpace />} />
+      <PeriodProvider>
+        <Toaster position="top-right" richColors />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes — no auth, no layout */}
+            <Route
+              path="/"
+              element={
+                <PublicRoute>
+                  <Landing />
+                </PublicRoute>
+              }
+            />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/join/:token" element={<JoinSpace />} />
 
-          {/* Onboarding — auth required but no space needed, no layout */}
-          <Route path="/onboarding" element={<Onboarding />} />
+            {/* Onboarding — auth required but no space needed, no layout */}
+            <Route path="/onboarding" element={<Onboarding />} />
 
-          {/* Protected routes — auth + space required, with layout */}
-          <Route
-            path="/home"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <Home />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/transactions"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <TransactionList />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/transactions/:id"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <ExpenseDetail />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/expenses/new"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <AddExpense />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/insights"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <Insights />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/limits"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <Limits />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <Settings />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/settings/categories"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <SettingsCategories />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/settings/payment-methods"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <SettingsPaymentMethods />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/settings/tags"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <SettingsTags />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/settings/members"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <SettingsMembers />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/settings/invite"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <SettingsInvite />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/settings/taxes"
-            element={
-              <AuthGuard>
-                <AppLayout>
-                  <SettingsTaxes />
-                </AppLayout>
-              </AuthGuard>
-            }
-          />
+            {/* Protected routes — auth + space required, with layout */}
+            <Route
+              path="/home"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <Home />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/transactions"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <TransactionList />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/transactions/:id"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <ExpenseDetail />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/expenses/new"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <AddExpense />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/insights"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <Insights />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/limits"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <Limits />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <Settings />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/settings/categories"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <SettingsCategories />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/settings/payment-methods"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <SettingsPaymentMethods />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/settings/tags"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <SettingsTags />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/settings/members"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <SettingsMembers />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/settings/invite"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <SettingsInvite />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/settings/taxes"
+              element={
+                <AuthGuard>
+                  <AppLayout>
+                    <SettingsTaxes />
+                  </AppLayout>
+                </AuthGuard>
+              }
+            />
 
-          {/* Catch-all 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Catch-all 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </PeriodProvider>
     </QueryClientProvider>
   );
 }
