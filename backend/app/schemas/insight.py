@@ -26,6 +26,7 @@ class SpendingTrendResponse(BaseModel):
     average_series: list[TrendPoint]
     timeframe: Timeframe
     year: int  # space-local year of the current window (used for yearly axis labels)
+    current_day: int | None = None  # 1-based day index of "today" within the window; null for past/future windows
 
 
 class CategoryBreakdownItem(BaseModel):

@@ -83,11 +83,15 @@ export function SpendingTrendChart({
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const trendYear = data.year;
   const monthStartDays = isYearly ? getMonthStartDays(trendYear) : undefined;
+  const currentDay = data.current_day ?? null;
   const chartData = data.current_series.map((point) => {
     const avgPoint = data.average_series.find((a) => a.day === point.day);
     return {
       day: point.day,
-      current: parseFloat(point.cumulative),
+      current:
+        currentDay !== null && point.day > currentDay
+          ? null
+          : parseFloat(point.cumulative),
       ...(avgPoint
         ? { average: parseFloat(avgPoint.cumulative) }
         : { average: null }),
@@ -135,6 +139,12 @@ export function SpendingTrendChart({
           <Tooltip
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
+              const currentValue = payload.find(
+                (item) => item.dataKey === 'current',
+              )?.value;
+              const averageValue = payload.find(
+                (item) => item.dataKey === 'average',
+              )?.value;
               return (
                 <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-[var(--shadow-card)]">
                   <p className="mb-1 text-xs font-medium text-muted-foreground">
@@ -144,20 +154,15 @@ export function SpendingTrendChart({
                         ? dayOfYearToMonthDay(label as number, trendYear)
                         : `Day ${label}`}
                   </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    Current:{' '}
-                    {formatCurrency(
-                      String(payload[0]?.value ?? '0'),
-                      currencyCode,
-                    )}
-                  </p>
-                  {payload[1] && payload[1].value != null && (
+                  {currentValue != null && (
+                    <p className="text-sm font-semibold text-foreground">
+                      Current: {formatCurrency(String(currentValue), currencyCode)}
+                    </p>
+                  )}
+                  {averageValue != null && (
                     <p className="text-sm text-muted-foreground">
                       Average:{' '}
-                      {formatCurrency(
-                        String(payload[1]?.value ?? '0'),
-                        currencyCode,
-                      )}
+                      {formatCurrency(String(averageValue), currencyCode)}
                     </p>
                   )}
                 </div>
