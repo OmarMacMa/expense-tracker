@@ -20,6 +20,9 @@ This document defines the **non-functional requirements, quality bars, and testi
   - Authenticated endpoints: 30 requests per minute per user.
   - Auth endpoints (`/auth/google`, `/auth/google/callback`): 5 requests per minute per IP.
   - Internal cron endpoints: 5 requests per minute per token.
+- **Per-endpoint overrides**:
+  - `GET /auth/me`: 60 requests per minute per user. This endpoint is polled on app load and on tab focus by the frontend, so the default 30/min would be too tight in practice.
+  - When adding a new override, document it here and apply it via `@limiter.limit("...")` on the route.
 - **Response**: `429 Too Many Requests` with `Retry-After` header.
 - **Implementation**: in-memory counter (MVP). Can be migrated to Redis if needed at scale.
 
@@ -167,7 +170,7 @@ This document defines the **non-functional requirements, quality bars, and testi
 - Connection pooling: see ARCHITECTURE.md §8 for pool configuration.
 
 ### Health check
-- `GET /api/2.0.0/health` — no authentication required.
+- `GET /api/v1/health` — no authentication required.
 - Returns `{ "status": "ok", "db": "connected" }` when healthy.
 - Returns `{ "status": "degraded", "db": "disconnected" }` with `503` status when DB is unreachable.
 - Used by Azure App Service health probes (configure 30-second interval, 5-second timeout, 3 consecutive failures → restart).
@@ -377,6 +380,6 @@ Cover API endpoints end-to-end (with test database):
 
 ### Monitoring
 - Azure App Service built-in monitoring for uptime, response times, and error rates
-- Health check endpoint (`GET /api/2.0.0/health`) polled by Azure health probes
+- Health check endpoint (`GET /api/v1/health`) polled by Azure health probes
 - Recommended Azure Monitor alerts: health check failures (3 consecutive), error rate > 5%, avg response time > 5s
 - No external monitoring services required in 2.0.0. Azure Monitor is sufficient.

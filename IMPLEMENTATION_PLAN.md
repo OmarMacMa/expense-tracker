@@ -39,8 +39,8 @@ When handing a task to an agent, include:
 - `app/config.py` using `pydantic-settings` to load env vars from `.env`
 - `backend/.env.example` with all required vars
 - Initialize Alembic (`alembic init alembic`), configure `alembic/env.py` for async SQLAlchemy
-- Health check endpoint: `GET /api/2.0.0/health` returning `{"status": "ok"}`
-- **Verify**: `uvicorn app.main:app --reload` starts, `curl localhost:8000/api/2.0.0/health` returns OK, `ruff check .` and `black --check .` pass
+- Health check endpoint: `GET /api/v1/health` returning `{"status": "ok"}`
+- **Verify**: `uvicorn app.main:app --reload` starts, `curl localhost:8000/api/v1/health` returns OK, `ruff check .` and `black --check .` pass
 
 ### Task 1.2 — Initialize frontend skeleton
 
@@ -323,7 +323,7 @@ Include 1.1.0+ columns as nullable (recurring_template_id, scheduled_date, benef
 
 **Context**: `REQUIREMENTS.md` §1 (rate limiting), §9 (request tracing)
 
-- Rate limiting with `slowapi`: 100 req/min per user (authenticated), 10 req/min per IP (auth endpoints)
+- Rate limiting with `slowapi`: 30 req/min per user (authenticated), 5 req/min per IP (auth endpoints). Per-endpoint overrides where appropriate (e.g., `/auth/me` is polled frequently, so it gets a higher cap).
 - Correlation ID middleware: generate UUID v4 per request, inject into all logs, return as `X-Correlation-ID` header
 - **Verify**: exceed rate limit → get 429 with `Retry-After`, correlation ID appears in response headers
 
@@ -367,7 +367,7 @@ Include 1.1.0+ columns as nullable (recurring_template_id, scheduled_date, benef
 - `lib/api-client.ts` — axios or fetch wrapper, base URL from env, credentials: include (cookies)
 - TanStack Query provider with 2-minute stale time, refetch on window focus
 - Auth context/hook: `useAuth` — calls `/auth/me`, provides user + space state, loading state
-- Google sign-in redirect to `/api/2.0.0/auth/google`
+- Google sign-in redirect to `/api/v1/auth/google`
 - Auth callback page: handles redirect after Google OAuth
 - **Verify**: sign in → redirected to Google → callback sets cookie → `/auth/me` returns user → app knows user is authenticated
 
