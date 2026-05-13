@@ -33,8 +33,8 @@ source venv/bin/activate
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 
-# Apply migrations (once DB schema exists)
-# alembic upgrade head
+# Apply migrations
+alembic upgrade head
 
 # Start the API server
 uvicorn app.main:app --reload    # http://localhost:8000
@@ -51,7 +51,7 @@ npm run dev                      # http://localhost:5173
 ### Verify
 
 - **Frontend**: Open http://localhost:5173
-- **Backend**: `curl http://localhost:8000/api/2.0.0/health` → `{"status": "ok"}`
+- **Backend**: `curl http://localhost:8000/api/v1/health` → `{"status": "ok"}`
 - **Database**: `docker exec -it expense-db psql -U postgres -d expense_tracker -c "\dt"`
 
 ### Environment Variables
