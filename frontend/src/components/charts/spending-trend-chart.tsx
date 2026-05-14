@@ -34,6 +34,42 @@ interface SpendingTrendChartProps {
   currencyCode?: string;
 }
 
+const MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/** Returns the 1-based day-of-year for the 1st of each month in the given year.
+ * Uses Date.UTC so DST transitions don't shift month boundaries. */
+function getMonthStartDays(year: number): number[] {
+  const jan1 = Date.UTC(year, 0, 1);
+  return MONTH_NAMES.map(
+    (_, m) => Math.floor((Date.UTC(year, m, 1) - jan1) / 86_400_000) + 1,
+  );
+}
+
+/** Converts a 1-based day-of-year to its month abbreviation for the given year. */
+function dayOfYearToMonthName(day: number, year: number): string {
+  const date = new Date(Date.UTC(year, 0, day));
+  return MONTH_NAMES[date.getUTCMonth()];
+}
+
+/** Converts a 1-based day-of-year to a "Mon DD" string (zero-padded day). */
+function dayOfYearToMonthDay(day: number, year: number): string {
+  const date = new Date(Date.UTC(year, 0, day));
+  return `${MONTH_NAMES[date.getUTCMonth()]} ${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
 export function SpendingTrendChart({
   data,
   periodLabel,
@@ -41,9 +77,12 @@ export function SpendingTrendChart({
 }: SpendingTrendChartProps) {
   const symbol = getCurrencySymbol(currencyCode);
   const isWeekly = data.timeframe === 'weekly';
+  const isYearly = data.timeframe === 'yearly';
   const hasAverage = data.average_series.length > 0;
   const avgLabel = AVG_LABEL[data.timeframe];
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const trendYear = data.year;
+  const monthStartDays = isYearly ? getMonthStartDays(trendYear) : undefined;
   const chartData = data.current_series.map((point) => {
     const avgPoint = data.average_series.find((a) => a.day === point.day);
     return {
@@ -78,9 +117,12 @@ export function SpendingTrendChart({
             tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v) =>
-              isWeekly ? weekdays[(v - 1) % 7] || `${v}` : `${v}`
-            }
+            ticks={monthStartDays}
+            tickFormatter={(v) => {
+              if (isWeekly) return weekdays[(v - 1) % 7] || `${v}`;
+              if (isYearly) return dayOfYearToMonthName(v, trendYear);
+              return `${v}`;
+            }}
           />
           <YAxis
             tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
@@ -98,7 +140,9 @@ export function SpendingTrendChart({
                   <p className="mb-1 text-xs font-medium text-muted-foreground">
                     {isWeekly
                       ? weekdays[(label as number) - 1] || `Day ${label}`
-                      : `Day ${label}`}
+                      : isYearly
+                        ? dayOfYearToMonthDay(label as number, trendYear)
+                        : `Day ${label}`}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     Current:{' '}

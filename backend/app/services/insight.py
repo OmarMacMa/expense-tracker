@@ -245,6 +245,7 @@ async def get_spending_trend(
         ],
         "average_series": [{"day": d, "cumulative": v} for d, v in avg_series.items()],
         "timeframe": timeframe,
+        "year": resolver.localize_for_display(start_utc).year,
     }
 
 

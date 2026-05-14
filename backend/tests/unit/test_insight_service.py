@@ -164,6 +164,9 @@ async def test_spending_trend_returns_series(db_session, test_user, test_space):
     assert isinstance(result["current_series"], list)
     # Should have at least one point
     assert len(result["current_series"]) >= 1
+    # Year reflects the space-tz year of the current window
+    assert isinstance(result["year"], int)
+    assert result["year"] >= 2020
 
 
 @pytest.mark.asyncio
@@ -173,6 +176,8 @@ async def test_spending_trend_yearly_skips_average(db_session, test_user, test_s
     assert result["timeframe"] == "yearly"
     assert result["average_series"] == []
     assert isinstance(result["current_series"], list)
+    # YTD year matches the space-tz year of today
+    assert result["year"] == datetime.now(UTC).year
 
 
 def test_to_cumulative_fills_gaps():
