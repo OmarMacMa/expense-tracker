@@ -6,6 +6,7 @@ import {
   Tooltip,
   CartesianGrid,
   Line,
+  ReferenceLine,
   ComposedChart,
 } from 'recharts';
 import type {
@@ -156,7 +157,8 @@ export function SpendingTrendChart({
                   </p>
                   {currentValue != null && (
                     <p className="text-sm font-semibold text-foreground">
-                      Current: {formatCurrency(String(currentValue), currencyCode)}
+                      Current:{' '}
+                      {formatCurrency(String(currentValue), currencyCode)}
                     </p>
                   )}
                   {averageValue != null && (
@@ -186,6 +188,20 @@ export function SpendingTrendChart({
               strokeOpacity={0.4}
               dot={false}
               connectNulls
+            />
+          )}
+          {currentDay !== null && (
+            <ReferenceLine
+              x={currentDay}
+              stroke="#7C6FA0"
+              strokeDasharray="3 3"
+              strokeOpacity={0.5}
+              label={{
+                value: 'Today',
+                position: 'top',
+                fill: 'var(--muted-foreground)',
+                fontSize: 10,
+              }}
             />
           )}
         </ComposedChart>

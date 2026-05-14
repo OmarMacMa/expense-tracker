@@ -202,6 +202,19 @@ async def test_spending_trend_past_week_has_no_current_day(
     assert result["current_day"] is None
 
 
+@pytest.mark.asyncio
+async def test_spending_trend_future_month_has_no_current_day(
+    db_session, test_user, test_space
+):
+    """Future month-picker selections should not expose a current day marker."""
+    now = datetime.now(UTC)
+    future_year = now.year + 1
+    result = await get_spending_trend(
+        db_session, test_space.id, month=f"{future_year}-06"
+    )
+    assert result["current_day"] is None
+
+
 def test_to_cumulative_fills_gaps():
     """Cumulative series must include non-spending days with carried-forward values."""
     daily = {1: Decimal("100"), 3: Decimal("50"), 6: Decimal("30")}
