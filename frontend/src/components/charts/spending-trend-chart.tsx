@@ -81,8 +81,8 @@ export function SpendingTrendChart({
   const hasAverage = data.average_series.length > 0;
   const avgLabel = AVG_LABEL[data.timeframe];
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const currentYear = new Date().getFullYear();
-  const monthStartDays = isYearly ? getMonthStartDays(currentYear) : undefined;
+  const trendYear = data.year;
+  const monthStartDays = isYearly ? getMonthStartDays(trendYear) : undefined;
   const chartData = data.current_series.map((point) => {
     const avgPoint = data.average_series.find((a) => a.day === point.day);
     return {
@@ -120,7 +120,7 @@ export function SpendingTrendChart({
             ticks={monthStartDays}
             tickFormatter={(v) => {
               if (isWeekly) return weekdays[(v - 1) % 7] || `${v}`;
-              if (isYearly) return dayOfYearToMonthName(v, currentYear);
+              if (isYearly) return dayOfYearToMonthName(v, trendYear);
               return `${v}`;
             }}
           />
@@ -141,7 +141,7 @@ export function SpendingTrendChart({
                     {isWeekly
                       ? weekdays[(label as number) - 1] || `Day ${label}`
                       : isYearly
-                        ? dayOfYearToMonthDay(label as number, currentYear)
+                        ? dayOfYearToMonthDay(label as number, trendYear)
                         : `Day ${label}`}
                   </p>
                   <p className="text-sm font-semibold text-foreground">

@@ -25,6 +25,7 @@ class SpendingTrendResponse(BaseModel):
     current_series: list[TrendPoint]
     average_series: list[TrendPoint]
     timeframe: Timeframe
+    year: int  # space-local year of the current window (used for yearly axis labels)
 
 
 class CategoryBreakdownItem(BaseModel):
