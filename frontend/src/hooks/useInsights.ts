@@ -19,6 +19,8 @@ export interface SpendingTrend {
   current_series: TrendPoint[];
   average_series: TrendPoint[];
   timeframe: SpendingTrendTimeframe;
+  year: number;
+  current_day?: number | null;
 }
 
 export interface CategoryBreakdown {

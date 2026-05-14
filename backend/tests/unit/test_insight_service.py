@@ -161,9 +161,14 @@ async def test_spending_trend_returns_series(db_session, test_user, test_space):
     assert "current_series" in result
     assert "average_series" in result
     assert result["timeframe"] == "monthly"
+    assert result["current_day"] is not None
+    assert 1 <= result["current_day"] <= len(result["current_series"])
     assert isinstance(result["current_series"], list)
     # Should have at least one point
     assert len(result["current_series"]) >= 1
+    # Year reflects the space-tz year of the current window
+    assert isinstance(result["year"], int)
+    assert result["year"] >= 2020
 
 
 @pytest.mark.asyncio
@@ -173,6 +178,41 @@ async def test_spending_trend_yearly_skips_average(db_session, test_user, test_s
     assert result["timeframe"] == "yearly"
     assert result["average_series"] == []
     assert isinstance(result["current_series"], list)
+    # YTD year matches the space-tz year of today
+    assert result["year"] == datetime.now(UTC).year
+    # YTD always contains "now" — current_day is set
+    assert result["current_day"] is not None
+
+
+@pytest.mark.asyncio
+async def test_spending_trend_past_month_has_no_current_day(
+    db_session, test_user, test_space
+):
+    """Past monthly periods should not expose a current day marker."""
+    result = await get_spending_trend(db_session, test_space.id, period="last_month")
+    assert result["current_day"] is None
+
+
+@pytest.mark.asyncio
+async def test_spending_trend_past_week_has_no_current_day(
+    db_session, test_user, test_space
+):
+    """Past weekly periods should not expose a current day marker."""
+    result = await get_spending_trend(db_session, test_space.id, period="last_week")
+    assert result["current_day"] is None
+
+
+@pytest.mark.asyncio
+async def test_spending_trend_future_month_has_no_current_day(
+    db_session, test_user, test_space
+):
+    """Future month-picker selections should not expose a current day marker."""
+    now = datetime.now(UTC)
+    future_year = now.year + 1
+    result = await get_spending_trend(
+        db_session, test_space.id, month=f"{future_year}-06"
+    )
+    assert result["current_day"] is None
 
 
 def test_to_cumulative_fills_gaps():

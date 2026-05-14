@@ -239,12 +239,21 @@ async def get_spending_trend(
             all_prev_dailies.append(_to_cumulative(daily, period_days=period_days))
         avg_series = _average_series(all_prev_dailies)
 
+    now_utc = datetime.now(UTC)
+    current_day = (
+        resolver.get_day_of_period(now_utc, timeframe)
+        if start_utc <= now_utc <= end_utc
+        else None
+    )
+
     return {
         "current_series": [
             {"day": d, "cumulative": v} for d, v in current_series.items()
         ],
         "average_series": [{"day": d, "cumulative": v} for d, v in avg_series.items()],
         "timeframe": timeframe,
+        "year": resolver.localize_for_display(start_utc).year,
+        "current_day": current_day,
     }
 
 

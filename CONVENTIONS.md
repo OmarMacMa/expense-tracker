@@ -116,8 +116,8 @@ ExpenseTracker/
 ## 3) API conventions
 
 ### URL patterns
-- All endpoints under `/api/2.0.0/`
-- Space-scoped: `/api/2.0.0/spaces/{space_id}/...`
+- All endpoints under `/api/v1/`
+- Space-scoped: `/api/v1/spaces/{space_id}/...`
 - Resource names are **plural** (e.g., `/expenses`, `/categories`, `/limits`)
 - Use kebab-case for multi-word resources (e.g., `/payment-methods`)
 
@@ -169,6 +169,7 @@ ExpenseTracker/
 - **`chore/{short-description}`** — infrastructure, docs, or tooling changes. Created from and merged into the current `release/X.Y.x` branch via PR.
 - **`feature/{short-description}`** — feature branches for new minor/major versions. Created from `main` and merged into `main` or a new release branch.
 - **`hotfix/{short-description}`** — urgent fixes that cannot wait for the normal release cycle. Created from `main`, merged to both `main` and the active release branch.
+- **`copilot/{short-description}`** — branches authored by the Copilot coding agent (created automatically when assigning an issue to Copilot). Treated as equivalent to `fix/*` or `chore/*` depending on the change; targets the current `release/X.Y.x` for patches or `main` for feature work, following the same review rules as a human-authored PR.
 
 ### Workflow
 
@@ -279,7 +280,7 @@ ENVIRONMENT=development
 
 **Frontend (`frontend/.env`):**
 ```
-VITE_API_URL=http://localhost:8000/api/2.0.0
+VITE_API_URL=http://localhost:8000/api/v1
 ```
 
 ### Running the full stack locally
@@ -305,13 +306,13 @@ npm run dev                        # http://localhost:5173
 
 **Verifying the stack is running:**
 - Frontend: open `http://localhost:5173` — should show the sign-in page
-- Backend: `curl http://localhost:8000/api/2.0.0/health` — should return `{"status": "ok", "db": "connected"}`
+- Backend: `curl http://localhost:8000/api/v1/health` — should return `{"status": "ok", "db": "connected"}`
 - Database: `docker exec -it expense-db psql -U postgres -d expense_tracker -c "\dt"` — should list tables after migrations
 
 **Google OAuth local setup:**
 1. Go to Google Cloud Console → APIs & Services → Credentials
 2. Create an OAuth 2.0 Client ID (Web application)
-3. Add `http://localhost:8000/api/2.0.0/auth/google/callback` as an authorized redirect URI
+3. Add `http://localhost:8000/api/v1/auth/google/callback` as an authorized redirect URI
 4. Copy Client ID and Client Secret into `backend/.env`
 
 **Common issues:**
@@ -400,8 +401,8 @@ This provides enough data for dashboard charts, Insights filters, and limit aler
 
 ### Scheduled jobs (GitHub Actions cron)
 - Defined in `.github/workflows/cron.yml`
-- Daily trigger: calls `POST /api/2.0.0/internal/cron/recurring-generate` (1.1.0+)
-- Monthly trigger: calls `POST /api/2.0.0/internal/cron/wrap-generate` (2.0.0+)
+- Daily trigger: calls `POST /api/v1/internal/cron/recurring-generate` (1.1.0+)
+- Monthly trigger: calls `POST /api/v1/internal/cron/wrap-generate` (2.0.0+)
 - Authenticated via `INTERNAL_CRON_TOKEN` secret
 
 ### Database migrations
