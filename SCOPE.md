@@ -32,6 +32,14 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - Generate single-use invite link (7-day expiry)
 - Partner joins via invite link → Google sign-in → added to space
 - Invite link invalidated after use
+- Authenticated user already in a space sees a clear "you already have a space" message with a path to leave (issue #18, #54)
+
+### Leave space (v1.0.7+)
+- User can leave any space they're a member of via Settings → Danger Zone
+- Type-to-confirm modal (Stripe/GitHub pattern)
+- Cascade behavior: zero-member spaces are automatically deleted in the same transaction
+- Single endpoint covers the recovery flow for users stuck in the wrong space, and the future shared-family case
+- See #54
 
 ### Expense entry (single-line only)
 - Add single-line expense (amount, merchant, category, datetime, spender, payment method, tags, notes)
@@ -170,6 +178,7 @@ Add recurring expenses and shareable analytics.
 - Share button copies URL with current filters
 
 ### Expense entry improvements
+- Drop time-of-day from expense entry: migrate `expenses.purchase_datetime TIMESTAMPTZ` → `purchase_date DATE`. Users only think in dates; time was never used by any feature. One-time alembic migration converts existing rows via space timezone. Breaking API change (acceptable in 1.1.0 minor bump). See issue #53.
 - Merchant auto-fill: selecting a known merchant auto-fills category, payment method, spender, and tags from the last expense with that merchant
 - Backend: store `last_payment_method_id`, `last_spender_id`, `last_tags` on merchant records (migration needed)
 - Frontend: populate all fields on merchant select (user can override any)
@@ -330,6 +339,7 @@ These features are intentionally excluded from the current roadmap. Do not build
 | File uploads / receipts | Never | Notes-only by design |
 | Transfers | TBD | May never be needed |
 | Real-time sync (WebSocket) | TBD | 2-minute refetch is sufficient |
+| Multiple spaces per user | TBD (if demand emerges) | Schema supports it; the constraint is at the app layer. Leave Space (v1.0.7) is the recovery primitive for any user who needs to switch. Multi-space adds significant UI complexity (space selector everywhere, current-space state, route params) and re-creates data-split problems. Not built until concrete user demand exists. |
 
 ---
 
