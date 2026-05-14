@@ -28,6 +28,8 @@ import {
 } from '@/components/ui/command';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { validateTagName } from '@/lib/tag-utils';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useCreateExpense } from '@/hooks/useExpenses';
@@ -198,15 +200,22 @@ export default function AddExpense() {
       const existingTag = tags?.find((t) => t.name === normalizedName);
       if (existingTag) {
         handleAddTag(existingTag, options);
-      } else {
-        handleAddTag(
-          {
-            id: `new-${normalizedName}`,
-            name: normalizedName,
-          },
-          options,
-        );
+        return;
       }
+
+      const validationError = validateTagName(normalizedName);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      handleAddTag(
+        {
+          id: `new-${normalizedName}`,
+          name: normalizedName,
+        },
+        options,
+      );
     },
     [tags, handleAddTag],
   );

@@ -42,6 +42,8 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { getCategoryColor } from '@/lib/expense-utils';
+import { validateTagName } from '@/lib/tag-utils';
+import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
   useExpense,
@@ -434,12 +436,19 @@ function ExpenseEditMode({
       const existingTag = tags?.find((t) => t.name === normalizedName);
       if (existingTag) {
         handleAddTag(existingTag, options);
-      } else {
-        handleAddTag(
-          { id: `new-${normalizedName}`, name: normalizedName },
-          options,
-        );
+        return;
       }
+
+      const validationError = validateTagName(normalizedName);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      handleAddTag(
+        { id: `new-${normalizedName}`, name: normalizedName },
+        options,
+      );
     },
     [tags, handleAddTag],
   );
