@@ -49,19 +49,25 @@ const MONTH_NAMES = [
   'Dec',
 ];
 
-/** Returns the 1-based day-of-year for the 1st of each month in the given year. */
+/** Returns the 1-based day-of-year for the 1st of each month in the given year.
+ * Uses Date.UTC so DST transitions don't shift month boundaries. */
 function getMonthStartDays(year: number): number[] {
-  return MONTH_NAMES.map((_, m) => {
-    const jan1 = new Date(year, 0, 1).getTime();
-    const monthStart = new Date(year, m, 1).getTime();
-    return Math.floor((monthStart - jan1) / 86_400_000) + 1;
-  });
+  const jan1 = Date.UTC(year, 0, 1);
+  return MONTH_NAMES.map(
+    (_, m) => Math.floor((Date.UTC(year, m, 1) - jan1) / 86_400_000) + 1,
+  );
 }
 
 /** Converts a 1-based day-of-year to its month abbreviation for the given year. */
 function dayOfYearToMonthName(day: number, year: number): string {
-  const date = new Date(year, 0, day);
-  return MONTH_NAMES[date.getMonth()];
+  const date = new Date(Date.UTC(year, 0, day));
+  return MONTH_NAMES[date.getUTCMonth()];
+}
+
+/** Converts a 1-based day-of-year to a "Mon DD" string (zero-padded day). */
+function dayOfYearToMonthDay(day: number, year: number): string {
+  const date = new Date(Date.UTC(year, 0, day));
+  return `${MONTH_NAMES[date.getUTCMonth()]} ${String(date.getUTCDate()).padStart(2, '0')}`;
 }
 
 export function SpendingTrendChart({
@@ -135,7 +141,7 @@ export function SpendingTrendChart({
                     {isWeekly
                       ? weekdays[(label as number) - 1] || `Day ${label}`
                       : isYearly
-                        ? dayOfYearToMonthName(label as number, currentYear)
+                        ? dayOfYearToMonthDay(label as number, currentYear)
                         : `Day ${label}`}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
