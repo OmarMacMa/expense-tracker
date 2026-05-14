@@ -117,18 +117,11 @@ async def google_callback(
     await db.commit()
     await db.refresh(user)
 
-    # Check if user has any space
-    membership_stmt = select(SpaceMember).where(SpaceMember.user_id == user.id)
-    membership_result = await db.execute(membership_stmt)
-    has_space = membership_result.scalar_one_or_none() is not None
-
-    # Create JWT and set cookie
+    # Create JWT and set cookie. The frontend's /auth/callback route is now the
+    # routing decision point (reads sessionStorage for pending invite tokens,
+    # then dispatches to /home, /onboarding, or /join/:token as appropriate).
     token = create_access_token(user.id)
-    redirect_url = (
-        f"{settings.FRONTEND_URL}/home"
-        if has_space
-        else f"{settings.FRONTEND_URL}/onboarding"
-    )
+    redirect_url = f"{settings.FRONTEND_URL}/auth/callback"
     response = RedirectResponse(url=redirect_url, status_code=302)
     response.set_cookie(
         key=COOKIE_NAME,
