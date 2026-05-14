@@ -172,15 +172,18 @@ export default function AddExpense() {
   }, []);
 
   const handleAddTag = useCallback(
-    (tag: { id: string; name: string }) => {
-      if (!selectedTags.find((t) => t.id === tag.id)) {
-        setSelectedTags((prev) => [...prev, tag]);
-      }
+    (tag: { id: string; name: string }, options: { focus?: boolean } = {}) => {
+      const { focus = true } = options;
+      setSelectedTags((prev) =>
+        prev.some((t) => t.id === tag.id) ? prev : [...prev, tag],
+      );
       setTagInput('');
       setTagDropdownOpen(false);
-      tagInputRef.current?.focus();
+      if (focus) {
+        tagInputRef.current?.focus();
+      }
     },
-    [selectedTags],
+    [],
   );
 
   const handleRemoveTag = useCallback((tagId: string) => {
@@ -188,18 +191,21 @@ export default function AddExpense() {
   }, []);
 
   const commitTagFromInput = useCallback(
-    (input: string) => {
-      const normalizedName = input.replace(/^#/, '').toLowerCase().trim();
+    (input: string, options: { focus?: boolean } = {}) => {
+      const normalizedName = input.replace(/^#+/, '').toLowerCase().trim();
       if (!normalizedName) return;
 
       const existingTag = tags?.find((t) => t.name === normalizedName);
       if (existingTag) {
-        handleAddTag(existingTag);
+        handleAddTag(existingTag, options);
       } else {
-        handleAddTag({
-          id: `new-${normalizedName}`,
-          name: normalizedName,
-        });
+        handleAddTag(
+          {
+            id: `new-${normalizedName}`,
+            name: normalizedName,
+          },
+          options,
+        );
       }
     },
     [tags, handleAddTag],
@@ -230,7 +236,7 @@ export default function AddExpense() {
   const handleTagKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       const currentFilteredTags = tags?.filter((t) => {
-        const q = tagInput.replace(/^#/, '').toLowerCase();
+        const q = tagInput.replace(/^#+/, '').toLowerCase();
         return t.name.includes(q) && !selectedTags.find((st) => st.id === t.id);
       });
 
@@ -325,7 +331,7 @@ export default function AddExpense() {
   );
 
   const filteredTags = tags?.filter((t) => {
-    const query = tagInput.replace(/^#/, '').toLowerCase();
+    const query = tagInput.replace(/^#+/, '').toLowerCase();
     return t.name.includes(query) && !selectedTags.find((st) => st.id === t.id);
   });
 
@@ -702,7 +708,7 @@ export default function AddExpense() {
                   setTimeout(() => {
                     setTagDropdownOpen(false);
                     if (tagInput.trim()) {
-                      commitTagFromInput(tagInput);
+                      commitTagFromInput(tagInput, { focus: false });
                     }
                   }, 200)
                 }
@@ -713,7 +719,7 @@ export default function AddExpense() {
                 }
                 className="min-w-[100px] flex-1 bg-transparent text-[0.82rem] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
               />
-              {tagInput.replace(/^#/, '').trim() && (
+              {tagInput.replace(/^#+/, '').trim() && (
                 <button
                   type="button"
                   aria-label="Add tag"
