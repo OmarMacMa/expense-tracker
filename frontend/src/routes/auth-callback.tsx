@@ -1,20 +1,31 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/useAuth';
+import { readPendingInvite } from '@/lib/pendingInvite';
 
 export default function AuthCallback() {
   const { isAuthenticated, hasSpace, isLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading) {
-      if (isAuthenticated && hasSpace) {
-        navigate('/home', { replace: true });
-      } else if (isAuthenticated && !hasSpace) {
-        navigate('/onboarding', { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
+    if (isLoading) return;
+
+    // Pending invite token wins — route back to /join/:token to complete the
+    // join (or to show "already in a space" if the user already has one).
+    // Don't clear here: /join/:token consumes it on successful join, and the
+    // "leave then auto-rejoin" path needs it to survive a Settings detour.
+    const pendingToken = readPendingInvite();
+    if (isAuthenticated && pendingToken) {
+      navigate(`/join/${pendingToken}`, { replace: true });
+      return;
+    }
+
+    if (isAuthenticated && hasSpace) {
+      navigate('/home', { replace: true });
+    } else if (isAuthenticated && !hasSpace) {
+      navigate('/onboarding', { replace: true });
+    } else {
+      navigate('/', { replace: true });
     }
   }, [isAuthenticated, hasSpace, isLoading, navigate]);
 

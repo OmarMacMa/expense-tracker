@@ -1,7 +1,23 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { BarChart3, Shield, Users } from 'lucide-react';
+import { clearPendingInvite } from '@/lib/pendingInvite';
 
 export default function Landing() {
+  const location = useLocation();
+
+  // Defensive clear of any stale pending invite, EXCEPT when the user arrived
+  // via an OAuth error redirect (backend redirects failures to /?error=...).
+  // In that case the token must survive so the retry sign-in can resume the
+  // /join/:token flow within the 10-minute TTL.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (!params.has('error')) {
+      clearPendingInvite();
+    }
+  }, [location.search]);
+
   const handleSignIn = () => {
     window.location.href = '/api/v1/auth/google';
   };

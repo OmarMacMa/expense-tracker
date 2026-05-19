@@ -28,14 +28,14 @@ async def generate_invite(
     return invite
 
 
-async def join_space(db: AsyncSession, token: str, user_id: uuid.UUID) -> dict:
-    """Join a space via invite token.
+async def preview_invite(db: AsyncSession, token: str) -> dict:
+    """Return the target space info for an invite without consuming it.
 
-    Validates: token exists, not expired, not used, space not at limit,
-    user not already member.
-    Returns dict with space_id, space_name, message.
+    Validates that the invite exists, is not expired, and is not used.
+    Does NOT check user membership state — the frontend decides what to do
+    with that information. Used by the frontend confirmation step before
+    calling join_space().
     """
-    # Find invite by token
     stmt = select(InviteLink).where(InviteLink.token == token)
     result = await db.execute(stmt)
     invite = result.scalar_one_or_none()
@@ -46,7 +46,6 @@ async def join_space(db: AsyncSession, token: str, user_id: uuid.UUID) -> dict:
             detail={"error": {"code": "NOT_FOUND", "message": "Invite link not found"}},
         )
 
-    # Check if expired
     if invite.expires_at < datetime.now(UTC):
         raise HTTPException(
             status_code=410,
@@ -58,7 +57,6 @@ async def join_space(db: AsyncSession, token: str, user_id: uuid.UUID) -> dict:
             },
         )
 
-    # Check if already used
     if invite.used_at is not None:
         raise HTTPException(
             status_code=410,
@@ -70,7 +68,103 @@ async def join_space(db: AsyncSession, token: str, user_id: uuid.UUID) -> dict:
             },
         )
 
-    # Check member limit
+    space_stmt = select(Space).where(Space.id == invite.space_id)
+    space = (await db.execute(space_stmt)).scalar_one()
+
+    return {
+        "space_id": space.id,
+        "space_name": space.name,
+        "space_currency_code": space.currency_code,
+    }
+
+
+async def join_space(db: AsyncSession, token: str, user_id: uuid.UUID) -> dict:
+    """Join a space via invite token.
+
+    Validation order (user-state errors before space-state errors):
+      1. Invite token exists (404)
+      2. User is already a member of the target space (409 ALREADY_MEMBER)
+      3. User already belongs to some OTHER space (409 ALREADY_HAS_SPACE)
+      4. Invite expired (410)
+      5. Invite already used (410)
+      6. Target space at member limit (409)
+
+    Returns dict with space_id, space_name, message.
+    """
+    # 1. Find invite by token
+    stmt = select(InviteLink).where(InviteLink.token == token)
+    result = await db.execute(stmt)
+    invite = result.scalar_one_or_none()
+
+    if invite is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": {"code": "NOT_FOUND", "message": "Invite link not found"}},
+        )
+
+    # 2. Target-space membership check (deterministic when target matches).
+    # Uses .scalars().first() rather than scalar_one_or_none() to tolerate any
+    # historical multi-membership data that may exist from prior bugs.
+    target_member_stmt = (
+        select(SpaceMember)
+        .where(
+            SpaceMember.space_id == invite.space_id,
+            SpaceMember.user_id == user_id,
+        )
+        .limit(1)
+    )
+    target_member = (await db.execute(target_member_stmt)).scalars().first()
+    if target_member is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ALREADY_MEMBER",
+                    "message": "Already a member of this space",
+                }
+            },
+        )
+
+    # 3. Any-space membership (one-space-per-user invariant).
+    any_space_stmt = select(SpaceMember).where(SpaceMember.user_id == user_id).limit(1)
+    any_existing = (await db.execute(any_space_stmt)).scalars().first()
+    if any_existing is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ALREADY_HAS_SPACE",
+                    "message": "You already belong to a space. "
+                    "Leave your current space before joining another.",
+                }
+            },
+        )
+
+    # 4. Check if expired
+    if invite.expires_at < datetime.now(UTC):
+        raise HTTPException(
+            status_code=410,
+            detail={
+                "error": {
+                    "code": "INVITE_EXPIRED",
+                    "message": "This invite link has expired",
+                }
+            },
+        )
+
+    # 5. Check if already used
+    if invite.used_at is not None:
+        raise HTTPException(
+            status_code=410,
+            detail={
+                "error": {
+                    "code": "INVITE_USED",
+                    "message": "This invite link has already been used",
+                }
+            },
+        )
+
+    # 6. Check member limit
     member_count = await get_member_count(db, invite.space_id)
     if member_count >= MAX_MEMBERS:
         raise HTTPException(
@@ -79,23 +173,6 @@ async def join_space(db: AsyncSession, token: str, user_id: uuid.UUID) -> dict:
                 "error": {
                     "code": "MEMBER_LIMIT",
                     "message": "This space has reached its member limit (10).",
-                }
-            },
-        )
-
-    # Check if user is already a member
-    existing_stmt = select(SpaceMember).where(
-        SpaceMember.space_id == invite.space_id,
-        SpaceMember.user_id == user_id,
-    )
-    existing_result = await db.execute(existing_stmt)
-    if existing_result.scalar_one_or_none() is not None:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error": {
-                    "code": "ALREADY_MEMBER",
-                    "message": "Already a member of this space",
                 }
             },
         )

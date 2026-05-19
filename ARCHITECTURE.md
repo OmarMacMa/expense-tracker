@@ -118,13 +118,16 @@ User → "Sign in with Google" → Frontend redirects to backend
 → Google callback → GET /api/v1/auth/google/callback
 → Backend validates OAuth token (scopes: `openid`, `email`, `profile`), creates/updates user record
 → Backend issues JWT, sets httpOnly cookie (Secure, SameSite=Lax)
-→ Redirects to frontend (onboarding if new user, Home if existing)
+→ Redirects to frontend /auth/callback
+→ /auth/callback inspects sessionStorage for a pending invite token (set by /join/:token before redirect)
+  and routes to /join/:token, /home, or /onboarding accordingly
 ```
 
 - JWT contains: user ID, issued-at, expiration
 - Cookie: httpOnly, Secure, SameSite=Lax
 - Every API request: middleware extracts JWT from cookie, validates, injects user into request context
 - Space membership: middleware checks `space_members` table for every `/spaces/{space_id}/...` endpoint
+- **Invite recovery**: when a user starts the join flow at `/join/:token`, the frontend stores the token in `sessionStorage` with a 10-minute TTL. After the Google OAuth roundtrip, `/auth/callback` reads it and routes back to `/join/:token` to complete the join. This survives the "you already have a space → leave first → rejoin" flow.
 
 ### Frontend routes (React Router v7)
 
@@ -171,12 +174,13 @@ GET  /api/v1/auth/me                → get current user info + their space(s)
 
 ### 4.3 Space endpoints
 ```
-POST /api/v1/spaces                          → create space
-GET  /api/v1/spaces/{space_id}               → get space details
-PUT  /api/v1/spaces/{space_id}               → update space settings
-POST /api/v1/spaces/{space_id}/invite        → generate invite link
-POST /api/v1/spaces/join/{invite_token}      → join space via invite
-GET  /api/v1/spaces/{space_id}/members       → list members
+POST /api/v1/spaces                                 → create space
+GET  /api/v1/spaces/{space_id}                      → get space details
+PUT  /api/v1/spaces/{space_id}                      → update space settings
+POST /api/v1/spaces/{space_id}/invite               → generate invite link
+GET  /api/v1/spaces/invites/{invite_token}/preview  → preview an invite (target space info, no consume)
+POST /api/v1/spaces/join/{invite_token}             → join space via invite
+GET  /api/v1/spaces/{space_id}/members              → list members
 ```
 
 ### 4.4 Expense endpoints

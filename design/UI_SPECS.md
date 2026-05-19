@@ -202,7 +202,10 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 
 ### MVP
 - Google OAuth callback handler. Loading spinner while processing.
-- Redirects to `/onboarding` (new user) or `/home` (existing user with space).
+- Backend always lands the user here after OAuth (no longer branches server-side). The page inspects `sessionStorage` for a pending invite token (set by `/join/:token` before sign-in, with a 10-minute TTL):
+  - If a valid pending token exists → redirect to `/join/:token` to complete the join.
+  - Else if user has a space → `/home`.
+  - Else → `/onboarding`.
 
 ---
 
