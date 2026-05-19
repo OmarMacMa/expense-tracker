@@ -7,9 +7,9 @@ from app.db.session import get_db
 from app.middleware.auth import get_current_user
 from app.middleware.space import get_current_space_member
 from app.models import SpaceMember, User
-from app.schemas.invite import InviteResponse, JoinResponse
+from app.schemas.invite import InvitePreviewResponse, InviteResponse, JoinResponse
 from app.schemas.space import MemberResponse, SpaceCreate, SpaceResponse, SpaceUpdate
-from app.services.invite import generate_invite, join_space
+from app.services.invite import generate_invite, join_space, preview_invite
 from app.services.space import create_space, get_space, list_members, update_space
 
 router = APIRouter(prefix="/api/v1", tags=["spaces"])
@@ -24,6 +24,26 @@ async def create_space_endpoint(
     """Create a new space. The creator is automatically added as a member."""
     space = await create_space(db, current_user, data)
     return SpaceResponse.model_validate(space)
+
+
+@router.get(
+    "/spaces/invites/{invite_token}/preview",
+    response_model=InvitePreviewResponse,
+)
+async def preview_invite_endpoint(
+    invite_token: str,
+    _current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> InvitePreviewResponse:
+    """Preview an invite (target space info) without consuming it.
+
+    Requires auth (so we don't leak space names to unauthenticated probes),
+    but does NOT require membership in any space — the frontend uses this on
+    /join/:token after the user signs in, to render a confirmation step
+    showing which space they're about to join.
+    """
+    result = await preview_invite(db, invite_token)
+    return InvitePreviewResponse(**result)
 
 
 @router.post("/spaces/join/{invite_token}", response_model=JoinResponse)

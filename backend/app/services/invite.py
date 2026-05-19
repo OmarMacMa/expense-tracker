@@ -28,6 +28,56 @@ async def generate_invite(
     return invite
 
 
+async def preview_invite(db: AsyncSession, token: str) -> dict:
+    """Return the target space info for an invite without consuming it.
+
+    Validates that the invite exists, is not expired, and is not used.
+    Does NOT check user membership state — the frontend decides what to do
+    with that information. Used by the frontend confirmation step before
+    calling join_space().
+    """
+    stmt = select(InviteLink).where(InviteLink.token == token)
+    result = await db.execute(stmt)
+    invite = result.scalar_one_or_none()
+
+    if invite is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": {"code": "NOT_FOUND", "message": "Invite link not found"}},
+        )
+
+    if invite.expires_at < datetime.now(UTC):
+        raise HTTPException(
+            status_code=410,
+            detail={
+                "error": {
+                    "code": "INVITE_EXPIRED",
+                    "message": "This invite link has expired",
+                }
+            },
+        )
+
+    if invite.used_at is not None:
+        raise HTTPException(
+            status_code=410,
+            detail={
+                "error": {
+                    "code": "INVITE_USED",
+                    "message": "This invite link has already been used",
+                }
+            },
+        )
+
+    space_stmt = select(Space).where(Space.id == invite.space_id)
+    space = (await db.execute(space_stmt)).scalar_one()
+
+    return {
+        "space_id": space.id,
+        "space_name": space.name,
+        "space_currency_code": space.currency_code,
+    }
+
+
 async def join_space(db: AsyncSession, token: str, user_id: uuid.UUID) -> dict:
     """Join a space via invite token.
 

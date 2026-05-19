@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api-client';
 import { useAuth } from '@/hooks/useAuth';
 import { setPendingInvite, clearPendingInvite } from '@/lib/pendingInvite';
+
+interface InvitePreview {
+  space_id: string;
+  space_name: string;
+  space_currency_code: string;
+}
 
 interface JoinResult {
   space_id: string;
@@ -19,17 +25,57 @@ export default function JoinSpace() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, hasSpace, currentSpace, isLoading } = useAuth();
+
+  const [preview, setPreview] = useState<InvitePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [joining, setJoining] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState<JoinResult | null>(null);
 
+  // Cancel target depends on the user's auth/space state.
+  const cancelTarget = !isAuthenticated
+    ? '/'
+    : hasSpace
+      ? '/home'
+      : '/onboarding';
+  const cancelLabel = !isAuthenticated
+    ? 'Go to Home'
+    : hasSpace
+      ? 'Back to Dashboard'
+      : 'No, create my own space';
+
+  // Fetch the invite preview once the user is authenticated. Unauthenticated
+  // users sign in first and re-land here after OAuth (sessionStorage carries
+  // the token), at which point this fetch runs.
+  useEffect(() => {
+    if (!token || !isAuthenticated || isLoading) return;
+    let cancelled = false;
+    setPreviewLoading(true);
+    api
+      .get<InvitePreview>(`/spaces/invites/${token}/preview`)
+      .then((data) => {
+        if (!cancelled) setPreview(data);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const apiErr = err as ApiError;
+        setErrorCode(apiErr?.data?.error?.code ?? null);
+        setErrorMessage(
+          apiErr?.data?.error?.message ||
+            'Failed to load this invite. Please try again.',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, isAuthenticated, isLoading]);
+
   const signInToAcceptInvite = () => {
-    if (token) {
-      // Persist the token across the Google OAuth roundtrip; auth-callback
-      // reads it after sign-in and routes back here.
-      setPendingInvite(token);
-    }
+    if (token) setPendingInvite(token);
     window.location.href = '/api/v1/auth/google';
   };
 
@@ -54,13 +100,15 @@ export default function JoinSpace() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FAFAFE]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#7C6FA0] border-t-transparent" />
-      </div>
-    );
-  }
+  const handleDecline = () => {
+    // User explicitly declines the invite; clear the token so it doesn't
+    // re-trigger on a subsequent /auth/callback hop, and route them to
+    // onboarding where they can create their own space.
+    clearPendingInvite();
+    navigate('/onboarding');
+  };
+
+  if (isLoading) return <FullScreenSpinner />;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#FAFAFE] px-4">
@@ -72,9 +120,6 @@ export default function JoinSpace() {
         }}
       >
         <h1 className="text-2xl font-bold text-[#1D1B20]">Join a Space</h1>
-        <p className="mt-2 text-sm text-[#615D69]">
-          You've been invited to join a shared expense tracking space.
-        </p>
 
         {success ? (
           <SuccessState
@@ -84,30 +129,53 @@ export default function JoinSpace() {
         ) : errorCode === 'ALREADY_HAS_SPACE' ? (
           <AlreadyHasSpaceState
             currentSpaceName={currentSpace?.name ?? 'your current space'}
-            onCancel={() => navigate('/home')}
+            invitedSpaceName={preview?.space_name ?? null}
+            cancelTarget={cancelTarget}
+            cancelLabel={cancelLabel}
           />
         ) : errorCode ? (
           <ErrorState
             code={errorCode}
             message={errorMessage ?? ''}
-            onCancel={() => navigate('/')}
+            cancelTarget={cancelTarget}
+            cancelLabel={cancelLabel}
           />
         ) : !isAuthenticated ? (
           <UnauthenticatedState onSignIn={signInToAcceptInvite} />
         ) : hasSpace ? (
-          // Authenticated, already in a space. Don't auto-call the API; show
-          // the user the leave-first path. Note: pending_invite_token is NOT
-          // cleared here — useLeaveSpace (PR 2) consumes it after the user
-          // leaves their current space, so they get auto-routed back to this
-          // invite to complete the join.
           <AlreadyHasSpaceState
             currentSpaceName={currentSpace?.name ?? 'your current space'}
-            onCancel={() => navigate('/home')}
+            invitedSpaceName={preview?.space_name ?? null}
+            cancelTarget={cancelTarget}
+            cancelLabel={cancelLabel}
           />
+        ) : previewLoading || !preview ? (
+          <InlineSpinner />
         ) : (
-          <ReadyToJoinState joining={joining} onJoin={handleJoin} />
+          <ConfirmJoinState
+            spaceName={preview.space_name}
+            joining={joining}
+            onAccept={handleJoin}
+            onDecline={handleDecline}
+          />
         )}
       </div>
+    </div>
+  );
+}
+
+function FullScreenSpinner() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#FAFAFE]">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#7C6FA0] border-t-transparent" />
+    </div>
+  );
+}
+
+function InlineSpinner() {
+  return (
+    <div className="mt-8 flex justify-center">
+      <div className="h-6 w-6 animate-spin rounded-full border-4 border-[#7C6FA0] border-t-transparent" />
     </div>
   );
 }
@@ -152,21 +220,43 @@ function UnauthenticatedState({ onSignIn }: { onSignIn: () => void }) {
   );
 }
 
-function ReadyToJoinState({
+function ConfirmJoinState({
+  spaceName,
   joining,
-  onJoin,
+  onAccept,
+  onDecline,
 }: {
+  spaceName: string;
   joining: boolean;
-  onJoin: () => void;
+  onAccept: () => void;
+  onDecline: () => void;
 }) {
   return (
-    <div className="mt-6">
+    <div className="mt-6 text-left">
+      <p className="text-sm text-[#615D69]">
+        You're about to join the shared expense space:
+      </p>
+      <p className="mt-3 text-center text-xl font-semibold text-[#1D1B20]">
+        "{spaceName}"
+      </p>
+      <p className="mt-3 text-sm text-[#615D69]">
+        You'll see and contribute to its expenses, categories, and limits.
+        Joining is reversible — you can leave from Settings at any time.
+      </p>
       <Button
-        onClick={onJoin}
+        onClick={onAccept}
         disabled={joining}
-        className="w-full bg-[#7C6FA0] hover:bg-[#6B5F8A]"
+        className="mt-6 w-full bg-[#7C6FA0] hover:bg-[#6B5F8A]"
       >
-        {joining ? 'Joining...' : 'Join Space'}
+        {joining ? 'Joining...' : `Yes, join "${spaceName}"`}
+      </Button>
+      <Button
+        onClick={onDecline}
+        disabled={joining}
+        variant="outline"
+        className="mt-2 w-full"
+      >
+        No, create my own space
       </Button>
     </div>
   );
@@ -174,10 +264,14 @@ function ReadyToJoinState({
 
 function AlreadyHasSpaceState({
   currentSpaceName,
-  onCancel,
+  invitedSpaceName,
+  cancelTarget,
+  cancelLabel,
 }: {
   currentSpaceName: string;
-  onCancel: () => void;
+  invitedSpaceName: string | null;
+  cancelTarget: string;
+  cancelLabel: string;
 }) {
   return (
     <div className="mt-6">
@@ -186,17 +280,16 @@ function AlreadyHasSpaceState({
           You're already in "{currentSpaceName}"
         </p>
         <p className="mt-2 text-sm text-amber-800">
-          To join this new space, you need to leave your current space first.
-          Your invite will wait for you here.
+          {invitedSpaceName
+            ? `To join "${invitedSpaceName}", you need to leave your current space first. Your invite will wait for you here.`
+            : 'To join this new space, you need to leave your current space first. Your invite will wait for you here.'}
         </p>
       </div>
-      <Link to="/settings#danger-zone">
-        <Button className="mt-4 w-full bg-[#7C6FA0] hover:bg-[#6B5F8A]">
-          Go to Settings
-        </Button>
-      </Link>
-      <Button onClick={onCancel} variant="outline" className="mt-2 w-full">
-        Cancel
+      <Button asChild className="mt-4 w-full bg-[#7C6FA0] hover:bg-[#6B5F8A]">
+        <Link to="/settings#danger-zone">Go to Settings</Link>
+      </Button>
+      <Button asChild variant="outline" className="mt-2 w-full">
+        <Link to={cancelTarget}>{cancelLabel}</Link>
       </Button>
     </div>
   );
@@ -205,11 +298,13 @@ function AlreadyHasSpaceState({
 function ErrorState({
   code,
   message,
-  onCancel,
+  cancelTarget,
+  cancelLabel,
 }: {
   code: string;
   message: string;
-  onCancel: () => void;
+  cancelTarget: string;
+  cancelLabel: string;
 }) {
   const friendly = (() => {
     switch (code) {
@@ -233,8 +328,8 @@ function ErrorState({
       <div className="rounded-lg bg-red-50 p-4">
         <p className="text-sm text-red-800">{friendly}</p>
       </div>
-      <Button onClick={onCancel} variant="outline" className="mt-4 w-full">
-        Go to Home
+      <Button asChild variant="outline" className="mt-4 w-full">
+        <Link to={cancelTarget}>{cancelLabel}</Link>
       </Button>
     </div>
   );

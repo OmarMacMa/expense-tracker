@@ -128,6 +128,76 @@ async def test_join_succeeds_for_user_with_no_space(test_engine, test_user_with_
 
 
 @pytest.mark.asyncio
+async def test_preview_returns_target_space_info(test_engine, test_user_with_space):
+    """Preview endpoint returns target space info without consuming the invite."""
+    _engine, conn = test_engine
+    inviter = test_user_with_space["user"]
+    space = test_user_with_space["space"]
+
+    invite = await _make_invite(conn, space.id, inviter.id)
+    joiner = await _make_user(conn, "joiner_preview")
+
+    async with _client_for(create_access_token(joiner.id)) as client:
+        response = await client.get(f"/api/v1/spaces/invites/{invite.token}/preview")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["space_id"] == str(space.id)
+    assert body["space_name"] == space.name
+    assert body["space_currency_code"] == "USD"
+
+
+@pytest.mark.asyncio
+async def test_preview_does_not_consume_invite(test_engine, test_user_with_space):
+    """Calling preview leaves the invite usable for a subsequent join."""
+    _engine, conn = test_engine
+    inviter = test_user_with_space["user"]
+    space = test_user_with_space["space"]
+
+    invite = await _make_invite(conn, space.id, inviter.id)
+    joiner = await _make_user(conn, "joiner_preview2")
+    token_jwt = create_access_token(joiner.id)
+
+    async with _client_for(token_jwt) as client:
+        preview = await client.get(f"/api/v1/spaces/invites/{invite.token}/preview")
+        assert preview.status_code == 200
+        joined = await client.post(f"/api/v1/spaces/join/{invite.token}")
+        assert joined.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_preview_returns_410_for_expired_invite(
+    test_engine, test_user_with_space
+):
+    """Expired invite returns 410 INVITE_EXPIRED on preview."""
+    _engine, conn = test_engine
+    inviter = test_user_with_space["user"]
+    space = test_user_with_space["space"]
+
+    invite = await _make_invite(conn, space.id, inviter.id, expired=True)
+    joiner = await _make_user(conn, "joiner_preview_exp")
+
+    async with _client_for(create_access_token(joiner.id)) as client:
+        response = await client.get(f"/api/v1/spaces/invites/{invite.token}/preview")
+
+    assert response.status_code == 410
+    assert response.json()["detail"]["error"]["code"] == "INVITE_EXPIRED"
+
+
+@pytest.mark.asyncio
+async def test_preview_returns_404_for_unknown_token(test_engine, test_user_with_space):
+    """Unknown invite token returns 404 NOT_FOUND on preview."""
+    _engine, conn = test_engine
+    joiner = await _make_user(conn, "joiner_preview_nf")
+
+    async with _client_for(create_access_token(joiner.id)) as client:
+        response = await client.get("/api/v1/spaces/invites/bogus-token/preview")
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["error"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.asyncio
 async def test_join_returns_already_member_for_user_in_target_space(
     test_engine, test_user_with_space
 ):

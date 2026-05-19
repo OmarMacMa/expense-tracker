@@ -29,6 +29,7 @@ export function readPendingInvite(): string | null {
   try {
     const parsed = JSON.parse(raw) as Partial<StoredInvite>;
     if (typeof parsed.token !== 'string' || typeof parsed.ts !== 'number') {
+      sessionStorage.removeItem(KEY);
       return null;
     }
     if (Date.now() - parsed.ts > TTL_MS) {

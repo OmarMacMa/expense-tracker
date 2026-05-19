@@ -174,12 +174,13 @@ GET  /api/v1/auth/me                → get current user info + their space(s)
 
 ### 4.3 Space endpoints
 ```
-POST /api/v1/spaces                          → create space
-GET  /api/v1/spaces/{space_id}               → get space details
-PUT  /api/v1/spaces/{space_id}               → update space settings
-POST /api/v1/spaces/{space_id}/invite        → generate invite link
-POST /api/v1/spaces/join/{invite_token}      → join space via invite
-GET  /api/v1/spaces/{space_id}/members       → list members
+POST /api/v1/spaces                                 → create space
+GET  /api/v1/spaces/{space_id}                      → get space details
+PUT  /api/v1/spaces/{space_id}                      → update space settings
+POST /api/v1/spaces/{space_id}/invite               → generate invite link
+GET  /api/v1/spaces/invites/{invite_token}/preview  → preview an invite (target space info, no consume)
+POST /api/v1/spaces/join/{invite_token}             → join space via invite
+GET  /api/v1/spaces/{space_id}/members              → list members
 ```
 
 ### 4.4 Expense endpoints
