@@ -34,6 +34,11 @@ def _resolve_timeframe(period: str | None) -> str:
     return "monthly"  # default
 
 
+def _average_period_count(timeframe: str) -> int:
+    """Use nine completed weeks for weekly comparisons, otherwise three periods."""
+    return 9 if timeframe == "weekly" else 3
+
+
 def _resolve_ref_date(
     period: str | None,
     month: str | None,
@@ -132,7 +137,7 @@ async def get_summary(
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
 ) -> dict:
-    """Hero total + delta vs 3-month average."""
+    """Hero total + delta vs nine prior weeks or three other prior periods."""
     space = await db.get(Space, space_id)
     resolver = TimeWindowResolver(space.timezone)
     timeframe = _resolve_timeframe(period)
@@ -152,8 +157,9 @@ async def get_summary(
         db, space_id, start_utc, end_utc, **filter_kwargs
     )
 
-    # 3-month average
-    prev_windows = resolver.get_previous_windows(timeframe, count=3, ref_date=ref_date)
+    prev_windows = resolver.get_previous_windows(
+        timeframe, count=_average_period_count(timeframe), ref_date=ref_date
+    )
     prev_totals = []
     for p_start, p_end in prev_windows:
         p_total = await _sum_expenses_in_window(
@@ -189,7 +195,7 @@ async def get_spending_trend(
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
 ) -> dict:
-    """Cumulative daily spend for current period + 3-month average."""
+    """Cumulative spend vs nine prior weeks or three prior non-yearly periods."""
     space = await db.get(Space, space_id)
     resolver = TimeWindowResolver(space.timezone)
     timeframe = _resolve_timeframe(period)
@@ -219,7 +225,7 @@ async def get_spending_trend(
     avg_series: dict[int, Decimal] = {}
     if timeframe != "yearly":
         prev_windows = resolver.get_previous_windows(
-            timeframe, count=3, ref_date=ref_date
+            timeframe, count=_average_period_count(timeframe), ref_date=ref_date
         )
         all_prev_dailies = []
         for p_start, p_end in prev_windows:

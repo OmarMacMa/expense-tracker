@@ -16,6 +16,7 @@ from app.services.insight import (
     get_spending_trend,
     get_summary,
 )
+from app.services.time_window import TimeWindowResolver
 
 
 async def _get_uncategorized_id(db, space_id):
@@ -65,6 +66,130 @@ async def test_summary_no_prior_data_delta_null(db_session, test_user, test_spac
 
     result = await get_summary(db_session, test_space.id, period="this_month")
     assert result["delta_pct"] is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("period", ["this_week", "last_week"])
+@pytest.mark.parametrize("older_week", range(4, 10))
+async def test_weekly_baseline_includes_older_weeks(
+    db_session, test_user, test_space, monkeypatch, period, older_week
+):
+    """Weeks 4–9 count, empty weeks stay zero, and selected weeks are excluded."""
+    test_space.timezone = "America/New_York"
+    ref = datetime(2026, 3, 9, 4, tzinfo=UTC)
+    if period == "last_week":
+        ref -= timedelta(weeks=1)
+    monkeypatch.setattr("app.services.insight._resolve_ref_date", lambda *args: ref)
+    resolver = TimeWindowResolver(test_space.timezone)
+    start, end = resolver.get_current_window("weekly", ref)
+    windows = resolver.get_previous_windows("weekly", count=10, ref_date=ref)
+    cat_id = await _get_uncategorized_id(db_session, test_space.id)
+
+    for purchase_datetime, amount in (
+        (start, "50.00"),
+        (windows[older_week - 1][0], "900.00"),
+        (windows[9][0], "9000.00"),
+        (end + timedelta(microseconds=1), "9000.00"),
+    ):
+        await create_expense(
+            db_session,
+            test_space.id,
+            ExpenseCreate(
+                merchant="Monthly bill",
+                purchase_datetime=purchase_datetime,
+                amount=Decimal(amount),
+                category_id=cat_id,
+                spender_id=test_user.id,
+            ),
+            test_user.id,
+        )
+
+    summary = await get_summary(db_session, test_space.id, period=period)
+    trend = await get_spending_trend(db_session, test_space.id, period=period)
+
+    assert summary["total_spent"] == Decimal("50.00")
+    assert summary["delta_pct"] == Decimal("-50.0")
+    assert len(trend["average_series"]) == 7
+    assert all(
+        point["cumulative"] == Decimal("100.00") for point in trend["average_series"]
+    )
+    assert trend["current_series"][-1]["cumulative"] == Decimal("50.00")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("ref", "expected_start"),
+    [
+        (
+            datetime(2026, 3, 9, 3, 59, 59, tzinfo=UTC),
+            datetime(2026, 3, 2, 5, tzinfo=UTC),
+        ),
+        (
+            datetime(2026, 3, 9, 4, tzinfo=UTC),
+            datetime(2026, 3, 9, 4, tzinfo=UTC),
+        ),
+    ],
+)
+async def test_weekly_empty_baseline_at_local_monday_boundary(
+    db_session, test_space, monkeypatch, ref, expected_start
+):
+    """The nine completed weeks follow local Monday boundaries across DST."""
+    test_space.timezone = "America/New_York"
+    monkeypatch.setattr("app.services.insight._resolve_ref_date", lambda *args: ref)
+    resolver = TimeWindowResolver(test_space.timezone)
+    windows = resolver.get_previous_windows("weekly", count=9, ref_date=ref)
+    assert len(windows) == 9
+    assert windows[0][1] + timedelta(microseconds=1) == expected_start
+    for index, (start, end) in enumerate(windows):
+        assert resolver.localize_for_display(start).weekday() == 0
+        assert resolver.localize_for_display(end).weekday() == 6
+        if index:
+            assert end + timedelta(microseconds=1) == windows[index - 1][0]
+
+    summary = await get_summary(db_session, test_space.id, period="this_week")
+    trend = await get_spending_trend(db_session, test_space.id, period="this_week")
+    assert summary["window_start"] == expected_start
+    assert summary["total_spent"] == Decimal("0")
+    assert summary["delta_pct"] is None
+    assert len(trend["average_series"]) == 7
+    assert all(point["cumulative"] == 0 for point in trend["average_series"])
+
+
+@pytest.mark.asyncio
+async def test_monthly_baseline_remains_three_periods(
+    db_session, test_user, test_space
+):
+    """Summary and trend retain three months, including empty months as zeros."""
+    resolver = TimeWindowResolver(test_space.timezone)
+    ref = datetime(2026, 3, 15, tzinfo=UTC)
+    start, _ = resolver.get_current_window("monthly", ref)
+    windows = resolver.get_previous_windows("monthly", count=4, ref_date=ref)
+    cat_id = await _get_uncategorized_id(db_session, test_space.id)
+    for purchase_datetime, amount in (
+        (start, "50.00"),
+        (windows[2][0], "300.00"),
+        (windows[3][0], "9000.00"),
+    ):
+        await create_expense(
+            db_session,
+            test_space.id,
+            ExpenseCreate(
+                merchant="Store",
+                purchase_datetime=purchase_datetime,
+                amount=Decimal(amount),
+                category_id=cat_id,
+                spender_id=test_user.id,
+            ),
+            test_user.id,
+        )
+    summary = await get_summary(db_session, test_space.id, month="2026-03")
+    trend = await get_spending_trend(db_session, test_space.id, month="2026-03")
+    assert summary["total_spent"] == Decimal("50.00")
+    assert summary["delta_pct"] == Decimal("-50.0")
+    assert len(trend["average_series"]) == 31
+    assert all(
+        point["cumulative"] == Decimal("100.00") for point in trend["average_series"]
+    )
 
 
 @pytest.mark.asyncio

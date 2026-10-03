@@ -543,17 +543,18 @@ All computed using the **space timezone**. Datetimes stored as UTC.
 | Quarterly | Jan 1 / Apr 1 / Jul 1 / Oct 1 | Mar 31 / Jun 30 / Sep 30 / Dec 31 |
 | Yearly | Jan 1 00:00:00 | Dec 31 23:59:59 |
 
-### 3-month average computation
+### Historical spending average computation
 - For a given period (e.g., "this month to date"):
   - Get cumulative daily spend for the current period
-  - Get cumulative daily spend for each of the prior 3 comparable periods
-  - Average the 3 prior periods by day-of-period
-  - If fewer than 3 prior periods exist, use as many as available
+  - Use `TimeWindowResolver` to get the prior 9 completed weeks for weekly views or 3 completed months for monthly views, excluding the selected period
+  - Average those prior periods by day-of-period, retaining all confirmed expenses
+  - Include empty periods as zeros and divide by the full baseline count
+- Non-weekly behavior is unchanged: three prior periods; yearly trends omit the average series
 - Result: two series (current cumulative, average cumulative) for trend line chart
 
 ### Hero total + delta
 - `total` = sum of all confirmed expenses in selected window
-- `average` = mean of same metric across prior 3 comparable windows
+- `average` = mean of same metric across prior 9 completed weekly windows, or 3 comparable windows for other timeframes (same baseline as the trend)
 - `delta` = `((total - average) / average) * 100` → displayed as "+X%" or "-X%"
 - Edge case: if no prior data, delta is not shown
 

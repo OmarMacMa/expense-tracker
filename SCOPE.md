@@ -84,10 +84,10 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - In-app alerts only (2–3 cards on Home)
 
 ### Home dashboard
-- Hero total spent (current week or month) + delta vs 3-month average
+- Hero total spent (current week or month) + delta vs 9-week average (weekly) or 3-month average (monthly)
 - Week / Month toggle
 - Limit alerts (2–3 max)
-- Spending trend line (cumulative, current period vs 3-month avg)
+- Spending trend line (cumulative, current period vs 9-week avg for weekly views or 3-month avg for monthly views)
 - Category distribution pie/donut
 - Merchant leaderboard (top by amount only)
 - Latest transactions count + link to full list

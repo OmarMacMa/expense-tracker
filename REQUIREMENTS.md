@@ -248,7 +248,7 @@ Cover business logic in isolation:
 - Limit calculation: given a set of expenses and a limit definition, verify correct progress computation.
 - Recurring generation: verify pending expenses are created correctly, idempotency works, backfill handles gaps.
 - Split line validation: verify sum validation, rejection of mismatched totals.
-- 3-month average computation: verify correct averaging with varying data availability (0, 1, 2, 3+ prior periods).
+- Historical average computation: verify 9 completed weeks for weekly views and 3 completed months for monthly views, excluding the selected period and including empty periods as zeros in the full baseline count.
 - Category deletion: verify expense lines are reassigned to "Uncategorized".
 - Tag normalization: verify deduplication, casing, trimming.
 - Time window calculations: verify correct boundaries for all timeframes across timezone edge cases.

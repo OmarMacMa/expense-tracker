@@ -24,7 +24,7 @@ const PERIOD_DISPLAY: Record<string, string> = {
 };
 
 const AVG_LABEL: Partial<Record<SpendingTrendTimeframe, string>> = {
-  weekly: '3-week avg',
+  weekly: '9-week avg',
   monthly: '3-month avg',
   quarterly: '3-quarter avg',
 };
