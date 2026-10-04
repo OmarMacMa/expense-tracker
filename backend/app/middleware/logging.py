@@ -1,4 +1,5 @@
 import logging
+import re
 import sys
 import time
 import traceback
@@ -9,6 +10,11 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.config import settings
+
+
+def safe_request_path(path: str) -> str:
+    """Invite secrets belong neither in access logs nor exception metadata."""
+    return re.sub(r"(/spaces/(?:join|invites)/)[^/]+", r"\1[redacted]", path)
 
 
 def setup_logging() -> None:
@@ -69,7 +75,7 @@ class RequestLoggingMiddleware:
                 error_type=type(exc).__name__,
                 error_message=str(exc),
                 traceback=traceback.format_exc(),
-                path=str(request.url.path),
+                path=safe_request_path(request.url.path),
                 method=request.method,
                 duration_ms=duration_ms,
             )
@@ -89,7 +95,7 @@ class RequestLoggingMiddleware:
         await logger.ainfo(
             "api_request",
             method=request.method,
-            path=str(request.url.path),
+            path=safe_request_path(request.url.path),
             status_code=status_code,
             duration_ms=duration_ms,
         )

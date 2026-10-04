@@ -453,7 +453,7 @@ async def update_expense(
         expense.merchant = update_data["merchant"].strip()
         expense.merchant_normalized = update_data["merchant"].strip().lower()
 
-    if "spender_id" in update_data:
+    if "spender_id" in update_data and update_data["spender_id"] != expense.spender_id:
         spender_stmt = select(SpaceMember).where(
             SpaceMember.space_id == space_id,
             SpaceMember.user_id == update_data["spender_id"],

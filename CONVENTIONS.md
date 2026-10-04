@@ -197,7 +197,8 @@ If a change on a `fix/*` or `chore/*` branch is significant enough to warrant a 
 ### Tags and GitHub Releases
 
 - Tags follow SemVer with `v` prefix: `v1.0.0`, `v1.0.1`, `v1.1.0`, `v2.0.0`.
-- Every tag gets a **GitHub Release** with a description of what's included (2–3 bullet points per bundled change).
+- Every tag gets a **GitHub Release** with a description of what's included.
+- **Release notes are user-facing.** Group by user-visible change, not by PR. Use plain language a non-engineer would understand. Don't link PR numbers or mention internal files. See `v1.0.5` and `v1.0.4` as the reference style: each section is named after what the user experiences (e.g., "Period selection now carries across views"), followed by a short paragraph or bullet list of what changed in practice.
 - Tags are created on `main` merge commits only.
 
 ### Commit messages

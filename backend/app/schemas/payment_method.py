@@ -20,5 +20,8 @@ class PaymentMethodResponse(BaseModel):
     is_system: bool
     owner_id: uuid.UUID | None
     created_at: datetime
+    owner_display_name: str | None = None
+    owner_is_member: bool = False
+    can_manage: bool = False
 
     model_config = {"from_attributes": True}

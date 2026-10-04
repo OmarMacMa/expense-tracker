@@ -190,7 +190,7 @@ function ExpenseViewMode({
             Payment Method
           </span>
           <span className="text-[0.88rem] text-foreground">
-            {paymentMethod?.label ?? '—'}
+            {paymentMethod?.label ?? 'Deleted method'}
           </span>
         </div>
 
@@ -561,7 +561,9 @@ function ExpenseEditMode({
   ]);
 
   const selectedCategory = categories?.find((c) => c.id === categoryId);
-  const selectedMember = members?.find((m) => m.user_id === spenderId);
+  const selectedMember =
+    members?.find((m) => m.user_id === spenderId) ??
+    (spenderId === expense.spender.id ? expense.spender : undefined);
   const selectedPaymentMethod = paymentMethods?.find(
     (pm) => pm.id === paymentMethodId,
   );
@@ -833,6 +835,19 @@ function ExpenseEditMode({
                 <CommandList>
                   <CommandEmpty>No members.</CommandEmpty>
                   <CommandGroup>
+                    {!members?.some(
+                      (m) => m.user_id === expense.spender.id,
+                    ) && (
+                      <CommandItem
+                        value={`${expense.spender.display_name} former member`}
+                        onSelect={() => {
+                          setSpenderId(expense.spender.id);
+                          setSpenderOpen(false);
+                        }}
+                      >
+                        {expense.spender.display_name} (former member)
+                      </CommandItem>
+                    )}
                     {members?.map((m) => (
                       <CommandItem
                         key={m.user_id}

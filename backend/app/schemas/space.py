@@ -39,3 +39,28 @@ class MemberResponse(BaseModel):
     email: str
     avatar_url: str | None
     joined_at: datetime
+
+
+class LeavePreview(BaseModel):
+    space_id: uuid.UUID
+    space_name: str
+    member_ids: list[uuid.UUID]
+    member_count: int
+    source_deleted: bool
+    counts: dict[str, int]
+
+
+class LeaveConfirmation(BaseModel):
+    source_name: str
+    preview: LeavePreview
+
+
+class MembershipTransfer(LeaveConfirmation):
+    invite_token: str = Field(..., min_length=1, max_length=200)
+
+
+class MembershipOutcome(BaseModel):
+    source_space_id: uuid.UUID
+    source_deleted: bool
+    destination_space_id: uuid.UUID | None = None
+    destination_space_name: str | None = None

@@ -7,8 +7,12 @@ export function useMembers() {
   const { currentSpace } = useAuth();
   return useQuery<SpaceMember[]>({
     queryKey: ['members', currentSpace?.id],
-    queryFn: () =>
-      api.get<SpaceMember[]>(`/spaces/${currentSpace?.id}/members`),
+    queryFn: ({ signal }) =>
+      api.get<SpaceMember[]>(
+        `/spaces/${currentSpace?.id}/members`,
+        undefined,
+        signal,
+      ),
     enabled: !!currentSpace?.id,
   });
 }

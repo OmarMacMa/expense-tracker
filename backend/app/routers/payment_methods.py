@@ -16,6 +16,8 @@ from app.services.payment_method import (
     create_payment_method,
     delete_payment_method,
     list_payment_methods,
+    payment_method_response,
+    payment_method_responses,
     update_payment_method,
 )
 
@@ -25,12 +27,15 @@ router = APIRouter(prefix="/api/v1/spaces/{space_id}", tags=["payment-methods"])
 @router.get("/payment-methods", response_model=list[PaymentMethodResponse])
 async def list_payment_methods_endpoint(
     space_id: uuid.UUID,
-    _member: SpaceMember = Depends(get_current_space_member),
+    member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[PaymentMethodResponse]:
     """List all payment methods in a space."""
     methods = await list_payment_methods(db, space_id)
-    return [PaymentMethodResponse.model_validate(m) for m in methods]
+    return [
+        PaymentMethodResponse(**data)
+        for data in await payment_method_responses(db, methods, member.user_id)
+    ]
 
 
 @router.post("/payment-methods", response_model=PaymentMethodResponse, status_code=201)
@@ -42,7 +47,9 @@ async def create_payment_method_endpoint(
 ) -> PaymentMethodResponse:
     """Create a payment method owned by the current user."""
     pm = await create_payment_method(db, space_id, member.user_id, data)
-    return PaymentMethodResponse.model_validate(pm)
+    return PaymentMethodResponse(
+        **await payment_method_response(db, pm, member.user_id)
+    )
 
 
 @router.patch("/payment-methods/{method_id}", response_model=PaymentMethodResponse)
@@ -54,9 +61,11 @@ async def update_payment_method_endpoint(
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> PaymentMethodResponse:
-    """Update a payment method. Owner only."""
+    """Update a method as its active owner or a survivor of a departed owner."""
     pm = await update_payment_method(db, space_id, method_id, current_user.id, data)
-    return PaymentMethodResponse.model_validate(pm)
+    return PaymentMethodResponse(
+        **await payment_method_response(db, pm, current_user.id)
+    )
 
 
 @router.delete("/payment-methods/{method_id}", status_code=204)
@@ -67,5 +76,5 @@ async def delete_payment_method_endpoint(
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Delete a payment method. Owner only."""
+    """Delete a method as its active owner or a survivor of a departed owner."""
     await delete_payment_method(db, space_id, method_id, current_user.id)

@@ -26,7 +26,7 @@ export function useExpenseList(filters: ExpenseFilters = {}) {
 
   return useInfiniteQuery<ExpenseListResponse>({
     queryKey: ['expenses', currentSpace?.id, filters],
-    queryFn: ({ pageParam }) => {
+    queryFn: ({ pageParam, signal }) => {
       const params: Record<string, string> = { limit: '20' };
       if (pageParam) params.cursor = pageParam as string;
       Object.entries(filters).forEach(([k, v]) => {
@@ -35,6 +35,7 @@ export function useExpenseList(filters: ExpenseFilters = {}) {
       return api.get<ExpenseListResponse>(
         `/spaces/${currentSpace?.id}/expenses`,
         params,
+        signal,
       );
     },
     initialPageParam: undefined as string | undefined,
@@ -46,9 +47,13 @@ export function useExpenseList(filters: ExpenseFilters = {}) {
 export function useExpense(expenseId: string) {
   const { currentSpace } = useAuth();
   return useQuery<Expense>({
-    queryKey: ['expense', expenseId],
-    queryFn: () =>
-      api.get<Expense>(`/spaces/${currentSpace?.id}/expenses/${expenseId}`),
+    queryKey: ['expense', currentSpace?.id, expenseId],
+    queryFn: ({ signal }) =>
+      api.get<Expense>(
+        `/spaces/${currentSpace?.id}/expenses/${expenseId}`,
+        undefined,
+        signal,
+      ),
     enabled: !!currentSpace?.id && !!expenseId,
   });
 }

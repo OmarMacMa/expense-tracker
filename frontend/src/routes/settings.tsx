@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useSpace, useUpdateSpace } from '@/hooks/useSpace';
+import { LeaveSpaceDialog } from '@/components/settings/leave-space-dialog';
 
 interface NavItem {
   label: string;
@@ -243,6 +244,7 @@ export default function Settings() {
           </ul>
         </nav>
       </div>
+      {space && <LeaveSpaceDialog spaceId={space.id} />}
     </div>
   );
 }
