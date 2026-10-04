@@ -202,7 +202,10 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 
 ### MVP
 - Google OAuth callback handler. Loading spinner while processing.
-- Redirects to `/onboarding` (new user) or `/home` (existing user with space).
+- Backend always lands the user here after OAuth (no longer branches server-side). The page inspects `sessionStorage` for a pending invite token (set by `/join/:token` before sign-in, with a 10-minute TTL):
+  - If a valid pending token exists → redirect to `/join/:token` to complete the join.
+  - Else if user has a space → `/home`.
+  - Else → `/onboarding`.
 
 ---
 
@@ -412,6 +415,23 @@ Hub-and-spoke navigation layout. Top section shows space info inline; below is a
 - **Members >**: list of members (display only, no removal). Member count shown (max 10).
 - **Invite >**: generate invite link (single-use, 7-day expiry), disable active link.
 - **Taxes >**: default tax % (editable).
+- **Danger Zone** (`#danger-zone`): a separate tonal card below navigation.
+  "Review leaving space" opens a controlled, scrollable dialog; initial focus is
+  Cancel. Show source name, all unfiltered counts, remaining-member outcome and
+  account preservation. Last-member copy explicitly says permanent deletion and
+  no data transfer. Exact case-sensitive source-name input enables the destructive
+  action only after previews succeed. Changed/expired tokens or changed previews
+  clear confirmation and block submission. Mobile dialog fits 85dvh with scrolling.
+- Pending invite recovery names both spaces and uses "Leave and join [destination]";
+  standalone action says "Leave space". Cancel changes nothing. Explicit
+  "Abandon invitation" is required before selecting standalone leave after expiry.
+- A committed leave/recovery emits one success toast: "The space was deleted"
+  for last-member deletion, otherwise "You've left the space". Emit nothing on
+  a failed mutation, and do not repeat success when retrying only session refresh.
+- Payment method groups use authoritative owner names and "former member" labels;
+  deletion controls follow server `can_manage`, not a partial member list.
+- Historical spender edit retains the original named option with a former-member
+  label; newly selected spenders come from current members only.
 
 ### 1.1.0 additions
 - **Recurring Expenses >**: shortcut to `/recurring` template management.
@@ -433,8 +453,16 @@ Hub-and-spoke navigation layout. Top section shows space info inline; below is a
 
 ### MVP
 - Displays space name from invite token.
-- "Join with Google" button → Google sign-in → added to space → redirect to `/home`.
-- Error states: expired link, already-used link, space full (10 members).
+- Google sign-in if needed → authenticated preview → explicit acceptance.
+- Show target name and capacity. Already-target members see dashboard access.
+  Other-space members see a Settings recovery link and atomicity/no-transfer copy.
+- Save the intended token on signed-in entry too; replace on another invite,
+  retain across OAuth errors, clear on success/explicit cancellation.
+- Expired, used, full, invalid and network/unknown errors are visible with cancel
+  and retry paths; optional error codes never gate error rendering.
+- After successful mutation, a full-page membership boundary blocks old-space
+  content while canceling/purging caches and refreshing auth before navigation.
+  Post-commit failure says completed and offers session refresh/reload only.
 
 ---
 

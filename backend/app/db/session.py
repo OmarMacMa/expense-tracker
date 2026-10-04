@@ -15,6 +15,7 @@ engine = create_async_engine(
     pool_timeout=30,
     pool_recycle=1800,
     connect_args=connect_args,
+    hide_parameters=True,
 )
 
 async_session_factory = async_sessionmaker(

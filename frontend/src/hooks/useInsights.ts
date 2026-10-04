@@ -56,10 +56,11 @@ export function useInsightsSummary(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<InsightsSummary>({
     queryKey: ['insights', 'summary', currentSpace?.id, filters],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<InsightsSummary>(
         `/spaces/${currentSpace?.id}/insights/summary`,
         filtersToParams(filters),
+        signal,
       ),
     enabled: !!currentSpace?.id,
   });
@@ -69,10 +70,11 @@ export function useSpendingTrend(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<SpendingTrend>({
     queryKey: ['insights', 'trend', currentSpace?.id, filters],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<SpendingTrend>(
         `/spaces/${currentSpace?.id}/insights/spending-trend`,
         filtersToParams(filters),
+        signal,
       ),
     enabled: !!currentSpace?.id,
   });
@@ -82,10 +84,11 @@ export function useCategoryBreakdown(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<CategoryBreakdown[]>({
     queryKey: ['insights', 'categories', currentSpace?.id, filters],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<CategoryBreakdown[]>(
         `/spaces/${currentSpace?.id}/insights/category-breakdown`,
         filtersToParams(filters),
+        signal,
       ),
     enabled: !!currentSpace?.id,
   });
@@ -95,10 +98,11 @@ export function useMerchantLeaderboard(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<MerchantLeaderboard[]>({
     queryKey: ['insights', 'merchants', currentSpace?.id, filters],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<MerchantLeaderboard[]>(
         `/spaces/${currentSpace?.id}/insights/merchant-leaderboard`,
         { ...filtersToParams(filters), limit: '10' },
+        signal,
       ),
     enabled: !!currentSpace?.id,
   });
@@ -108,9 +112,11 @@ export function useLimitProgress() {
   const { currentSpace } = useAuth();
   return useQuery<LimitProgress[]>({
     queryKey: ['insights', 'limits', currentSpace?.id],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<LimitProgress[]>(
         `/spaces/${currentSpace?.id}/insights/limit-progress`,
+        undefined,
+        signal,
       ),
     enabled: !!currentSpace?.id,
   });
@@ -120,10 +126,11 @@ export function useSpenderBreakdown(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<SpenderBreakdown[]>({
     queryKey: ['insights', 'spenders', currentSpace?.id, filters],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<SpenderBreakdown[]>(
         `/spaces/${currentSpace?.id}/insights/spender-breakdown`,
         filtersToParams(filters),
+        signal,
       ),
     enabled: !!currentSpace?.id,
   });

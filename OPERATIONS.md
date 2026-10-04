@@ -44,6 +44,36 @@ alembic downgrade <revision>  # Rollback to specific revision
 ```
 **Rule**: Never modify a migration that has been applied to production. Always create a new migration.
 
+### Permanently deleted spaces
+Leaving a sole-member space, including a successful atomic invite switch,
+permanently deletes its source data. **Rolling back the application does not
+restore that data.** This change has no migration to downgrade.
+
+Before production rollout, verify the actual Azure PostgreSQL backup retention,
+earliest available restore point and restoration procedure. Do not assume Azure
+defaults or a seven-day recovery window. Restoration depends on available
+backups and verified server settings; assess a point-in-time restore to a
+separate server and reconcile subsequent writes before any recovery operation.
+No backup/cloud operation is performed by local regression tests.
+
+### Invite recovery regression checks
+Use a dedicated local PostgreSQL database with a name ending in `_test`, never
+the personal development or production database. Real-commit tests refuse other
+targets and clean only IDs they created.
+
+```bash
+cd backend
+pytest tests/real_db -q
+pip install -r requirements-browser.txt
+python -m playwright install chromium
+pytest browser_tests -q
+```
+
+Browser fixtures own backend port 8126 and Vite port 5176 (fail if occupied),
+wait for readiness and stop only their own server processes. Test identities
+are minted outside production code; only the external OAuth boundary is
+simulated. CI runs this coverage in a separate job/database.
+
 ### Emergency procedures
 1. **App is down**: Check Azure Portal → App Service → Diagnose and solve problems
 2. **Database issues**: Azure PostgreSQL → Connection security → Verify firewall rules

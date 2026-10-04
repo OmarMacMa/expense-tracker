@@ -1,7 +1,14 @@
+import { useLocation } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { BarChart3, Shield, Users } from 'lucide-react';
+import {
+  clearPendingInvite,
+  hasPendingInviteIntent,
+} from '@/lib/pendingInvite';
 
 export default function Landing() {
+  const location = useLocation();
+
   const handleSignIn = () => {
     window.location.href = '/api/v1/auth/google';
   };
@@ -23,6 +30,23 @@ export default function Landing() {
         >
           Sign in with Google
         </Button>
+        {new URLSearchParams(location.search).has('error') && (
+          <p role="alert" className="mt-4 text-sm text-destructive">
+            Sign-in failed. Your invitation is retained; try signing in again.
+          </p>
+        )}
+        {hasPendingInviteIntent() && (
+          <Button
+            variant="outline"
+            className="mt-3"
+            onClick={() => {
+              clearPendingInvite();
+              window.location.reload();
+            }}
+          >
+            Abandon invitation
+          </Button>
+        )}
       </div>
 
       {/* Feature cards */}

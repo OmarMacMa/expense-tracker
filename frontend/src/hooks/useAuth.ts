@@ -11,7 +11,8 @@ export function useAuth() {
     isError,
   } = useQuery<AuthMeResponse>({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get<AuthMeResponse>('/auth/me'),
+    queryFn: ({ signal }) =>
+      api.get<AuthMeResponse>('/auth/me', undefined, signal),
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
