@@ -102,7 +102,7 @@ This document describes the **technical architecture, tech stack, API design, da
 - Single source of truth for all data
 - All datetimes stored as UTC
 - Indexes optimized for common query patterns (analytics, filtering, autocomplete)
-- Automated backups with 7-day retention (Azure default, no extra cost)
+- Automated backups: verify the deployed server's actual retention and restore capability
 
 **GitHub Actions (Cron Triggers)**
 - **Recurring generator** (daily schedule): calls `POST /api/v1/internal/cron/recurring-generate` with an internal auth token. The endpoint checks all active templates where `next_due_date <= today`, generates pending expenses (idempotent), advances `next_due_date`, backfills missed dates.
@@ -127,7 +127,49 @@ User → "Sign in with Google" → Frontend redirects to backend
 - Cookie: httpOnly, Secure, SameSite=Lax
 - Every API request: middleware extracts JWT from cookie, validates, injects user into request context
 - Space membership: middleware checks `space_members` table for every `/spaces/{space_id}/...` endpoint
-- **Invite recovery**: when a user starts the join flow at `/join/:token`, the frontend stores the token in `sessionStorage` with a 10-minute TTL. After the Google OAuth roundtrip, `/auth/callback` reads it and routes back to `/join/:token` to complete the join. This survives the "you already have a space → leave first → rejoin" flow.
+- **Invite recovery**: `/join/:token` deliberately saves/replaces the intended token
+  for authenticated and unauthenticated entry. Tab-local storage retains it across
+  OAuth failure and a Settings detour, with a 10-minute TTL. Expired/changed intent
+  invalidates recovery confirmation; only explicit abandonment selects standalone
+  leave. Authenticated preview reports target membership and capacity.
+- **Membership transactions**: create, join, leave and recovery lock the acting
+  User with `FOR NO KEY UPDATE` first, then existing Space rows with
+  `FOR UPDATE` one at a time in sorted UUID order, then the accepting invite.
+  The account lock still serializes transitions but allows foreign-key checks
+  from ordinary expense/payment-method inserts, avoiding a user/space deadlock.
+  Locked ORM rereads use `populate_existing` before validation. Transaction-local
+  helpers never commit; public mutations own the commit. Recovery rolls back
+  source cleanup, destination membership and consumption together on any failure.
+- **Confirmation contracts**: `GET /spaces/{id}/leave-preview` returns current name,
+  member IDs/count, deletion outcome and unfiltered counts (including child rows).
+  `DELETE /spaces/{id}/members/me` accepts `source_name` and `preview`;
+  `POST /spaces/{id}/membership-transfers` additionally accepts `invite_token`.
+  Nonmembers get 404 on these dedicated routes; existing membership middleware
+  retains 403 elsewhere. Changed previews return 409; wrong names return 422.
+- **Cleanup**: ordered source-scoped explicit deletion covers expenses (DB cascades
+  lines/tag links), recurring templates, merchants, monthly wraps, limits (filter
+  cascade), tags, categories, payment methods, invites and memberships before Space.
+  No schema change or applied-migration edit is needed. Accounts are never deleted.
+- **Retained history**: payment methods keep original owner IDs and return
+  `owner_display_name`, `owner_is_member`, `can_manage`. Live membership authorizes
+  owner-only management while present and survivor management after departure.
+  List responses batch owner names and space memberships; metadata query count
+  stays constant as the number of payment methods grows.
+  Expense edits may keep an unchanged departed spender; new selections require
+  current membership. User joins retain original display names.
+- **Session/cache transition**: identity-only cookies are renewed after leave or
+  recovery; older valid JWTs lose source access through DB membership checks, not
+  token revocation. A frontend membership boundary unmounts old-space observers,
+  aborts query requests, purges all non-auth caches (including legacy unscoped
+  keys), fetches fresh auth, then navigates. Post-commit refresh errors block stale
+  views and offer refresh/reload without retrying mutations. Period preference
+  remains unchanged. API-client type guards normalize both existing error envelopes.
+- **Validation**: `tests/real_db` uses separate PostgreSQL connections and real
+  commits, local `*_test` DB enforcement and exact ID cleanup. `browser_tests`
+  runs real React/backend flows using external OAuth-boundary simulation only;
+  it is independent of the ordinary backend test selector. Concurrency coverage
+  includes ordinary expense insertion during leave/recovery, and API tests
+  enforce a constant payment-method metadata query count.
 
 ### Frontend routes (React Router v7)
 
@@ -628,9 +670,11 @@ Scheduled jobs run as internal FastAPI endpoints triggered by GitHub Actions on 
 
 ### Database backups
 - Azure PostgreSQL Flexible Server includes automated backups at no extra cost
-- Default retention: 7 days (configurable up to 35 days)
-- Point-in-time restore available within the retention window
-- No action needed for MVP; increased retention can be configured for 3.0.0+
+- Verify actual retention, earliest restore point and recovery procedure on the
+  deployed Azure server; do not infer them from provider defaults.
+- Point-in-time restore depends on those verified settings and available backups.
+- An application rollback does not restore permanently deleted space data.
+  See OPERATIONS before enabling destructive leave/recovery in production.
 
 ### Connection pooling
 - SQLAlchemy async connection pool configuration:

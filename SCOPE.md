@@ -38,7 +38,16 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - User can leave any space they're a member of via Settings → Danger Zone
 - Type-to-confirm modal (Stripe/GitHub pattern)
 - Cascade behavior: zero-member spaces are automatically deleted in the same transaction
-- Single endpoint covers the recovery flow for users stuck in the wrong space, and the future shared-family case
+- Standalone self-leave and atomic leave-and-join recovery have separate endpoints.
+- Recovery validates the destination before changing the source; any failure
+  preserves source membership/data and invitation consumption.
+- Last-member success permanently deletes all source data (including dormant
+  recurring templates/monthly wraps), with exact-name and changed-preview checks.
+  The user's account remains; no data is transferred.
+- Shared-source history and attribution remain. Survivors manage departed-owner
+  payment methods; active-owner restrictions and Cash protection remain.
+- Unchanged historical spenders remain editable; new/changed spenders must be members.
+- No removing others, RBAC, soft deletion or multi-space selector is included.
 - See #54
 
 ### Expense entry (single-line only)

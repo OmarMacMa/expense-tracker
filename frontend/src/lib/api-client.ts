@@ -9,6 +9,33 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: Record<string, unknown> | unknown[];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function normalizeApiError(value: unknown): ApiError['data'] {
+  if (!isRecord(value)) return undefined;
+  const envelope = isRecord(value.error)
+    ? value.error
+    : isRecord(value.detail) && isRecord(value.detail.error)
+      ? value.detail.error
+      : undefined;
+  if (!envelope) return undefined;
+  return {
+    error: {
+      code: typeof envelope.code === 'string' ? envelope.code : undefined,
+      message:
+        typeof envelope.message === 'string' ? envelope.message : undefined,
+    },
+  };
+}
+
+export function errorMessage(error: unknown): string {
+  return error instanceof Error
+    ? error.message
+    : 'Request failed. Please try again.';
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -16,7 +43,11 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  async get<T>(path: string, params?: Record<string, string>): Promise<T> {
+  async get<T>(
+    path: string,
+    params?: Record<string, string>,
+    signal?: AbortSignal,
+  ): Promise<T> {
     const url = new URL(`${this.baseUrl}${path}`, window.location.origin);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -25,7 +56,7 @@ class ApiClient {
         }
       });
     }
-    return this.request<T>(url.toString(), { method: 'GET' });
+    return this.request<T>(url.toString(), { method: 'GET', signal });
   }
 
   async post<T>(path: string, body?: Record<string, unknown>): Promise<T> {
@@ -49,9 +80,13 @@ class ApiClient {
     });
   }
 
-  async delete(path: string): Promise<void> {
-    await this.request<void>(`${this.baseUrl}${path}`, {
+  async delete<T = void>(
+    path: string,
+    body?: Record<string, unknown>,
+  ): Promise<T> {
+    return this.request<T>(`${this.baseUrl}${path}`, {
       method: 'DELETE',
+      body,
     });
   }
 
@@ -68,12 +103,13 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
+      const errorData: unknown = await response.json().catch(() => null);
+      const normalized = normalizeApiError(errorData);
       const error: ApiError = new Error(
-        errorData?.error?.message || `HTTP ${response.status}`,
+        normalized?.error?.message || `HTTP ${response.status}`,
       );
       error.status = response.status;
-      error.data = errorData;
+      error.data = normalized;
 
       // Redirect to landing on 401, but skip for /auth/me (expected when
       // unauthenticated) and when already on the landing page to avoid
@@ -81,7 +117,10 @@ class ApiClient {
       if (response.status === 401) {
         const isAuthCheck = url.includes('/auth/me');
         const isOnLanding = window.location.pathname === '/';
-        if (!isAuthCheck && !isOnLanding) {
+        const isRecovery =
+          window.location.pathname.startsWith('/join/') ||
+          window.location.pathname.startsWith('/settings');
+        if (!isAuthCheck && !isOnLanding && !isRecovery) {
           window.location.href = '/';
         }
         throw error;

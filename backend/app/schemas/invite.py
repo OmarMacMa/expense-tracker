@@ -33,3 +33,6 @@ class InvitePreviewResponse(BaseModel):
     space_id: uuid.UUID
     space_name: str
     space_currency_code: str
+    already_member: bool = False
+    member_count: int = 0
+    max_members: int = 10

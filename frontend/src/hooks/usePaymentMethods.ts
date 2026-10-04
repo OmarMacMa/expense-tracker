@@ -9,8 +9,12 @@ export function usePaymentMethods() {
   const { currentSpace } = useAuth();
   return useQuery<PaymentMethod[]>({
     queryKey: ['payment-methods', currentSpace?.id],
-    queryFn: () =>
-      api.get<PaymentMethod[]>(`/spaces/${currentSpace?.id}/payment-methods`),
+    queryFn: ({ signal }) =>
+      api.get<PaymentMethod[]>(
+        `/spaces/${currentSpace?.id}/payment-methods`,
+        undefined,
+        signal,
+      ),
     enabled: !!currentSpace?.id,
   });
 }

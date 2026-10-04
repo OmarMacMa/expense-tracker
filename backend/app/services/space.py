@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Category, PaymentMethod, Space, SpaceMember, User
 from app.schemas.space import SpaceCreate, SpaceUpdate
+from app.services.membership import lock_spaces, lock_user
 
 DEFAULT_CATEGORIES = [
     "Groceries",
@@ -32,6 +33,7 @@ async def create_space(db: AsyncSession, user: User, data: SpaceCreate) -> Space
     points. Users who want a fresh space must Leave their current one first
     (see DELETE /api/v1/spaces/{space_id}/members/me).
     """
+    await lock_user(db, user.id)
     existing_stmt = select(SpaceMember).where(SpaceMember.user_id == user.id).limit(1)
     existing = (await db.execute(existing_stmt)).scalars().first()
     if existing is not None:
@@ -104,7 +106,8 @@ async def update_space(
     db: AsyncSession, space_id: uuid.UUID, data: SpaceUpdate
 ) -> Space | None:
     """Update editable space settings. Currency is immutable."""
-    space = await get_space(db, space_id)
+    spaces = await lock_spaces(db, [space_id])
+    space = spaces.get(space_id)
     if space is None:
         return None
 

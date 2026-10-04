@@ -1,15 +1,34 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.jwt import (
+    COOKIE_HTTPONLY,
+    COOKIE_MAX_AGE,
+    COOKIE_NAME,
+    COOKIE_SAMESITE,
+    cookie_secure,
+    create_access_token,
+)
 from app.db.session import get_db
 from app.middleware.auth import get_current_user
 from app.middleware.space import get_current_space_member
 from app.models import SpaceMember, User
 from app.schemas.invite import InvitePreviewResponse, InviteResponse, JoinResponse
-from app.schemas.space import MemberResponse, SpaceCreate, SpaceResponse, SpaceUpdate
+from app.schemas.space import (
+    LeaveConfirmation,
+    LeavePreview,
+    MemberResponse,
+    MembershipOutcome,
+    MembershipTransfer,
+    SpaceCreate,
+    SpaceResponse,
+    SpaceUpdate,
+)
 from app.services.invite import generate_invite, join_space, preview_invite
+from app.services.membership import leave_preview
+from app.services.membership_transition import leave_space, transfer_membership
 from app.services.space import create_space, get_space, list_members, update_space
 
 router = APIRouter(prefix="/api/v1", tags=["spaces"])
@@ -32,7 +51,7 @@ async def create_space_endpoint(
 )
 async def preview_invite_endpoint(
     invite_token: str,
-    _current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> InvitePreviewResponse:
     """Preview an invite (target space info) without consuming it.
@@ -42,7 +61,7 @@ async def preview_invite_endpoint(
     /join/:token after the user signs in, to render a confirmation step
     showing which space they're about to join.
     """
-    result = await preview_invite(db, invite_token)
+    result = await preview_invite(db, invite_token, current_user.id)
     return InvitePreviewResponse(**result)
 
 
@@ -112,3 +131,51 @@ async def generate_invite_endpoint(
     """Generate a single-use invite link. Requires space membership."""
     invite = await generate_invite(db, space_id, member.user_id)
     return InviteResponse.model_validate(invite)
+
+
+def _renew_cookie(response: Response, user_id: uuid.UUID) -> None:
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=create_access_token(user_id),
+        max_age=COOKIE_MAX_AGE,
+        httponly=COOKIE_HTTPONLY,
+        secure=cookie_secure(),
+        samesite=COOKIE_SAMESITE,
+    )
+
+
+@router.get("/spaces/{space_id}/leave-preview", response_model=LeavePreview)
+async def leave_preview_endpoint(
+    space_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> LeavePreview:
+    return await leave_preview(db, space_id, current_user.id)
+
+
+@router.delete("/spaces/{space_id}/members/me", response_model=MembershipOutcome)
+async def leave_space_endpoint(
+    space_id: uuid.UUID,
+    data: LeaveConfirmation,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MembershipOutcome:
+    outcome = await leave_space(db, space_id, current_user.id, data)
+    _renew_cookie(response, current_user.id)
+    return outcome
+
+
+@router.post(
+    "/spaces/{space_id}/membership-transfers", response_model=MembershipOutcome
+)
+async def transfer_membership_endpoint(
+    space_id: uuid.UUID,
+    data: MembershipTransfer,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MembershipOutcome:
+    outcome = await transfer_membership(db, space_id, current_user.id, data)
+    _renew_cookie(response, current_user.id)
+    return outcome

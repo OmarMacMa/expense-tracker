@@ -218,8 +218,32 @@ Pending stays pending indefinitely until acted upon.
 - **Invite flow**:
   1. Member clicks "Invite partner"
   2. App generates a single-use invite link (7-day expiry)
-  3. Partner opens link → Google sign-in → added to space
+  3. Partner opens link → Google sign-in if needed → preview → explicit acceptance
   4. Invite link is invalidated after use
+- **One space per user**: creation and acceptance reject existing memberships.
+  A member of the invited space sees dashboard access, never a prompt to leave it.
+- **Self-leave** (1.0.x): Settings → Danger Zone previews the current membership
+  and unfiltered data counts. Type the exact, case-sensitive source name to confirm.
+  Only the caller leaves; removing other members and RBAC remain deferred.
+- **Invite recovery** (1.0.x): a user in another space explicitly confirms
+  "Leave and join [destination]". Source leave, destination acceptance and
+  invitation consumption are atomic. Any failure leaves source membership/data
+  and invite usage unchanged. No expense data is moved.
+- **Last member**: a successful leave or recovery permanently deletes the empty
+  source and all owned data, including pending expenses and dormant recurring
+  templates/monthly wraps. The account is preserved. Changed preview name,
+  membership or counts require reviewing and confirming again.
+- **Shared source**: history and original spender/owner attribution remain.
+  Remaining members may manage payment methods whose owner has left; while the
+  owner is a member, only that owner manages them. Cash stays protected.
+  Expense edits may retain an unchanged former spender; new/changed spenders
+  must be current members.
+- Invitations are retained across OAuth failures and Settings detours, but expire
+  locally after ten minutes. Expiry/replacement blocks a switch; it never becomes
+  standalone deletion. Explicit abandonment and success clear the intended token.
+- Successful mutations refresh membership before routing and purge old-space
+  caches. A subsequent refresh failure is shown as completed, with session
+  refresh/reload actions, not a retry of the destructive operation.
 
 ### 6.3 Expense entry
 
