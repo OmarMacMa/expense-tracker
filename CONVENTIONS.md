@@ -361,6 +361,27 @@ This provides enough data for dashboard charts, Insights filters, and limit aler
 - Core dependencies: `fastapi`, `uvicorn`, `sqlalchemy[asyncio]`, `asyncpg`, `alembic`, `pydantic`, `pydantic-settings`, `python-jose[cryptography]`, `httpx`, `structlog`, `slowapi`
 - Dev dependencies in a separate `requirements-dev.txt`: `pytest`, `pytest-asyncio`, `httpx`, `black`, `ruff`
 
+### Controlled chart browser regressions
+- `frontend/browser_tests/` uses Python Playwright against the real React Home
+  and Insights routes with explicit API fixtures. It needs no database or Google
+  sign-in; it verifies rendering, not live API/authentication integration.
+- Install its pinned `requirements.txt` in an isolated virtual environment and
+  run `python -m playwright install chromium`. Restore frontend dependencies
+  with `npm ci` first.
+- When several sessions use different Playwright versions, set
+  `PLAYWRIGHT_BROWSERS_PATH` to an isolated session directory before both browser
+  installation and test execution, so shared-cache cleanup cannot remove an
+  active session's browser.
+- From the repository root, run
+  `python -m pytest frontend/browser_tests -q`. The fixture starts/stops only its
+  own Vite process; `CHART_TEST_PORT` defaults to 5182 and refuses occupied ports.
+  Set `CHART_ARTIFACTS` to a session artifact directory to retain screenshots,
+  SVG geometry JSON and server logs; otherwise pytest temporary storage is used.
+- Coverage includes #65's original top-label clipping reproduction, full label
+  bounds at first/last days, uniform numeric ticks and live resize, all month
+  lengths, weekly/YTD labels, current-line cutoff/full comparison, null markers,
+  zero/large values, currency tooltips and supplied weekly average counts.
+
 ---
 
 ## 7) Code organization rules
