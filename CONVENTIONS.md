@@ -356,6 +356,7 @@ Use an independently initialized local database ending in `_test`, apply
 ```powershell
 python -m pytest tests\real_db\test_insights_filters.py
 python -m pytest browser_tests\test_insights_filters.py
+python -m pytest tests\real_db\test_insights_filters.py browser_tests\test_insights_filters.py
 ```
 
 Browser tests require `requirements-browser.txt`, Chromium
