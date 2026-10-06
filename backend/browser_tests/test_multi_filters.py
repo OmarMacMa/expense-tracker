@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -213,3 +214,71 @@ async def test_single_value_cache_keys_and_empty_vs_failure(real_db, context):
     await expect(
         page.get_by_text("No transactions match these filters")
     ).not_to_be_visible()
+
+
+async def test_insights_ignores_transactions_only_url_search(real_db, context):
+    data = await filter_dataset(real_db)
+    await authenticate(context, data["actor"])
+    page = await context.new_page()
+    responses = {}
+    endpoints = {
+        "summary",
+        "spending-trend",
+        "category-breakdown",
+        "merchant-leaderboard",
+        "spender-breakdown",
+        "expenses",
+    }
+
+    def record_response(response):
+        path = urlparse(response.url).path
+        endpoint = path.rsplit("/", 1)[-1]
+        if endpoint in endpoints:
+            responses[endpoint] = response
+
+    page.on("response", record_response)
+    categories = "&".join(f"category={category.id}" for category in data["categories"])
+    await page.goto(
+        f"/insights?period=this_month&spender={data['actor'].id}"
+        f"&{categories}&search=Partner%20Only"
+    )
+    await page.wait_for_load_state("networkidle")
+    await expect(page.locator("h1").locator("..")).to_contain_text("$240.00")
+    await expect(page.get_by_label("Search transactions")).not_to_be_visible()
+    await expect(
+        page.get_by_text("No transactions match these filters")
+    ).not_to_be_visible()
+    assert set(responses) == endpoints
+    results = {}
+    for endpoint, response in responses.items():
+        assert response.status == 200
+        assert "search" not in parse_qs(urlparse(response.url).query), endpoint
+        results[endpoint] = await response.json()
+    assert results["summary"]["total_spent"] == "240.00"
+    assert results["spending-trend"]["current_series"][-1]["cumulative"] == "240.00"
+    assert sum(Decimal(item["total"]) for item in results["category-breakdown"]) == 240
+    assert (
+        sum(Decimal(item["total"]) for item in results["merchant-leaderboard"]) == 240
+    )
+    assert sum(item["count"] for item in results["merchant-leaderboard"]) == 24
+    assert len(results["spender-breakdown"]) == 1
+    assert results["spender-breakdown"][0]["total"] == "240.00"
+    assert len(results["expenses"]["data"]) == 20
+    assert all(
+        expense["spender"]["id"] == str(data["actor"].id)
+        and expense["merchant"] != "Partner Only"
+        for expense in results["expenses"]["data"]
+    )
+    link = page.get_by_role("link", name="View all transactions")
+    assert "search" not in parse_qs(urlparse(await link.get_attribute("href")).query)
+    await select_values(page, "Merchant", ["Shop %"])
+    await expect(page.locator("h1").locator("..")).to_contain_text("$120.00")
+    assert "search" not in parse_qs(urlparse(page.url).query)
+    await page.get_by_role("button", name="Remove merchant: Shop %").click()
+    await expect(page.locator("h1").locator("..")).to_contain_text("$240.00")
+    await link.click()
+    await expect(page.get_by_label("Search transactions")).to_have_value("")
+    await page.get_by_label("Search transactions").fill("Cafe, North")
+    await expect(page.get_by_text("12 transactions", exact=True)).to_be_visible()
+    assert parse_qs(urlparse(page.url).query)["search"] == ["Cafe, North"]
+    await expect(page.get_by_text("Shop %", exact=True)).not_to_be_visible()

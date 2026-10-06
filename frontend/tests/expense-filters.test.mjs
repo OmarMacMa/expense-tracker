@@ -1,11 +1,36 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
-import {
-  canonicalFilters,
-  filtersFromParams,
-  filtersToParams,
-} from '../src/lib/expenseFilters.ts';
-import { api } from '../src/lib/api-client.ts';
+import ts from 'typescript';
+
+async function loadTypeScriptModule(path) {
+  const source = await readFile(new URL(path, import.meta.url), 'utf8');
+  const { outputText, diagnostics } = ts.transpileModule(source, {
+    fileName: path,
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+    },
+    reportDiagnostics: true,
+  });
+  const errors = diagnostics.filter(
+    (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
+  );
+  assert.equal(
+    errors.length,
+    0,
+    errors
+      .map((error) => ts.flattenDiagnosticMessageText(error.messageText, '\n'))
+      .join('\n'),
+  );
+  return import(
+    `data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`
+  );
+}
+
+const { canonicalFilters, filtersFromParams, filtersToParams } =
+  await loadTypeScriptModule('../src/lib/expenseFilters.ts');
+const { api } = await loadTypeScriptModule('../src/lib/api-client.ts');
 
 test('repeated keys round trip without comma-splitting merchant names', () => {
   const filters = {
@@ -60,6 +85,23 @@ test('query cache identities are order-independent, duplicate-free, and dimensio
     key({ category: ['a'], status: 'confirmed' }),
   );
   assert.equal(key({ category: [] }), key({}));
+});
+
+test('Insights omits unsupported search from parsed, cached and outgoing context', () => {
+  const params = new URLSearchParams(
+    'period=this_month&category=one&category=two&search=hidden',
+  );
+  const insights = filtersFromParams(params, 'insights');
+  assert.deepEqual(insights, {
+    period: 'this_month',
+    category: ['one', 'two'],
+  });
+  assert.equal(filtersToParams(insights).has('search'), false);
+  assert.deepEqual(
+    canonicalFilters({ ...insights, search: 'hidden' }, 'insights'),
+    insights,
+  );
+  assert.equal(filtersFromParams(params).search, 'hidden');
 });
 
 test('API client appends repeated keys and keeps pagination/scalar callers intact', async () => {

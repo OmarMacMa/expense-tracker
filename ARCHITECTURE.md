@@ -348,6 +348,8 @@ Client `ExpenseFilters` uses arrays for the five dimensions and scalar
 query cache keys and explicitly appends repeated keys to `URLSearchParams`;
 the API client accepts these alongside existing scalar parameter records.
 Insights and Transactions use the URL as their explicit filter context.
+Search remains Transactions-only: Insights explicitly excludes any URL `search`
+value from its parsed UI, cache, chart/list queries and View all navigation.
 Insights previews and their View all link set `status=confirmed`; the expense
 list API accepts optional typed `status=confirmed|pending`, with an omitted
 status retaining the general Transactions all-status behavior. Configured

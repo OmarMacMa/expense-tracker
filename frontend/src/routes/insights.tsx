@@ -86,7 +86,7 @@ function TransactionListSkeleton() {
 }
 
 export default function Insights() {
-  const { queryFilters, setFilters } = useExpenseFilters();
+  const { queryFilters, setFilters } = useExpenseFilters('insights');
   const transactionFilters = { ...queryFilters, status: 'confirmed' as const };
   const filterOptions = useExpenseFilterOptions();
   const { format, currencyCode } = useCurrency();

@@ -7,6 +7,7 @@ export const FILTER_DIMENSIONS = [
 ] as const;
 
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number];
+export type ExpenseFilterContext = 'transactions' | 'insights';
 
 export interface ExpenseFilters {
   period?: string;
@@ -22,9 +23,13 @@ export interface ExpenseFilters {
 
 const SCALAR_KEYS = ['period', 'month', 'search', 'status'] as const;
 
-export function canonicalFilters(filters: ExpenseFilters): ExpenseFilters {
+export function canonicalFilters(
+  filters: ExpenseFilters,
+  context: ExpenseFilterContext = 'transactions',
+): ExpenseFilters {
   const result: ExpenseFilters = {};
   for (const key of SCALAR_KEYS) {
+    if (context === 'insights' && key === 'search') continue;
     if (filters[key]) result[key] = filters[key];
   }
   for (const key of FILTER_DIMENSIONS) {
@@ -50,7 +55,10 @@ export function filtersToParams(filters: ExpenseFilters): URLSearchParams {
   return params;
 }
 
-export function filtersFromParams(params: URLSearchParams): ExpenseFilters {
+export function filtersFromParams(
+  params: URLSearchParams,
+  context: ExpenseFilterContext = 'transactions',
+): ExpenseFilters {
   const filters: ExpenseFilters = {};
   for (const key of SCALAR_KEYS) {
     filters[key] = params.get(key) ?? undefined;
@@ -58,5 +66,5 @@ export function filtersFromParams(params: URLSearchParams): ExpenseFilters {
   for (const key of FILTER_DIMENSIONS) {
     filters[key] = params.getAll(key);
   }
-  return canonicalFilters(filters);
+  return canonicalFilters(filters, context);
 }
