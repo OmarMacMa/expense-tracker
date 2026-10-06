@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 from urllib.parse import parse_qs, urlparse
 
@@ -98,8 +99,9 @@ async def test_real_range_apply_clear_context_and_precision(
     )
     await page.get_by_role("link", name="View all transactions").click()
     await expect(
-        page.get_by_role("heading", name="Transactions", exact=True)
+        page.get_by_role("heading", name="Transactions", exact=True, level=1)
     ).to_be_visible()
+    await expect(page).to_have_url(re.compile(r"/transactions\?"))
     await expect(page.get_by_label("Minimum amount (USD)")).to_have_value("10.10")
     await expect(page.get_by_label("Maximum amount (USD)")).to_have_value("20.20")
     assert parse_qs(urlparse(page.url).query)["period"] == ["this_month"]
