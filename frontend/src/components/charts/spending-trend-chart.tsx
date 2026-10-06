@@ -24,7 +24,6 @@ const PERIOD_DISPLAY: Record<string, string> = {
 };
 
 const AVG_LABEL: Partial<Record<SpendingTrendTimeframe, string>> = {
-  weekly: '9-week avg',
   monthly: '3-month avg',
   quarterly: '3-quarter avg',
 };
@@ -80,7 +79,9 @@ export function SpendingTrendChart({
   const isWeekly = data.timeframe === 'weekly';
   const isYearly = data.timeframe === 'yearly';
   const hasAverage = data.average_series.length > 0;
-  const avgLabel = AVG_LABEL[data.timeframe];
+  const avgLabel = isWeekly
+    ? `${data.average_period_count}-week avg`
+    : AVG_LABEL[data.timeframe];
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const trendYear = data.year;
   const monthStartDays = isYearly ? getMonthStartDays(trendYear) : undefined;

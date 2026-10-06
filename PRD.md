@@ -177,7 +177,7 @@ Pending stays pending indefinitely until acted upon.
 - Limits: weekly, monthly (MVP). Quarterly, yearly (2.0.0). Week starts Monday.
 - Warnings/alerts on Home (2–3 max). **In-app only** (no push notifications).
 - Insights layout: desktop split view; mobile chart-first.
-- Default comparisons emphasize **vs last 9-week average for weekly views, 3-month average for monthly views**.
+- Default comparisons emphasize **vs nonzero weeks within the last nine completed weeks for weekly views, three-month average for monthly views**.
 - Shareable Insights links (1.1.0+).
 
 ### Taxes
@@ -308,12 +308,12 @@ Full-page form at `/expenses/new`. Fields in order:
 
 ### 6.9 Home dashboard
 High-signal entry point. Shows:
-1. **Hero number**: Total spent for selected window + **delta vs 9-week average (weekly) or 3-month average (monthly)** (e.g., "+12%" or "-8% vs avg").
+1. **Hero number**: Total spent for selected window + **delta vs contributing-week average (weekly) or 3-month average (monthly)** (e.g., "-8% vs 4-week avg").
 2. **Time toggle**: "This Week" / "This Month" — all content updates.
 3. **Alerts** (2–3 max): limits breached/near-breached.
 4. **Pending recurring**: confirmations card. — **1.1.0+**
 5. **Core graphs (MVP)**:
-   - Spending trend line (cumulative, current period vs 9-week avg for weekly views or 3-month avg for monthly views)
+   - Spending trend line (cumulative, current period vs contributing-week avg within nine completed weeks, or 3-month avg for monthly views)
    - Category distribution (pie/donut)
    - Merchant leaderboard (top by amount only; Amount/Count toggle in 1.1.0+)
 6. **Latest transactions**: count + quick link to full list.
@@ -351,13 +351,13 @@ Analysis playground.
 2. As a user, I can split a mixed basket (groceries + shampoo for B) and assign beneficiaries.
 3. As a couple, we can see total groceries and who paid and who benefited.
 4. As a user, I can set weekly/monthly/quarterly/yearly limits and get warned when near or over.
-5. As a user, I can see spending trends vs normal (9-week average for weekly views, 3-month average for monthly views).
+5. As a user, I can see spending trends vs normal (nonzero weeks within nine completed weeks for weekly views, 3-month average for monthly views).
 6. As a user, I can view top merchants and identify "problem merchants".
 7. As a user, I can create recurring items and confirm them when they appear.
 8. As a user, I can use tags like `#vacation` to see cross-category spend.
 9. As a user, I can share an Insights view link with my partner.
 10. As a user, I can edit any field of a past expense, including its date.
-11. As a user, I can see a hero "total spent" number with a comparison to my 9-week average (weekly) or 3-month average (monthly).
+11. As a user, I can see a hero "total spent" number with a comparison to my actual contributing-week average (weekly) or 3-month average (monthly).
 
 ### Edge cases
 - Logging late: purchase date determines where it counts.
@@ -493,8 +493,12 @@ Analysis playground.
 
 ### Historical spending average
 - Compare cumulative spend by day-of-period vs average of the prior 9 completed weeks for weekly views, or prior 3 completed months for monthly views. Exclude the selected period.
-- All confirmed expenses remain included, including large monthly bills. Nine weeks smooths their impact without trimming legitimate spending.
-- Empty periods contribute zero; always divide by the full baseline count (9 weeks or 3 months).
+- Apply the same active filters to summary and trend history. All matching confirmed expenses remain included, including large monthly bills; do not trim the largest expenses.
+- Weekly: inspect only those nine calendar windows, exclude zero-total weeks, and divide by the actual number of nonzero weeks. Four contributing weeks means divide by four; one zero week out of nine means divide by eight. Do not look further back to fill samples.
+- Zero-spending days inside included weeks remain in the cumulative series with carry-forward totals.
+- Monthly behavior is unchanged: three previous months, including zero months, divided by three. Quarterly/yearly behavior is unchanged.
+- Show the actual weekly count in Home/Insights badges and trend legends (e.g., "4-week avg", "8-week avg", "9-week avg"). No contributors means no delta and no average trend line or legend.
+- Pending and future expenses are excluded; Last Week uses space-local calendar boundaries even across DST.
 
 ### Hero total + delta
 - Total = sum of confirmed expenses in selected window.

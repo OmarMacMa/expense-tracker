@@ -2,9 +2,9 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import event, select
 
-from app.models import Category
+from app.models import Category, Expense
 from app.schemas.expense import ExpenseCreate
 from app.services.expense import create_expense
 from app.services.insight import (
@@ -74,7 +74,7 @@ async def test_summary_no_prior_data_delta_null(db_session, test_user, test_spac
 async def test_weekly_baseline_includes_older_weeks(
     db_session, test_user, test_space, monkeypatch, period, older_week
 ):
-    """Weeks 4–9 count, empty weeks stay zero, and selected weeks are excluded."""
+    """Weeks 4–9 count, zero weeks and the selected/tenth weeks are excluded."""
     test_space.timezone = "America/New_York"
     ref = datetime(2026, 3, 9, 4, tzinfo=UTC)
     if period == "last_week":
@@ -108,10 +108,11 @@ async def test_weekly_baseline_includes_older_weeks(
     trend = await get_spending_trend(db_session, test_space.id, period=period)
 
     assert summary["total_spent"] == Decimal("50.00")
-    assert summary["delta_pct"] == Decimal("-50.0")
+    assert summary["delta_pct"] == Decimal("-94.4")
+    assert summary["average_period_count"] == trend["average_period_count"] == 1
     assert len(trend["average_series"]) == 7
     assert all(
-        point["cumulative"] == Decimal("100.00") for point in trend["average_series"]
+        point["cumulative"] == Decimal("900.00") for point in trend["average_series"]
     )
     assert trend["current_series"][-1]["cumulative"] == Decimal("50.00")
 
@@ -151,8 +152,8 @@ async def test_weekly_empty_baseline_at_local_monday_boundary(
     assert summary["window_start"] == expected_start
     assert summary["total_spent"] == Decimal("0")
     assert summary["delta_pct"] is None
-    assert len(trend["average_series"]) == 7
-    assert all(point["cumulative"] == 0 for point in trend["average_series"])
+    assert trend["average_series"] == []
+    assert summary["average_period_count"] == trend["average_period_count"] == 0
 
 
 @pytest.mark.asyncio
@@ -186,10 +187,263 @@ async def test_monthly_baseline_remains_three_periods(
     trend = await get_spending_trend(db_session, test_space.id, month="2026-03")
     assert summary["total_spent"] == Decimal("50.00")
     assert summary["delta_pct"] == Decimal("-50.0")
+    assert summary["average_period_count"] == trend["average_period_count"] == 3
     assert len(trend["average_series"]) == 31
     assert all(
         point["cumulative"] == Decimal("100.00") for point in trend["average_series"]
     )
+
+
+def _freeze_insight_clock(monkeypatch, now):
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now.astimezone(tz) if tz else now.replace(tzinfo=None)
+
+    monkeypatch.setattr("app.services.insight.datetime", Clock)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("count", [4, 8, 9])
+async def test_weekly_actual_contributors_and_constant_queries(
+    db_session, test_user, test_space, monkeypatch, count
+):
+    """The same nonzero weeks drive summary/trend in two expense SELECTs each."""
+    now = datetime(2026, 3, 10, 12, tzinfo=UTC)
+    _freeze_insight_clock(monkeypatch, now)
+    resolver = TimeWindowResolver(test_space.timezone)
+    windows = resolver.get_previous_windows("weekly", count=10, ref_date=now)
+    cat_id = await _get_uncategorized_id(db_session, test_space.id)
+    # Include week nine even with short history; never reach out to week ten.
+    included = list(range(count - 1)) + [8]
+    for index in included + [9]:
+        await create_expense(
+            db_session,
+            test_space.id,
+            ExpenseCreate(
+                merchant="Bill",
+                purchase_datetime=windows[index][0] + timedelta(days=2),
+                amount=Decimal("900") if index == 8 else Decimal("100"),
+                category_id=cat_id,
+                spender_id=test_user.id,
+            ),
+            test_user.id,
+        )
+    queries = []
+
+    def record_query(conn, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().upper().startswith("SELECT") and (
+            "FROM expenses" in statement
+        ):
+            queries.append(statement)
+
+    engine = db_session.bind.engine.sync_engine
+    event.listen(engine, "before_cursor_execute", record_query)
+    try:
+        summary = await get_summary(db_session, test_space.id, period="this_week")
+        assert len(queries) == 2
+        queries.clear()
+        trend = await get_spending_trend(db_session, test_space.id, period="this_week")
+        assert len(queries) == 2
+    finally:
+        event.remove(engine, "before_cursor_execute", record_query)
+
+    expected = (Decimal("100") * (count - 1) + Decimal("900")) / count
+    assert summary["average_period_count"] == trend["average_period_count"] == count
+    assert summary["delta_pct"] == Decimal("-100.0")
+    assert [p["cumulative"] for p in trend["average_series"]] == [
+        Decimal("0"),
+        Decimal("0"),
+        expected,
+        expected,
+        expected,
+        expected,
+        expected,
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("now", "expected_start", "expected_end"),
+    [
+        (
+            datetime(2026, 3, 9, 3, 30, tzinfo=UTC),
+            datetime(2026, 2, 23, 5, tzinfo=UTC),
+            datetime(2026, 3, 2, 5, tzinfo=UTC),
+        ),
+        (
+            datetime(2026, 3, 9, 4, 30, tzinfo=UTC),
+            datetime(2026, 3, 2, 5, tzinfo=UTC),
+            datetime(2026, 3, 9, 4, tzinfo=UTC),
+        ),
+        (
+            datetime(2026, 11, 2, 4, 30, tzinfo=UTC),
+            datetime(2026, 10, 19, 4, tzinfo=UTC),
+            datetime(2026, 10, 26, 4, tzinfo=UTC),
+        ),
+        (
+            datetime(2026, 11, 2, 5, 30, tzinfo=UTC),
+            datetime(2026, 10, 26, 4, tzinfo=UTC),
+            datetime(2026, 11, 2, 5, tzinfo=UTC),
+        ),
+    ],
+)
+async def test_last_week_real_reference_resolver_across_dst(
+    db_session, test_user, test_space, monkeypatch, now, expected_start, expected_end
+):
+    """Freeze the clock, not reference selection; also exercise expense listing."""
+    from app.services.expense import list_expenses
+
+    test_space.timezone = "America/New_York"
+    _freeze_insight_clock(monkeypatch, now)
+    # Direct inserts allow testing the autumn clock independently of wall time.
+    selected = Expense(
+        space_id=test_space.id,
+        merchant="Selected",
+        merchant_normalized="selected",
+        purchase_datetime=expected_start,
+        total_amount=Decimal("50"),
+        spender_id=test_user.id,
+        status="confirmed",
+    )
+    older = Expense(
+        space_id=test_space.id,
+        merchant="Older",
+        merchant_normalized="older",
+        purchase_datetime=expected_start - timedelta(hours=1),
+        total_amount=Decimal("100"),
+        spender_id=test_user.id,
+        status="confirmed",
+    )
+    db_session.add_all([selected, older])
+    await db_session.flush()
+    summary = await get_summary(db_session, test_space.id, period="last_week")
+    trend = await get_spending_trend(db_session, test_space.id, period="last_week")
+    expenses = await list_expenses(db_session, test_space.id, period="last_week")
+    assert summary["window_start"] == expected_start
+    assert summary["window_end"] == expected_end - timedelta(microseconds=1)
+    assert summary["total_spent"] == Decimal("50")
+    assert summary["delta_pct"] == Decimal("-50.0")
+    assert summary["average_period_count"] == trend["average_period_count"] == 1
+    assert trend["current_day"] is None
+    assert trend["average_series"][-1]["cumulative"] == Decimal("100")
+    assert [row["id"] for row in expenses["data"]] == [selected.id]
+
+
+@pytest.mark.asyncio
+async def test_weekly_zero_pending_and_future_expenses_are_not_history(
+    db_session, test_user, test_space, monkeypatch
+):
+    now = datetime(2026, 3, 10, 12, tzinfo=UTC)
+    _freeze_insight_clock(monkeypatch, now)
+    for when, amount, status in [
+        (now - timedelta(weeks=2), "500", "pending"),
+        (now + timedelta(hours=1), "900", "confirmed"),
+    ]:
+        db_session.add(
+            Expense(
+                space_id=test_space.id,
+                merchant="Excluded",
+                merchant_normalized="excluded",
+                purchase_datetime=when,
+                total_amount=Decimal(amount),
+                spender_id=test_user.id,
+                status=status,
+            )
+        )
+    await db_session.flush()
+    summary = await get_summary(db_session, test_space.id, period="this_week")
+    trend = await get_spending_trend(db_session, test_space.id, period="this_week")
+    assert summary["total_spent"] == 0
+    assert summary["delta_pct"] is None
+    assert summary["average_period_count"] == trend["average_period_count"] == 0
+    assert trend["average_series"] == []
+    assert all(point["cumulative"] == 0 for point in trend["current_series"])
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "filter_name", ["spender_id", "category_id", "merchant", "tag", "payment_method_id"]
+)
+async def test_weekly_history_uses_active_filters(
+    db_session, test_user, second_user, test_space, monkeypatch, filter_name
+):
+    from app.models import PaymentMethod, SpaceMember
+    from app.schemas.category import CategoryCreate
+    from app.services.category import create_category
+
+    now = datetime(2026, 3, 10, 12, tzinfo=UTC)
+    _freeze_insight_clock(monkeypatch, now)
+    category = await create_category(
+        db_session, test_space.id, CategoryCreate(name="Matching")
+    )
+    other_category = await _get_uncategorized_id(db_session, test_space.id)
+    db_session.add(SpaceMember(space_id=test_space.id, user_id=second_user.id))
+    method = PaymentMethod(
+        space_id=test_space.id, owner_id=test_user.id, label="Matching"
+    )
+    db_session.add(method)
+    await db_session.flush()
+    for weeks, matching in [(0, True), (1, True), (2, False), (3, True)]:
+        await create_expense(
+            db_session,
+            test_space.id,
+            ExpenseCreate(
+                merchant="Matching" if matching else "Other",
+                purchase_datetime=now - timedelta(weeks=weeks),
+                amount=Decimal("50") if weeks == 0 else Decimal("100"),
+                category_id=category.id if matching else other_category,
+                spender_id=test_user.id if matching else second_user.id,
+                payment_method_id=method.id if matching else None,
+                tags=["matching"] if matching else [],
+            ),
+            test_user.id,
+        )
+    value = {
+        "spender_id": test_user.id,
+        "category_id": category.id,
+        "merchant": "MATCH",
+        "tag": "#MATCHING",
+        "payment_method_id": method.id,
+    }[filter_name]
+    summary = await get_summary(
+        db_session, test_space.id, period="this_week", **{filter_name: value}
+    )
+    trend = await get_spending_trend(
+        db_session, test_space.id, period="this_week", **{filter_name: value}
+    )
+    assert summary["average_period_count"] == trend["average_period_count"] == 2
+    assert summary["total_spent"] == Decimal("50")
+    assert summary["delta_pct"] == Decimal("-50.0")
+    assert trend["average_series"][-1]["cumulative"] == Decimal("100")
+
+
+@pytest.mark.asyncio
+async def test_yearly_summary_retains_three_year_average(
+    db_session, test_user, test_space, monkeypatch
+):
+    _freeze_insight_clock(monkeypatch, datetime(2026, 3, 10, 12, tzinfo=UTC))
+    cat_id = await _get_uncategorized_id(db_session, test_space.id)
+    for year, amount in [(2026, "50"), (2023, "300"), (2022, "9000")]:
+        await create_expense(
+            db_session,
+            test_space.id,
+            ExpenseCreate(
+                merchant="Yearly",
+                purchase_datetime=datetime(year, 1, 1, tzinfo=UTC),
+                amount=Decimal(amount),
+                category_id=cat_id,
+                spender_id=test_user.id,
+            ),
+            test_user.id,
+        )
+    summary = await get_summary(db_session, test_space.id, period="ytd")
+    trend = await get_spending_trend(db_session, test_space.id, period="ytd")
+    assert summary["total_spent"] == Decimal("50")
+    assert summary["delta_pct"] == Decimal("-50.0")
+    assert summary["average_period_count"] == 3
+    assert trend["average_period_count"] == 0
+    assert trend["average_series"] == []
 
 
 @pytest.mark.asyncio

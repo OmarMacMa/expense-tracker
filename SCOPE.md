@@ -93,10 +93,10 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - In-app alerts only (2–3 cards on Home)
 
 ### Home dashboard
-- Hero total spent (current week or month) + delta vs 9-week average (weekly) or 3-month average (monthly)
+- Hero total spent (current week or month) + delta vs nonzero weeks within nine completed weeks (weekly) or 3-month average (monthly)
 - Week / Month toggle
 - Limit alerts (2–3 max)
-- Spending trend line (cumulative, current period vs 9-week avg for weekly views or 3-month avg for monthly views)
+- Spending trend line (cumulative, current period vs actual contributing-week avg within nine completed weeks, or 3-month avg for monthly views)
 - Category distribution pie/donut
 - Merchant leaderboard (top by amount only)
 - Latest transactions count + link to full list
@@ -162,6 +162,13 @@ Ship fast, validate the core expense-tracking loop for one couple.
 
 ---
 
+## 1.0.8 — User-approved next-release scope
+
+- Weekly spending averages (#68): only the nine completed calendar weeks before the selected week; exclude zero-total weeks after active filters, divide by the actual contributing count, retain all positive expenses and zero-spending days, and show actual-count labels on Home/Insights. No contributors means no delta or average line/legend. DST-safe Last Week selection and bounded historical queries are tightly coupled fixes. Monthly/quarterly/yearly behavior remains unchanged.
+- Remaining user-approved items stay in **1.0.8**, to be planned after #68: multi-select filters, amount-range filter (#44), chart Today/axis corrections (#65), spender filter, limit corrections (#39), and Save & Add Another (#11). They are not implemented as part of #68.
+
+---
+
 ## 1.1.0 — Automation & sharing
 
 Add recurring expenses and shareable analytics.
@@ -198,7 +205,6 @@ Add recurring expenses and shareable analytics.
 - React.lazy() code splitting for routes (bundle size reduction)
 - Deduplicate add/edit expense forms (extract shared ExpenseForm component)
 - Wire filters into transaction list page (match Insights filter bar)
-- Add "Save & Add Another" button to expense form
 - Optimize spending trend: SQL GROUP BY instead of in-memory aggregation
 - Add partial index for confirmed expenses
 - Add Content Security Policy headers

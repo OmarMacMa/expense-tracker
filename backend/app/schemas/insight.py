@@ -11,6 +11,7 @@ Timeframe = Literal["weekly", "monthly", "quarterly", "yearly"]
 class SummaryResponse(BaseModel):
     total_spent: Decimal
     delta_pct: Decimal | None  # null if no prior data
+    average_period_count: int
     period_label: str
     window_start: datetime
     window_end: datetime
@@ -24,6 +25,7 @@ class TrendPoint(BaseModel):
 class SpendingTrendResponse(BaseModel):
     current_series: list[TrendPoint]
     average_series: list[TrendPoint]
+    average_period_count: int
     timeframe: Timeframe
     year: int  # space-local year of the current window (used for yearly axis labels)
     # 1-based day index of "today" within the window; null for past/future windows

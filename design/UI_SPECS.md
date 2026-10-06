@@ -96,7 +96,7 @@ A consistent color system is used across all status indicators (limit progress, 
 **Application rules:**
 - **Limit alert cards** (Home): hidden when healthy (< `warning_pct`). Show on Home only at warning (amber), critical (red), or exceeded (purple). Progress bar fill color matches the state.
 - **Limit list view** (`/limits`): all limits shown regardless of state. Progress bar uses green / amber / red / purple based on the limit's `warning_pct` and the fixed 90% critical threshold.
-- **Delta badge** (Home hero): green + ↓ arrow when below the historical average (9-week for weekly views, 3-month for monthly views), red + ↑ arrow when above. Hidden entirely when no prior data exists.
+- **Delta badge** (Home hero): green + ↓ arrow when below the historical average (nonzero weeks within nine completed weeks for weekly views, 3-month for monthly views), red + ↑ arrow when above. Hidden entirely when no contributing history exists.
 - **Color is never the sole indicator** — always paired with text labels, percentages, or icons (accessibility requirement).
 
 ---
@@ -237,7 +237,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - The top row respects the phone's **camera notch / Dynamic Island** — space selector sits left of it, avatar sits right.
 - **Week / Month toggle** (top-right, below avatar): pill-style toggle. Controls the time window for the entire page.
 - **Hero total** (left-aligned, large): currency-formatted total spent for the selected window.
-- **Delta badge** (below hero total): percentage vs 9-week average (weekly) or 3-month average (monthly). Green with ↓ arrow if under average, red/orange with ↑ arrow if over. Hidden if no prior data exists.
+- **Delta badge** (below hero total): percentage vs contributing-week average (weekly) or 3-month average (monthly). Weekly label includes the backend's actual count, e.g. "vs 4-week avg". Green with ↓ arrow if under average, red/orange with ↑ arrow if over. Hidden if no contributing history exists.
 
 ### MVP sections (top to bottom, scrollable)
 
@@ -254,7 +254,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 3. **Spending trend line chart**:
    - Cumulative line chart, two lines:
      - **Solid line**: current period's cumulative spend day-by-day.
-     - **Dashed/lighter line**: average cumulative spend over the prior 9 completed weeks (weekly) or 3 completed months (monthly), excluding the selected period. Legend: "9-week avg" or "3-month avg".
+     - **Dashed/lighter line**: average cumulative spend over nonzero-total weeks within the prior nine completed calendar weeks (weekly) or three completed months including zero months (monthly), excluding the selected period. Weekly contributors use the same filters as the summary. Preserve zero-spending days inside included weeks. Legend shows the actual backend count, e.g. "4-week avg", "8-week avg", "9-week avg", or "3-month avg". No weekly contributors means no average line or legend.
    - X-axis: days in the period (1–7 for week, 1–28/31 for month).
    - Y-axis: cumulative dollar amount.
    - Subtle grid, clean axis labels.
@@ -365,7 +365,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - Spender, category, merchant, tag, payment method.
 
 **Charts**:
-1. Spending trend line (same as Home: cumulative, current vs 9-week avg for weekly views or 3-month avg for monthly views).
+1. Spending trend line (same as Home: cumulative, current vs actual contributing-week avg within nine completed weeks or 3-month avg for monthly views). Weekly summary badges also show the actual contributing count.
 2. Category distribution pie/donut.
 3. Merchant leaderboard (by amount).
 4. Spender breakdown (bar or pie, totals per spender).
