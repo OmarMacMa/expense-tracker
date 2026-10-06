@@ -347,6 +347,26 @@ This provides enough data for dashboard charts, Insights filters, and limit aler
 
 ---
 
+### Insights filter regression checks
+
+Use an independently initialized local database ending in `_test`, apply
+`alembic upgrade head`, and set `DATABASE_URL` before running tests from
+`backend`:
+
+```powershell
+python -m pytest tests\real_db\test_insights_filters.py
+python -m pytest browser_tests\test_insights_filters.py
+```
+
+Browser tests require `requirements-browser.txt`, Chromium
+(`python -m playwright install chromium`), and frontend dependencies. The real
+React/backend harness accepts `BROWSER_BACKEND_PORT` and
+`BROWSER_FRONTEND_PORT` (defaults 8126/5176). Use unused, explicitly assigned
+ports when running concurrent worktrees; the harness refuses occupied ports.
+It stops only owned servers and fixtures delete only their created records.
+
+---
+
 ## 6) Dependency management
 
 ### Frontend

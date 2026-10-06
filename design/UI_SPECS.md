@@ -372,6 +372,11 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 
 **Transaction list**: same component as `/transactions` but filtered by Insights filters.
 
+**v1.0.8 filter correctness**: keep every chart visible and apply all selected
+dimensions, including each chart's own dimension. Insights transactions are
+confirmed-only, matching chart totals. A failed summary/chart/list query shows
+an inline error and Retry action instead of an empty state or permanent skeleton.
+
 ### 1.1.0 additions
 - **Share button**: copies URL with encoded filter state.
 

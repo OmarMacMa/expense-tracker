@@ -19,6 +19,7 @@ export interface ExpenseFilters {
   tag?: string;
   payment_method?: string;
   search?: string;
+  status?: 'confirmed' | 'pending';
 }
 
 export function useExpenseList(filters: ExpenseFilters = {}) {
