@@ -3,6 +3,8 @@ import binascii
 import json
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
+from typing import Literal
 
 from fastapi import HTTPException
 from sqlalchemy import and_, delete, func, or_, select
@@ -19,6 +21,7 @@ from app.models import (
     User,
 )
 from app.models.expense import expense_line_tags
+from app.services.amount_range import amount_range_predicates
 from app.services.merchant import upsert_merchant
 from app.services.tag import ensure_tags
 
@@ -212,6 +215,9 @@ async def list_expenses(
     search: str | None = None,
     period: str | None = None,
     month: str | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
+    status: Literal["confirmed", "pending"] | None = None,
 ) -> dict:
     """List expenses with cursor pagination and filters.
 
@@ -225,7 +231,10 @@ async def list_expenses(
             selectinload(Expense.lines).selectinload(ExpenseLine.tags),
             selectinload(Expense.lines).selectinload(ExpenseLine.category),
         )
-        .where(Expense.space_id == space_id)
+        .where(
+            Expense.space_id == space_id,
+            *amount_range_predicates(min_amount, max_amount),
+        )
         .order_by(Expense.purchase_datetime.desc(), Expense.id.desc())
         .limit(limit + 1)
     )
@@ -257,6 +266,8 @@ async def list_expenses(
             )
 
     # Apply filters
+    if status:
+        stmt = stmt.where(Expense.status == status)
     if spender_id:
         stmt = stmt.where(Expense.spender_id == spender_id)
 

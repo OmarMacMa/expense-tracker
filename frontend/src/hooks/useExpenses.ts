@@ -9,8 +9,9 @@ import { api } from '@/lib/api-client';
 import type { ApiError } from '@/lib/api-client';
 import type { Expense, ExpenseListResponse } from '@/types/api';
 import { useAuth } from './useAuth';
+import type { AmountRange } from '@/lib/amount-range';
 
-export interface ExpenseFilters {
+export interface ExpenseFilters extends AmountRange {
   period?: string;
   month?: string;
   spender?: string;
@@ -19,6 +20,7 @@ export interface ExpenseFilters {
   tag?: string;
   payment_method?: string;
   search?: string;
+  status?: 'confirmed' | 'pending';
 }
 
 export function useExpenseList(filters: ExpenseFilters = {}) {

@@ -5,9 +5,11 @@ from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models import Category, Expense, ExpenseLine, Space, Tag, User
 from app.models.expense import expense_line_tags
+from app.services.amount_range import amount_range_predicates
 from app.services.time_window import TimeWindowResolver
 
 
@@ -78,6 +80,8 @@ async def _sum_expenses_in_window(
     merchant: str | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> Decimal:
     """Sum confirmed expense amounts in a window with optional filters."""
     stmt = select(func.coalesce(func.sum(Expense.total_amount), Decimal("0"))).where(
@@ -85,6 +89,7 @@ async def _sum_expenses_in_window(
         Expense.status == "confirmed",
         Expense.purchase_datetime >= start_utc,
         Expense.purchase_datetime <= end_utc,
+        *amount_range_predicates(min_amount, max_amount),
     )
     if spender_id:
         stmt = stmt.where(Expense.spender_id == spender_id)
@@ -131,6 +136,8 @@ async def get_summary(
     merchant: str | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> dict:
     """Hero total + delta vs 3-month average."""
     space = await db.get(Space, space_id)
@@ -146,6 +153,8 @@ async def get_summary(
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method_id,
+        min_amount=min_amount,
+        max_amount=max_amount,
     )
 
     total = await _sum_expenses_in_window(
@@ -188,6 +197,8 @@ async def get_spending_trend(
     merchant: str | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> dict:
     """Cumulative daily spend for current period + 3-month average."""
     space = await db.get(Space, space_id)
@@ -212,6 +223,8 @@ async def get_spending_trend(
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method_id,
+        min_amount=min_amount,
+        max_amount=max_amount,
     )
     current_series = _to_cumulative(current_daily, period_days=period_days)
 
@@ -235,6 +248,8 @@ async def get_spending_trend(
                 merchant=merchant,
                 tag=tag,
                 payment_method_id=payment_method_id,
+                min_amount=min_amount,
+                max_amount=max_amount,
             )
             all_prev_dailies.append(_to_cumulative(daily, period_days=period_days))
         avg_series = _average_series(all_prev_dailies)
@@ -272,6 +287,7 @@ async def _daily_amounts(
         Expense.status == "confirmed",
         Expense.purchase_datetime >= start_utc,
         Expense.purchase_datetime <= end_utc,
+        *amount_range_predicates(filters.get("min_amount"), filters.get("max_amount")),
     )
     if filters.get("spender_id"):
         stmt = stmt.where(Expense.spender_id == filters["spender_id"])
@@ -384,6 +400,9 @@ async def get_category_breakdown(
     merchant: str | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
+    category_id: uuid.UUID | None = None,
 ) -> list[dict]:
     """Category totals within window."""
     space = await db.get(Space, space_id)
@@ -405,12 +424,22 @@ async def get_category_breakdown(
             Expense.status == "confirmed",
             Expense.purchase_datetime >= start_utc,
             Expense.purchase_datetime <= end_utc,
+            *amount_range_predicates(min_amount, max_amount),
         )
         .group_by(ExpenseLine.category_id, Category.name)
         .order_by(func.sum(ExpenseLine.amount).desc())
     )
     if spender_id:
         stmt = stmt.where(Expense.spender_id == spender_id)
+    if category_id:
+        matching_line = aliased(ExpenseLine)
+        stmt = stmt.where(
+            Expense.id.in_(
+                select(matching_line.expense_id).where(
+                    matching_line.category_id == category_id
+                )
+            )
+        )
     if merchant:
         stmt = stmt.where(
             Expense.merchant_normalized.ilike(
@@ -461,6 +490,9 @@ async def get_merchant_leaderboard(
     category_id: uuid.UUID | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
+    merchant: str | None = None,
 ) -> list[dict]:
     """Top merchants by amount in window."""
     space = await db.get(Space, space_id)
@@ -480,6 +512,7 @@ async def get_merchant_leaderboard(
             Expense.status == "confirmed",
             Expense.purchase_datetime >= start_utc,
             Expense.purchase_datetime <= end_utc,
+            *amount_range_predicates(min_amount, max_amount),
         )
         .group_by(Expense.merchant)
         .order_by(func.sum(Expense.total_amount).desc())
@@ -487,6 +520,12 @@ async def get_merchant_leaderboard(
     )
     if spender_id:
         stmt = stmt.where(Expense.spender_id == spender_id)
+    if merchant:
+        stmt = stmt.where(
+            Expense.merchant_normalized.ilike(
+                f"%{_escape_like(merchant.lower())}%", escape="\\"
+            )
+        )
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
     if category_id:
@@ -526,6 +565,9 @@ async def get_spender_breakdown(
     merchant: str | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
+    spender_id: uuid.UUID | None = None,
 ) -> list[dict]:
     """Totals per spender in window."""
     space = await db.get(Space, space_id)
@@ -546,10 +588,13 @@ async def get_spender_breakdown(
             Expense.status == "confirmed",
             Expense.purchase_datetime >= start_utc,
             Expense.purchase_datetime <= end_utc,
+            *amount_range_predicates(min_amount, max_amount),
         )
         .group_by(Expense.spender_id, User.display_name)
         .order_by(func.sum(Expense.total_amount).desc())
     )
+    if spender_id:
+        stmt = stmt.where(Expense.spender_id == spender_id)
     if merchant:
         stmt = stmt.where(
             Expense.merchant_normalized.ilike(

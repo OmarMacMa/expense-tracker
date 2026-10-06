@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.middleware.space import get_current_space_member
 from app.models import SpaceMember
+from app.routers.amount_range import get_amount_range
+from app.schemas.amount_range import AmountRange
 from app.schemas.expense import (
     ExpenseCreate,
     ExpenseListResponse,
@@ -50,6 +53,8 @@ async def list_expenses_endpoint(
     tag: str | None = Query(None),
     payment_method: uuid.UUID | None = Query(None),
     search: str | None = Query(None),
+    status: Literal["confirmed", "pending"] | None = Query(None),
+    amount_range: AmountRange = Depends(get_amount_range),
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> ExpenseListResponse:
@@ -67,6 +72,8 @@ async def list_expenses_endpoint(
         search=search,
         period=period,
         month=month,
+        status=status,
+        **amount_range.model_dump(),
     )
     return ExpenseListResponse(
         data=[ExpenseResponse(**d) for d in result["data"]],

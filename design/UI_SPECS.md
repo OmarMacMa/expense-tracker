@@ -326,6 +326,14 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 ### MVP
 - **Search bar** (top): search by merchant, notes, tags (case-insensitive contains).
 - **Filter bar**: time window, spender, category, merchant, tag, payment method.
+- **1.0.8 amount range (#44)**: below the chips, a compact tonal panel has
+  currency-code-labelled minimum/maximum decimal inputs, **Apply range**, and
+  **Clear amount range**. Inputs wrap on narrow screens and retain exact decimal
+  text. Blank bounds are unbounded; bounds are inclusive. Editing is a draft:
+  requests change only on valid Apply, never while typing incomplete amounts.
+  Invalid/negative/nonfinite values or minimum > maximum show inline errors.
+  An applied range pill shows exact bounds and removes the whole dimension.
+  **Clear all** resets all applied dimensions and the amount inputs.
 - **Grouped list**:
   - Groups: Today, Yesterday, This Week, Earlier.
   - Within group: sorted by purchase datetime DESC, then created_at DESC.
@@ -363,6 +371,11 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 **Filter bar** (top, applies to all charts + list):
 - Time presets: This Week, Last Week, This Month, Last Month, Month Picker, YTD.
 - Spender, category, merchant, tag, payment method.
+- **1.0.8**: reuse the Transactions amount-range panel and applied pill.
+  Every chart, summary and transaction list uses the same applied range,
+  including historical comparisons. Show loading feedback and real query
+  failures with retry, never a failed chart disguised as empty data.
+  **View all transactions** retains the current period and filter context.
 
 **Charts**:
 1. Spending trend line (same as Home: cumulative, current vs 3-month avg).

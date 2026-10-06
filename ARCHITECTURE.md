@@ -247,6 +247,9 @@ DELETE /api/v1/spaces/{space_id}/expenses/{expense_id}    → hard delete expens
 &tag={tag_name}             → filter by tag
 &payment_method={method_id} → filter by payment method
 &search={text}              → search merchant/notes/tags
+&min_amount=10.10           → inclusive expense-total minimum (1.0.8)
+&max_amount=1000            → inclusive expense-total maximum (1.0.8)
+&status=confirmed           → optional confirmed/pending; default includes both
 ```
 
 **Cursor pagination:**
@@ -325,7 +328,23 @@ GET /api/v1/spaces/{space_id}/insights/limit-progress        → all limits with
 &merchant={merchant_name}
 &tag={tag_name}
 &payment_method={method_id}
+&min_amount=10.10
+&max_amount=1000
 ```
+
+**Amount-range contract (1.0.8, issue #44):** scalar decimal query strings;
+omitted or blank bounds are unbounded. Values must be finite and nonnegative,
+and minimum must not exceed maximum (otherwise standard `422 VALIDATION_ERROR`).
+Both bounds compare inclusively against `Expense.total_amount`, not individual
+lines. The shared `amount_range_predicates` helper ANDs them with existing
+space-scoped filters before aggregation/pagination, including historical
+comparison windows. Decimal precision is retained without float conversion.
+Unscaled `NUMERIC` bound parameters avoid rounding to the column's two-decimal
+storage scale. Insights requests confirmed expenses explicitly; the general
+Transactions list retains its unfiltered status default.
+These parameters apply to all five analytics endpoints and the expense list;
+`limit-progress` remains configured-budget data and does not accept exploratory
+range filtering. Category/tag membership uses subqueries, not multiplying joins.
 
 ### 4.11 Merchant suggestion endpoints
 ```

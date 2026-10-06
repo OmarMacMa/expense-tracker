@@ -320,6 +320,14 @@ High-signal entry point. Shows:
 7. **Monthly wrap** card (first 5 days of month). — **2.0.0+**
 
 ### 6.10 Insights
+
+**1.0.8 amount-range analysis (#44)**: users may set inclusive minimum and/or
+maximum expense totals to focus on routine or high-ticket purchases. Blank
+bounds are unbounded. Finite nonnegative decimals and minimum <= maximum are
+required. The range ANDs with existing filters and applies identically to all
+charts, summary, current/historical comparisons and matching transactions.
+Transactions offers the same reusable Apply/Clear control. Filtering never
+changes stored expenses, configured budgets or automatically removes outliers.
 Analysis playground.
 
 **Layout**: Desktop: split view (charts + transactions side-by-side). Mobile: charts first, then transactions.

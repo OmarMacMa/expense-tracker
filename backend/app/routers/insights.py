@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.middleware.space import get_current_space_member
 from app.models import SpaceMember
+from app.routers.amount_range import get_amount_range
+from app.schemas.amount_range import AmountRange
 from app.schemas.insight import (
     CategoryBreakdownItem,
     MerchantLeaderboardItem,
@@ -36,6 +38,7 @@ async def summary_endpoint(
     merchant: str | None = Query(None),
     tag: str | None = Query(None),
     payment_method: uuid.UUID | None = Query(None),
+    amount_range: AmountRange = Depends(get_amount_range),
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> SummaryResponse:
@@ -49,6 +52,7 @@ async def summary_endpoint(
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method,
+        **amount_range.model_dump(),
     )
     return SummaryResponse(**result)
 
@@ -63,6 +67,7 @@ async def spending_trend_endpoint(
     merchant: str | None = Query(None),
     tag: str | None = Query(None),
     payment_method: uuid.UUID | None = Query(None),
+    amount_range: AmountRange = Depends(get_amount_range),
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> SpendingTrendResponse:
@@ -76,6 +81,7 @@ async def spending_trend_endpoint(
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method,
+        **amount_range.model_dump(),
     )
     return SpendingTrendResponse(**result)
 
@@ -86,9 +92,11 @@ async def category_breakdown_endpoint(
     period: str | None = Query(None),
     month: str | None = Query(None),
     spender: uuid.UUID | None = Query(None),
+    category: uuid.UUID | None = Query(None),
     merchant: str | None = Query(None),
     tag: str | None = Query(None),
     payment_method: uuid.UUID | None = Query(None),
+    amount_range: AmountRange = Depends(get_amount_range),
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[CategoryBreakdownItem]:
@@ -98,9 +106,11 @@ async def category_breakdown_endpoint(
         period=period,
         month=month,
         spender_id=spender,
+        category_id=category,
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method,
+        **amount_range.model_dump(),
     )
     return [CategoryBreakdownItem(**item) for item in result]
 
@@ -112,8 +122,10 @@ async def merchant_leaderboard_endpoint(
     month: str | None = Query(None),
     spender: uuid.UUID | None = Query(None),
     category: uuid.UUID | None = Query(None),
+    merchant: str | None = Query(None),
     tag: str | None = Query(None),
     payment_method: uuid.UUID | None = Query(None),
+    amount_range: AmountRange = Depends(get_amount_range),
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[MerchantLeaderboardItem]:
@@ -124,8 +136,10 @@ async def merchant_leaderboard_endpoint(
         month=month,
         spender_id=spender,
         category_id=category,
+        merchant=merchant,
         tag=tag,
         payment_method_id=payment_method,
+        **amount_range.model_dump(),
     )
     return [MerchantLeaderboardItem(**item) for item in result]
 
@@ -135,10 +149,12 @@ async def spender_breakdown_endpoint(
     space_id: uuid.UUID,
     period: str | None = Query(None),
     month: str | None = Query(None),
+    spender: uuid.UUID | None = Query(None),
     category: uuid.UUID | None = Query(None),
     merchant: str | None = Query(None),
     tag: str | None = Query(None),
     payment_method: uuid.UUID | None = Query(None),
+    amount_range: AmountRange = Depends(get_amount_range),
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> list[SpenderBreakdownItem]:
@@ -147,10 +163,12 @@ async def spender_breakdown_endpoint(
         space_id,
         period=period,
         month=month,
+        spender_id=spender,
         category_id=category,
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method,
+        **amount_range.model_dump(),
     )
     return [SpenderBreakdownItem(**item) for item in result]
 

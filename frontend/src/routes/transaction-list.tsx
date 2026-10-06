@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { useExpenseList, type ExpenseFilters } from '@/hooks/useExpenses';
 import { usePeriod } from '@/hooks/usePeriod';
 import { FilterBar } from '@/components/expenses/filter-bar';
@@ -48,7 +49,29 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 
 export default function TransactionList() {
   const { period: globalPeriod } = usePeriod();
-  const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
+  const [searchParams] = useSearchParams();
+  const [localFilters, setLocalFilters] = useState<ExpenseFilters>(() => {
+    const filters: ExpenseFilters = {};
+    const keys: Exclude<keyof ExpenseFilters, 'status'>[] = [
+      'period',
+      'month',
+      'spender',
+      'category',
+      'merchant',
+      'tag',
+      'payment_method',
+      'search',
+      'min_amount',
+      'max_amount',
+    ];
+    keys.forEach((key) => {
+      const value = searchParams.get(key);
+      if (value) filters[key] = value;
+    });
+    const status = searchParams.get('status');
+    if (status === 'confirmed' || status === 'pending') filters.status = status;
+    return filters;
+  });
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   // For the data query: use local period if set, otherwise fall back to global
@@ -63,6 +86,7 @@ export default function TransactionList() {
   const {
     data,
     isLoading,
+    isFetching,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
@@ -116,6 +140,11 @@ export default function TransactionList() {
 
       {/* Filters */}
       <FilterBar filters={localFilters} onFiltersChange={setLocalFilters} />
+      {isFetching && !isFetchingNextPage && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Updating transactions…
+        </p>
+      )}
 
       {/* Content */}
       {isLoading ? (

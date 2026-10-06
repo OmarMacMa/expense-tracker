@@ -20,6 +20,15 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 
 Ship fast, validate the core expense-tracking loop for one couple.
 
+### User-directed 1.0.8 addition
+- Issue #44: optional inclusive minimum/maximum expense-total filtering in
+  Insights and Transactions. Blank bounds are unbounded; finite nonnegative
+  decimal values and minimum <= maximum are validated on the server and UI.
+- The range combines with existing filters and applies to every Insights chart,
+  summary, current/historical trend data and paginated matching transaction list.
+- This is exploratory filtering only: stored amounts and configured limit
+  progress are unchanged. No automatic outlier trimming or average-policy change.
+
 ### Authentication & onboarding
 - Google SSO sign-in / sign-up (OAuth 2.0)
 - JWT session via httpOnly cookies

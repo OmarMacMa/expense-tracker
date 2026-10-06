@@ -91,6 +91,7 @@ export default function Insights() {
       Object.entries(localFilters).filter(([, v]) => v),
     );
     if (!active.period) active.period = globalPeriod;
+    active.status = 'confirmed';
     return active;
   }, [globalPeriod, localFilters]);
 
@@ -102,19 +103,35 @@ export default function Insights() {
   const { data: merchantList } = useMerchantList();
 
   // Insights data
-  const { data: summary } = useInsightsSummary(queryFilters);
-  const { data: trendData, isLoading: trendLoading } =
-    useSpendingTrend(queryFilters);
-  const { data: categoryData, isLoading: categoryLoading } =
-    useCategoryBreakdown(queryFilters);
-  const { data: merchantData, isLoading: merchantLoading } =
-    useMerchantLeaderboard(queryFilters);
-  const { data: spenderData, isLoading: spenderLoading } =
-    useSpenderBreakdown(queryFilters);
+  const summaryQuery = useInsightsSummary(queryFilters);
+  const trendQuery = useSpendingTrend(queryFilters);
+  const categoryQuery = useCategoryBreakdown(queryFilters);
+  const merchantQuery = useMerchantLeaderboard(queryFilters);
+  const spenderQuery = useSpenderBreakdown(queryFilters);
+  const { data: summary } = summaryQuery;
+  const { data: trendData, isLoading: trendLoading } = trendQuery;
+  const { data: categoryData, isLoading: categoryLoading } = categoryQuery;
+  const { data: merchantData, isLoading: merchantLoading } = merchantQuery;
+  const { data: spenderData, isLoading: spenderLoading } = spenderQuery;
 
   // Transaction list (same filters)
-  const { data: expensePages, isLoading: expensesLoading } =
-    useExpenseList(queryFilters);
+  const expenseQuery = useExpenseList(queryFilters);
+  const { data: expensePages, isLoading: expensesLoading } = expenseQuery;
+  const queries = [
+    summaryQuery,
+    trendQuery,
+    categoryQuery,
+    merchantQuery,
+    spenderQuery,
+    expenseQuery,
+  ];
+  const failed = queries.some((query) => query.isError);
+  const fetching = queries.some((query) => query.isFetching);
+  const transactionParams = new URLSearchParams(
+    Object.entries(queryFilters).filter((entry): entry is [string, string] =>
+      Boolean(entry[1]),
+    ),
+  );
 
   const allExpenses = useMemo(
     () => (expensePages?.pages[0]?.data ?? []).slice(0, 15),
@@ -135,7 +152,7 @@ export default function Insights() {
         <h1 className="text-2xl font-bold text-foreground md:text-[1.3rem]">
           Insights
         </h1>
-        {summary && (
+        {summary && !failed && (
           <div className="mt-1 flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               {summary.period_label}
@@ -174,109 +191,131 @@ export default function Insights() {
         showSearch={false}
         showPeriodChips
       />
+      {fetching && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Updating insights and transactions…
+        </p>
+      )}
+      {failed && (
+        <div role="alert" className="text-sm text-destructive">
+          Failed to load filtered insights or transactions.
+          <button
+            className="ml-2 font-medium underline"
+            onClick={() => {
+              queries.forEach((query) => {
+                if (query.isError) void query.refetch();
+              });
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       {/* Main content — desktop split, mobile stacked */}
-      <div className="flex flex-col gap-5 lg:flex-row">
-        {/* Charts panel */}
-        <div className="flex flex-col gap-4 lg:w-[60%] lg:shrink-0">
-          {/* Spending trend */}
-          <ChartCard title="Spending Trend">
-            {trendLoading || !trendData ? (
-              <ChartSkeleton />
-            ) : (
-              <SpendingTrendChart
-                data={trendData}
-                periodLabel={queryFilters.period ?? 'this_month'}
-                currencyCode={currencyCode}
-              />
-            )}
-          </ChartCard>
-
-          {/* Two-column grid for category + merchant on desktop */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Category donut */}
-            <ChartCard title="By Category">
-              {categoryLoading || !categoryData ? (
+      {!failed && (
+        <div className="flex flex-col gap-5 lg:flex-row">
+          {/* Charts panel */}
+          <div className="flex flex-col gap-4 lg:w-[60%] lg:shrink-0">
+            {/* Spending trend */}
+            <ChartCard title="Spending Trend">
+              {trendLoading || !trendData ? (
                 <ChartSkeleton />
-              ) : categoryData.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">
-                  No category data yet
-                </p>
               ) : (
-                <CategoryDonutChart
-                  data={categoryData}
-                  totalAmount={summary?.total_spent ?? '0'}
+                <SpendingTrendChart
+                  data={trendData}
+                  periodLabel={queryFilters.period ?? 'this_month'}
                   currencyCode={currencyCode}
                 />
               )}
             </ChartCard>
 
-            {/* Merchant leaderboard */}
-            <ChartCard title="Top Merchants">
-              {merchantLoading || !merchantData ? (
+            {/* Two-column grid for category + merchant on desktop */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Category donut */}
+              <ChartCard title="By Category">
+                {categoryLoading || !categoryData ? (
+                  <ChartSkeleton />
+                ) : categoryData.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    No category data yet
+                  </p>
+                ) : (
+                  <CategoryDonutChart
+                    data={categoryData}
+                    totalAmount={summary?.total_spent ?? '0'}
+                    currencyCode={currencyCode}
+                  />
+                )}
+              </ChartCard>
+
+              {/* Merchant leaderboard */}
+              <ChartCard title="Top Merchants">
+                {merchantLoading || !merchantData ? (
+                  <ChartSkeleton />
+                ) : (
+                  <MerchantLeaderboard
+                    data={merchantData}
+                    maxItems={10}
+                    currencyCode={currencyCode}
+                  />
+                )}
+              </ChartCard>
+            </div>
+
+            {/* Spender breakdown */}
+            <ChartCard title="By Spender">
+              {spenderLoading || !spenderData ? (
                 <ChartSkeleton />
               ) : (
-                <MerchantLeaderboard
-                  data={merchantData}
-                  maxItems={10}
+                <SpenderBreakdownChart
+                  data={spenderData}
                   currencyCode={currencyCode}
                 />
               )}
             </ChartCard>
           </div>
 
-          {/* Spender breakdown */}
-          <ChartCard title="By Spender">
-            {spenderLoading || !spenderData ? (
-              <ChartSkeleton />
-            ) : (
-              <SpenderBreakdownChart
-                data={spenderData}
-                currencyCode={currencyCode}
-              />
-            )}
-          </ChartCard>
-        </div>
+          {/* Transaction list panel */}
+          <div className="min-w-0 lg:flex-1">
+            <div className="rounded-2xl bg-card p-4 shadow-[var(--shadow-card)] md:p-5">
+              <h3 className="mb-4 text-[13px] font-bold uppercase tracking-widest text-muted-foreground">
+                Transactions
+              </h3>
 
-        {/* Transaction list panel */}
-        <div className="min-w-0 lg:flex-1">
-          <div className="rounded-2xl bg-card p-4 shadow-[var(--shadow-card)] md:p-5">
-            <h3 className="mb-4 text-[13px] font-bold uppercase tracking-widest text-muted-foreground">
-              Transactions
-            </h3>
-
-            {expensesLoading ? (
-              <TransactionListSkeleton />
-            ) : groups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-2xl">
-                  📭
+              {expensesLoading ? (
+                <TransactionListSkeleton />
+              ) : groups.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-2xl">
+                    📭
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    No transactions match these filters
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  No transactions match these filters
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {groups.map((group) => (
-                  <TransactionGroup key={group.label} group={group} />
-                ))}
-              </div>
-            )}
+              ) : (
+                <div className="space-y-1">
+                  {groups.map((group) => (
+                    <TransactionGroup key={group.label} group={group} />
+                  ))}
+                </div>
+              )}
 
-            {groups.length > 0 && (
-              <div className="mt-3 text-center">
-                <Link
-                  to="/transactions"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  View all transactions →
-                </Link>
-              </div>
-            )}
+              {groups.length > 0 && (
+                <div className="mt-3 text-center">
+                  <Link
+                    to={`/transactions?${transactionParams}`}
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    View all transactions →
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

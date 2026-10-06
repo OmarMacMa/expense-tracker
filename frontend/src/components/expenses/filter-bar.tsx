@@ -1,4 +1,5 @@
 import { Search, X } from 'lucide-react';
+import type { Dispatch, SetStateAction } from 'react';
 import {
   Select,
   SelectContent,
@@ -9,6 +10,7 @@ import {
 import { Input } from '@/components/ui/input';
 import type { ExpenseFilters } from '@/hooks/useExpenses';
 import { cn } from '@/lib/utils';
+import { AmountRangeFilter } from './amount-range-filter';
 
 const PERIOD_OPTIONS = [
   { value: 'this_week', label: 'This Week' },
@@ -20,7 +22,7 @@ const PERIOD_OPTIONS = [
 
 interface FilterBarProps {
   filters: ExpenseFilters;
-  onFiltersChange: (filters: ExpenseFilters) => void;
+  onFiltersChange: Dispatch<SetStateAction<ExpenseFilters>>;
   spenders?: { id: string; display_name: string }[];
   categories?: { id: string; name: string }[];
   merchants?: string[];
@@ -48,10 +50,15 @@ export function FilterBar({
     filters.search ||
     filters.merchant ||
     filters.tag ||
-    filters.payment_method;
+    filters.payment_method ||
+    filters.min_amount ||
+    filters.max_amount;
 
-  const updateFilter = (key: keyof ExpenseFilters, value: string) => {
-    onFiltersChange({ ...filters, [key]: value || undefined });
+  const updateFilter = (
+    key: Exclude<keyof ExpenseFilters, 'status'>,
+    value: string,
+  ) => {
+    onFiltersChange((current) => ({ ...current, [key]: value || undefined }));
   };
 
   const resetFilters = () => {
@@ -257,10 +264,21 @@ export function FilterBar({
             className="flex shrink-0 items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-secondary/80"
           >
             <X className="h-3.5 w-3.5" />
-            Reset
+            Clear all
           </button>
         )}
       </div>
+      <AmountRangeFilter
+        key={`${filters.min_amount ?? ''}|${filters.max_amount ?? ''}`}
+        range={filters}
+        onApply={(range) =>
+          onFiltersChange((current) => ({
+            ...current,
+            min_amount: range.min_amount,
+            max_amount: range.max_amount,
+          }))
+        }
+      />
     </div>
   );
 }
