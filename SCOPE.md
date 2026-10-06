@@ -16,6 +16,23 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 
 ---
 
+## 1.0.8 — Accumulating Insights filters
+
+- Select multiple categories, spenders, merchants, tags and payment methods;
+  selections accumulate across dimensions (OR within, AND across).
+- All Insights totals, charts and confirmed transaction previews honor the
+  complete selection. Period/month remains one exclusive window.
+- Shared accessible filter controls on Insights and Transactions show counts,
+  removable selections, clear-dimension and clear-all actions.
+- Repeated existing URL query keys preserve context through "View all
+  transactions", reload and infinite pagination. Single-value URLs remain valid.
+- This is internal navigation context, not the deferred public Share button or
+  saved views. General Transactions retains its existing all-status default;
+  navigation from Insights carries the confirmed-only context.
+- Amount ranges and weekly average changes are separate v1.0.8 workstreams.
+
+---
+
 ## 1.0.0 — Core expense tracking (MVP)
 
 Ship fast, validate the core expense-tracking loop for one couple.

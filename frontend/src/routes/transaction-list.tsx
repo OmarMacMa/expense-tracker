@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useExpenseList, type ExpenseFilters } from '@/hooks/useExpenses';
-import { usePeriod } from '@/hooks/usePeriod';
+import { useExpenseList } from '@/hooks/useExpenses';
+import { useExpenseFilters } from '@/hooks/useExpenseFilters';
+import { useExpenseFilterOptions } from '@/hooks/useExpenseFilterOptions';
 import { FilterBar } from '@/components/expenses/filter-bar';
 import {
   TransactionGroup,
@@ -47,18 +48,13 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 }
 
 export default function TransactionList() {
-  const { period: globalPeriod } = usePeriod();
-  const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
+  const {
+    filters: localFilters,
+    queryFilters,
+    setFilters,
+  } = useExpenseFilters();
+  const filterOptions = useExpenseFilterOptions();
   const sentinelRef = useRef<HTMLDivElement>(null);
-
-  // For the data query: use local period if set, otherwise fall back to global
-  const queryFilters = useMemo<ExpenseFilters>(() => {
-    const active = Object.fromEntries(
-      Object.entries(localFilters).filter(([, v]) => v),
-    );
-    if (!active.period) active.period = globalPeriod;
-    return active;
-  }, [globalPeriod, localFilters]);
 
   const {
     data,
@@ -115,7 +111,11 @@ export default function TransactionList() {
       </div>
 
       {/* Filters */}
-      <FilterBar filters={localFilters} onFiltersChange={setLocalFilters} />
+      <FilterBar
+        filters={queryFilters}
+        onFiltersChange={setFilters}
+        {...filterOptions}
+      />
 
       {/* Content */}
       {isLoading ? (
@@ -135,7 +135,11 @@ export default function TransactionList() {
       )}
 
       {/* Infinite scroll sentinel */}
-      <div ref={sentinelRef} className="h-px" />
+      <div
+        ref={sentinelRef}
+        data-testid="transaction-pagination"
+        className="h-px"
+      />
 
       {/* Loading more indicator */}
       {isFetchingNextPage && (

@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,12 +45,13 @@ async def list_expenses_endpoint(
     limit: int = Query(20, ge=1, le=100),
     period: str | None = Query(None),
     month: str | None = Query(None),
-    spender: uuid.UUID | None = Query(None),
-    category: uuid.UUID | None = Query(None),
-    merchant: str | None = Query(None),
-    tag: str | None = Query(None),
-    payment_method: uuid.UUID | None = Query(None),
+    spender: list[uuid.UUID] | None = Query(None),
+    category: list[uuid.UUID] | None = Query(None),
+    merchant: list[str] | None = Query(None),
+    tag: list[str] | None = Query(None),
+    payment_method: list[uuid.UUID] | None = Query(None),
     search: str | None = Query(None),
+    status: Literal["confirmed", "pending"] | None = Query(None),
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
 ) -> ExpenseListResponse:
@@ -65,6 +67,7 @@ async def list_expenses_endpoint(
         tag=tag,
         payment_method_id=payment_method,
         search=search,
+        status=status,
         period=period,
         month=month,
     )

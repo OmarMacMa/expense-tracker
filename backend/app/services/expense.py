@@ -3,6 +3,7 @@ import binascii
 import json
 import uuid
 from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import HTTPException
 from sqlalchemy import and_, delete, func, or_, select
@@ -19,6 +20,11 @@ from app.models import (
     User,
 )
 from app.models.expense import expense_line_tags
+from app.services.expense_filters import (
+    TextFilter,
+    UUIDFilter,
+    apply_expense_filters,
+)
 from app.services.merchant import upsert_merchant
 from app.services.tag import ensure_tags
 
@@ -204,14 +210,15 @@ async def list_expenses(
     space_id: uuid.UUID,
     cursor: str | None = None,
     limit: int = 20,
-    spender_id: uuid.UUID | None = None,
-    category_id: uuid.UUID | None = None,
-    merchant: str | None = None,
-    tag: str | None = None,
-    payment_method_id: uuid.UUID | None = None,
+    spender_id: UUIDFilter = None,
+    category_id: UUIDFilter = None,
+    merchant: TextFilter = None,
+    tag: TextFilter = None,
+    payment_method_id: UUIDFilter = None,
     search: str | None = None,
     period: str | None = None,
     month: str | None = None,
+    status: Literal["confirmed", "pending"] | None = None,
 ) -> dict:
     """List expenses with cursor pagination and filters.
 
@@ -256,42 +263,17 @@ async def list_expenses(
                 },
             )
 
-    # Apply filters
-    if spender_id:
-        stmt = stmt.where(Expense.spender_id == spender_id)
-
-    if payment_method_id:
-        stmt = stmt.where(Expense.payment_method_id == payment_method_id)
-
-    if merchant:
-        stmt = stmt.where(
-            Expense.merchant_normalized.ilike(
-                f"%{_escape_like(merchant.lower())}%", escape="\\"
-            )
-        )
-
-    if category_id:
-        stmt = stmt.where(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id).where(
-                    ExpenseLine.category_id == category_id
-                )
-            )
-        )
-
-    if tag:
-        tag_normalized = tag.strip().lower().lstrip("#")
-        stmt = stmt.where(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id)
-                .join(
-                    expense_line_tags,
-                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
-                )
-                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
-                .where(Tag.name == tag_normalized)
-            )
-        )
+    stmt = apply_expense_filters(
+        stmt,
+        space_id,
+        spender_id=spender_id,
+        category_id=category_id,
+        merchant=merchant,
+        tag=tag,
+        payment_method_id=payment_method_id,
+    )
+    if status:
+        stmt = stmt.where(Expense.status == status)
 
     if search:
         search_term = f"%{_escape_like(search.lower())}%"

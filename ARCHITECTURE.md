@@ -327,6 +327,33 @@ GET /api/v1/spaces/{space_id}/insights/limit-progress        → all limits with
 &payment_method={method_id}
 ```
 
+**Accumulating filters (v1.0.8):** `spender`, `category`, `merchant`, `tag` and
+`payment_method` accept repeated existing query keys, for example
+`category={id1}&category={id2}&spender={user_id}`. One value remains compatible;
+no selected values means no predicate. Use OR within a dimension and AND across
+dimensions. Never comma-split merchant/tag names. Spenders use `User.id`
+(`SpaceMember.user_id`), not membership-row IDs. UUID query values are typed
+and malformed values return the standard 422 validation envelope.
+
+Services retain scalar callers while also accepting typed sequences. The shared
+`apply_expense_filters` query builder injects the expense `space_id`; category
+and tag subqueries also scope their resources to that space. Deduplicated IN
+subqueries avoid multiplying expense sums/counts when several selected tags match.
+Current and historical comparison queries apply the identical predicate set;
+the builder does not choose or modify historical windows/average denominators.
+The category, merchant and spender endpoints also honor their own dimension.
+
+Client `ExpenseFilters` uses arrays for the five dimensions and scalar
+`period`, `month`, `search`, `status`. `expenseFilters.ts` canonicalizes sets for
+query cache keys and explicitly appends repeated keys to `URLSearchParams`;
+the API client accepts these alongside existing scalar parameter records.
+Insights and Transactions use the URL as their explicit filter context.
+Insights previews and their View all link set `status=confirmed`; the expense
+list API accepts optional typed `status=confirmed|pending`, with an omitted
+status retaining the general Transactions all-status behavior. Configured
+limit progress is not altered by exploratory filters. Public sharing remains
+deferred.
+
 ### 4.11 Merchant suggestion endpoints
 ```
 GET /api/v1/spaces/{space_id}/merchants/suggest?q={query}   → autocomplete merchant names
