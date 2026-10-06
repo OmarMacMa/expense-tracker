@@ -45,6 +45,34 @@ export interface PaymentMethod {
   is_system: boolean;
   owner_id: string | null;
   created_at: string;
+  owner_display_name: string | null;
+  owner_is_member: boolean;
+  can_manage: boolean;
+}
+
+export interface LeavePreview {
+  space_id: string;
+  space_name: string;
+  member_ids: string[];
+  member_count: number;
+  source_deleted: boolean;
+  counts: Record<string, number>;
+}
+
+export interface MembershipOutcome {
+  source_space_id: string;
+  source_deleted: boolean;
+  destination_space_id: string | null;
+  destination_space_name: string | null;
+}
+
+export interface InvitePreview {
+  space_id: string;
+  space_name: string;
+  space_currency_code: string;
+  already_member: boolean;
+  member_count: number;
+  max_members: number;
 }
 
 export interface Tag {

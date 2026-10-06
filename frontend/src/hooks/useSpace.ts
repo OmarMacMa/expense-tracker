@@ -11,7 +11,8 @@ export function useSpace() {
 
   return useQuery<Space>({
     queryKey: ['space', spaceId],
-    queryFn: () => api.get<Space>(`/spaces/${spaceId}`),
+    queryFn: ({ signal }) =>
+      api.get<Space>(`/spaces/${spaceId}`, undefined, signal),
     enabled: !!spaceId,
   });
 }

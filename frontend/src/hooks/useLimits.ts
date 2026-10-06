@@ -9,8 +9,12 @@ export function useLimits() {
   const { currentSpace } = useAuth();
   return useQuery<LimitProgress[]>({
     queryKey: ['limits', currentSpace?.id],
-    queryFn: () =>
-      api.get<LimitProgress[]>(`/spaces/${currentSpace?.id}/limits`),
+    queryFn: ({ signal }) =>
+      api.get<LimitProgress[]>(
+        `/spaces/${currentSpace?.id}/limits`,
+        undefined,
+        signal,
+      ),
     enabled: !!currentSpace?.id,
   });
 }

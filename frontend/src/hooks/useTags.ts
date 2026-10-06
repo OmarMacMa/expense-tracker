@@ -7,7 +7,8 @@ export function useTags() {
   const { currentSpace } = useAuth();
   return useQuery<Tag[]>({
     queryKey: ['tags', currentSpace?.id],
-    queryFn: () => api.get<Tag[]>(`/spaces/${currentSpace?.id}/tags`),
+    queryFn: ({ signal }) =>
+      api.get<Tag[]>(`/spaces/${currentSpace?.id}/tags`, undefined, signal),
     enabled: !!currentSpace?.id,
   });
 }

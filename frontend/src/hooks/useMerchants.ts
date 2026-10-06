@@ -17,10 +17,11 @@ export function useMerchantList() {
   const { currentSpace } = useAuth();
   return useQuery<MerchantSuggestion[]>({
     queryKey: ['merchants', 'list', currentSpace?.id],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<MerchantSuggestion[]>(
         `/spaces/${currentSpace?.id}/merchants/suggest`,
         { q: '' },
+        signal,
       ),
     enabled: !!currentSpace?.id,
     staleTime: 60_000,
@@ -30,13 +31,14 @@ export function useMerchantList() {
 export function useMerchantSuggest(query: string) {
   const { currentSpace } = useAuth();
   return useQuery<MerchantSuggestion[]>({
-    queryKey: ['merchants', 'suggest', query],
-    queryFn: () =>
+    queryKey: ['merchants', 'suggest', currentSpace?.id, query],
+    queryFn: ({ signal }) =>
       api.get<MerchantSuggestion[]>(
         `/spaces/${currentSpace?.id}/merchants/suggest`,
         { q: query },
+        signal,
       ),
-    enabled: query.length >= 1,
+    enabled: !!currentSpace?.id && query.length >= 1,
     staleTime: 30_000,
   });
 }
@@ -44,11 +46,13 @@ export function useMerchantSuggest(query: string) {
 export function useMerchantCategory(merchantName: string) {
   const { currentSpace } = useAuth();
   return useQuery<MerchantCategory>({
-    queryKey: ['merchants', 'category', merchantName],
-    queryFn: () =>
+    queryKey: ['merchants', 'category', currentSpace?.id, merchantName],
+    queryFn: ({ signal }) =>
       api.get<MerchantCategory>(
         `/spaces/${currentSpace?.id}/merchants/${encodeURIComponent(merchantName)}/category`,
+        undefined,
+        signal,
       ),
-    enabled: merchantName.length >= 1,
+    enabled: !!currentSpace?.id && merchantName.length >= 1,
   });
 }

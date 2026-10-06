@@ -19,13 +19,9 @@ import {
   useCreatePaymentMethod,
   useDeletePaymentMethod,
 } from '@/hooks/usePaymentMethods';
-import { useMembers } from '@/hooks/useMembers';
-import { useAuth } from '@/hooks/useAuth';
 
 export default function SettingsPaymentMethods() {
   const { data: methods, isLoading } = usePaymentMethods();
-  const { data: members } = useMembers();
-  const { user } = useAuth();
   const createMethod = useCreatePaymentMethod();
   const deleteMethod = useDeletePaymentMethod();
 
@@ -34,12 +30,6 @@ export default function SettingsPaymentMethods() {
     id: string;
     label: string;
   } | null>(null);
-
-  const memberMap = useMemo(() => {
-    const map = new Map<string, string>();
-    members?.forEach((m) => map.set(m.user_id, m.display_name));
-    return map;
-  }, [members]);
 
   // Group methods: system first, then by owner
   const grouped = useMemo(() => {
@@ -56,14 +46,14 @@ export default function SettingsPaymentMethods() {
 
     const groups: { title: string; items: typeof methods }[] = [];
     if (system.length > 0) groups.push({ title: 'System', items: system });
-    byOwner.forEach((items, ownerId) => {
+    byOwner.forEach((items) => {
       groups.push({
-        title: memberMap.get(ownerId) ?? 'Unknown',
+        title: `${items[0].owner_display_name ?? 'Unassigned'}${items[0].owner_is_member ? '' : ' (former member)'}`,
         items,
       });
     });
     return groups;
-  }, [methods, memberMap]);
+  }, [methods]);
 
   const handleCreate = () => {
     const trimmed = newLabel.trim();
@@ -135,7 +125,6 @@ export default function SettingsPaymentMethods() {
           <div className="rounded-xl border bg-card shadow-sm">
             <ul className="divide-y">
               {group.items.map((method) => {
-                const isOwn = method.owner_id === user?.id;
                 return (
                   <li
                     key={method.id}
@@ -144,10 +133,11 @@ export default function SettingsPaymentMethods() {
                     <span className="flex-1 font-medium">{method.label}</span>
                     {method.is_system ? (
                       <Badge variant="secondary">System</Badge>
-                    ) : isOwn ? (
+                    ) : method.can_manage ? (
                       <Button
                         variant="ghost"
                         size="icon-sm"
+                        aria-label={`Delete ${method.label}`}
                         onClick={() =>
                           setDeleteTarget({
                             id: method.id,

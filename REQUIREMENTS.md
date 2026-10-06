@@ -44,6 +44,38 @@ This document defines the **non-functional requirements, quality bars, and testi
 - Single-use: once used, the link is permanently invalidated.
 - Expiry: 7 days from creation.
 - Must not be guessable or enumerable.
+- Never log raw invitation tokens; redact token-bearing request paths and hide
+  SQL parameter values in exception reporting.
+
+### Membership recovery and destructive confirmation (1.0.x)
+- Self-leave affects only the authenticated caller. Preview/leave/recovery use
+  404 for a nonmember; other space-scoped routes preserve existing 403 behavior.
+- Recovery is a single database transaction: source leave/deletion, destination
+  membership and single-use consumption either all commit or all roll back.
+- Lock User → Spaces in deterministic UUID order → invite; revalidate locked
+  ORM state, one-space membership and destination capacity after waiting.
+  Use `FOR NO KEY UPDATE` for User so ordinary expense/owner foreign-key checks
+  cannot deadlock against the transition's account lock.
+- Require the exact source name and acknowledged preview; changes to name,
+  member identities/count, deletion outcome or unfiltered affected-data counts
+  require a refreshed confirmation. Preview errors/loading disable submission.
+- Empty-source deletion covers all owned tables, including dormant features,
+  never accounts or a control space. Shared sources retain data and attribution.
+- Survivors manage departed-owner methods; nonmembers cannot manage even methods
+  they created. Active-owner restrictions and Cash protections stay in place.
+  Payment-method list metadata must be batched, not queried once per method.
+- Retain unchanged historical spenders on expense edit; new/changed spenders must
+  be members. Original identity must resolve without a current-member-list proxy.
+- Cancel old-space requests using AbortSignals; purge domain caches before
+  refreshing membership/navigation. Never expose cached source data on refresh
+  failure or automatically retry an already-committed destructive mutation.
+- Persistent PostgreSQL tests must use real commits and independent connections
+  for races/rollback, not the ordinary flush-overridden fixtures. Browser tests
+  exercise real routing/cache/backend transitions, mobile/desktop confirmation,
+  invitation errors/expiry, OAuth retry and retained history. Simulated Google
+  boundary coverage is not a live Google end-to-end claim.
+  Test ordinary expense insertion racing leave/recovery and constant-query
+  payment-method list serialization.
 
 ### Input sanitization
 - Notes field: treat as plain text. Sanitize output to prevent XSS (escape HTML entities on render).

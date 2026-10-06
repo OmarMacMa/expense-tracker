@@ -1,10 +1,12 @@
 import uuid
 
+from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Category, PaymentMethod, Space, SpaceMember, User
 from app.schemas.space import SpaceCreate, SpaceUpdate
+from app.services.membership import lock_spaces, lock_user
 
 DEFAULT_CATEGORIES = [
     "Groceries",
@@ -23,7 +25,29 @@ MAX_MEMBERS = 10
 
 
 async def create_space(db: AsyncSession, user: User, data: SpaceCreate) -> Space:
-    """Create a space with required seed entities."""
+    """Create a space with required seed entities.
+
+    Enforces the one-space-per-user invariant: a user who already belongs to
+    any space cannot create another. This pairs with the same guard in
+    join_space() so the invariant is consistently enforced on both entry
+    points. Users who want a fresh space must Leave their current one first
+    (see DELETE /api/v1/spaces/{space_id}/members/me).
+    """
+    await lock_user(db, user.id)
+    existing_stmt = select(SpaceMember).where(SpaceMember.user_id == user.id).limit(1)
+    existing = (await db.execute(existing_stmt)).scalars().first()
+    if existing is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": {
+                    "code": "ALREADY_HAS_SPACE",
+                    "message": "You already belong to a space. "
+                    "Leave your current space before creating another.",
+                }
+            },
+        )
+
     space = Space(
         name=data.name,
         currency_code=data.currency_code,
@@ -82,7 +106,8 @@ async def update_space(
     db: AsyncSession, space_id: uuid.UUID, data: SpaceUpdate
 ) -> Space | None:
     """Update editable space settings. Currency is immutable."""
-    space = await get_space(db, space_id)
+    spaces = await lock_spaces(db, [space_id])
+    space = spaces.get(space_id)
     if space is None:
         return None
 

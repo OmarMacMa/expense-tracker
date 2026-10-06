@@ -5,7 +5,8 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import PaymentMethod
+from app.models import PaymentMethod, SpaceMember, User
+from app.services.membership import lock_spaces, lock_user
 
 
 async def list_payment_methods(
@@ -45,6 +46,8 @@ async def update_payment_method(
     data,
 ) -> PaymentMethod:
     """Update a payment method. Owner only. System methods cannot be updated."""
+    await lock_user(db, user_id)
+    await lock_spaces(db, [space_id])
     pm = await _get_payment_method(db, space_id, method_id)
 
     if pm.is_system:
@@ -58,13 +61,14 @@ async def update_payment_method(
             },
         )
 
-    if pm.owner_id != user_id:
+    if not await can_manage(db, pm, user_id):
         raise HTTPException(
             status_code=403,
             detail={
                 "error": {
                     "code": "FORBIDDEN",
-                    "message": "Only the owner can update this payment method",
+                    "message": "Only the current owner or remaining members "
+                    "of a departed owner can update this method",
                 }
             },
         )
@@ -84,6 +88,8 @@ async def delete_payment_method(
     user_id: uuid.UUID,
 ) -> None:
     """Delete a payment method. Owner only. System methods cannot be deleted."""
+    await lock_user(db, user_id)
+    await lock_spaces(db, [space_id])
     pm = await _get_payment_method(db, space_id, method_id)
 
     if pm.is_system:
@@ -97,13 +103,14 @@ async def delete_payment_method(
             },
         )
 
-    if pm.owner_id != user_id:
+    if not await can_manage(db, pm, user_id):
         raise HTTPException(
             status_code=403,
             detail={
                 "error": {
                     "code": "FORBIDDEN",
-                    "message": "Only the owner can delete this payment method",
+                    "message": "Only the current owner or remaining members "
+                    "of a departed owner can delete this method",
                 }
             },
         )
@@ -133,3 +140,70 @@ async def _get_payment_method(
             },
         )
     return pm
+
+
+async def can_manage(db: AsyncSession, pm: PaymentMethod, user_id: uuid.UUID) -> bool:
+    """Require live membership; inherit management only when the owner has left."""
+    member_ids = set(
+        await db.scalars(
+            select(SpaceMember.user_id).where(SpaceMember.space_id == pm.space_id)
+        )
+    )
+    return _can_manage(pm, user_id, member_ids)
+
+
+def _can_manage(
+    pm: PaymentMethod, user_id: uuid.UUID, member_ids: set[uuid.UUID]
+) -> bool:
+    return (
+        not pm.is_system
+        and user_id in member_ids
+        and (pm.owner_id == user_id or pm.owner_id not in member_ids)
+    )
+
+
+async def payment_method_response(
+    db: AsyncSession, pm: PaymentMethod, user_id: uuid.UUID
+) -> dict:
+    """Provide authoritative permissions and historical attribution to clients."""
+    return (await payment_method_responses(db, [pm], user_id))[0]
+
+
+async def payment_method_responses(
+    db: AsyncSession, methods: Sequence[PaymentMethod], user_id: uuid.UUID
+) -> list[dict]:
+    """Batch owner and membership metadata without per-method database reads."""
+    if not methods:
+        return []
+    space_ids = {method.space_id for method in methods}
+    owner_ids = {method.owner_id for method in methods if method.owner_id is not None}
+    owner_names = dict(
+        (
+            await db.execute(
+                select(User.id, User.display_name).where(User.id.in_(owner_ids))
+            )
+        ).all()
+    )
+    members_by_space: dict[uuid.UUID, set[uuid.UUID]] = {
+        space_id: set() for space_id in space_ids
+    }
+    member_rows = await db.execute(
+        select(SpaceMember.space_id, SpaceMember.user_id).where(
+            SpaceMember.space_id.in_(space_ids)
+        )
+    )
+    for space_id, member_id in member_rows:
+        members_by_space[space_id].add(member_id)
+    return [
+        {
+            "id": pm.id,
+            "label": pm.label,
+            "is_system": pm.is_system,
+            "owner_id": pm.owner_id,
+            "created_at": pm.created_at,
+            "owner_display_name": owner_names.get(pm.owner_id),
+            "owner_is_member": pm.owner_id in members_by_space[pm.space_id],
+            "can_manage": _can_manage(pm, user_id, members_by_space[pm.space_id]),
+        }
+        for pm in methods
+    ]

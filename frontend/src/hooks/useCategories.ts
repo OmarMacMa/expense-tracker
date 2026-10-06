@@ -9,8 +9,12 @@ export function useCategories() {
   const { currentSpace } = useAuth();
   return useQuery<Category[]>({
     queryKey: ['categories', currentSpace?.id],
-    queryFn: () =>
-      api.get<Category[]>(`/spaces/${currentSpace?.id}/categories`),
+    queryFn: ({ signal }) =>
+      api.get<Category[]>(
+        `/spaces/${currentSpace?.id}/categories`,
+        undefined,
+        signal,
+      ),
     enabled: !!currentSpace?.id,
   });
 }
