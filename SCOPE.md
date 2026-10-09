@@ -173,6 +173,19 @@ Ship fast, validate the core expense-tracking loop for one couple.
 
 ---
 
+## 1.0.8 — Approved daily-entry improvement
+
+- Issue #11: Add "Save & Add Another" alongside ordinary Save. Create one expense,
+  remain at `/expenses/new`, clear the draft and focus Amount for the next entry.
+- Restore the logged-in spender, current purchase datetime and existing payment
+  default (no selection); currency continues to follow the current space.
+- Both actions block concurrent submissions. Failures retain the entire draft
+  and display standard errors without resetting or navigating.
+- This item is brought forward from 1.1.0 by user approval; form deduplication,
+  date-only migration and API idempotency remain separate work.
+
+---
+
 ## 1.1.0 — Automation & sharing
 
 Add recurring expenses and shareable analytics.
@@ -209,7 +222,6 @@ Add recurring expenses and shareable analytics.
 - React.lazy() code splitting for routes (bundle size reduction)
 - Deduplicate add/edit expense forms (extract shared ExpenseForm component)
 - Wire filters into transaction list page (match Insights filter bar)
-- Add "Save & Add Another" button to expense form
 - Optimize spending trend: SQL GROUP BY instead of in-memory aggregation
 - Add partial index for confirmed expenses
 - Add Content Security Policy headers
