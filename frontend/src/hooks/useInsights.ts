@@ -3,6 +3,7 @@ import { api } from '@/lib/api-client';
 import type { InsightsSummary, LimitProgress } from '@/types/api';
 import type { ExpenseFilters } from './useExpenses';
 import { useAuth } from './useAuth';
+import { canonicalFilters, filtersToParams } from '@/lib/expenseFilters';
 
 interface TrendPoint {
   day: number;
@@ -45,18 +46,15 @@ export interface SpenderBreakdown {
   percentage: string;
 }
 
-function filtersToParams(filters: ExpenseFilters): Record<string, string> {
-  const params: Record<string, string> = {};
-  Object.entries(filters).forEach(([k, v]) => {
-    if (v) params[k] = v;
-  });
-  return params;
-}
-
 export function useInsightsSummary(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<InsightsSummary>({
-    queryKey: ['insights', 'summary', currentSpace?.id, filters],
+    queryKey: [
+      'insights',
+      'summary',
+      currentSpace?.id,
+      canonicalFilters(filters),
+    ],
     queryFn: ({ signal }) =>
       api.get<InsightsSummary>(
         `/spaces/${currentSpace?.id}/insights/summary`,
@@ -70,7 +68,12 @@ export function useInsightsSummary(filters: ExpenseFilters = {}) {
 export function useSpendingTrend(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<SpendingTrend>({
-    queryKey: ['insights', 'trend', currentSpace?.id, filters],
+    queryKey: [
+      'insights',
+      'trend',
+      currentSpace?.id,
+      canonicalFilters(filters),
+    ],
     queryFn: ({ signal }) =>
       api.get<SpendingTrend>(
         `/spaces/${currentSpace?.id}/insights/spending-trend`,
@@ -84,7 +87,12 @@ export function useSpendingTrend(filters: ExpenseFilters = {}) {
 export function useCategoryBreakdown(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<CategoryBreakdown[]>({
-    queryKey: ['insights', 'categories', currentSpace?.id, filters],
+    queryKey: [
+      'insights',
+      'categories',
+      currentSpace?.id,
+      canonicalFilters(filters),
+    ],
     queryFn: ({ signal }) =>
       api.get<CategoryBreakdown[]>(
         `/spaces/${currentSpace?.id}/insights/category-breakdown`,
@@ -98,11 +106,16 @@ export function useCategoryBreakdown(filters: ExpenseFilters = {}) {
 export function useMerchantLeaderboard(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<MerchantLeaderboard[]>({
-    queryKey: ['insights', 'merchants', currentSpace?.id, filters],
+    queryKey: [
+      'insights',
+      'merchants',
+      currentSpace?.id,
+      canonicalFilters(filters),
+    ],
     queryFn: ({ signal }) =>
       api.get<MerchantLeaderboard[]>(
         `/spaces/${currentSpace?.id}/insights/merchant-leaderboard`,
-        { ...filtersToParams(filters), limit: '10' },
+        filtersToParams(filters),
         signal,
       ),
     enabled: !!currentSpace?.id,
@@ -126,7 +139,12 @@ export function useLimitProgress() {
 export function useSpenderBreakdown(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
   return useQuery<SpenderBreakdown[]>({
-    queryKey: ['insights', 'spenders', currentSpace?.id, filters],
+    queryKey: [
+      'insights',
+      'spenders',
+      currentSpace?.id,
+      canonicalFilters(filters),
+    ],
     queryFn: ({ signal }) =>
       api.get<SpenderBreakdown[]>(
         `/spaces/${currentSpace?.id}/insights/spender-breakdown`,

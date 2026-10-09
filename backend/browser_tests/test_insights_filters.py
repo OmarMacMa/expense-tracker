@@ -25,12 +25,13 @@ async def test_spender_selector_uses_user_id_with_real_backend(
     await page.goto("/insights")
     await page.wait_for_load_state("networkidle")
     assert await page.get_by_role("heading", name="Insights", exact=True).count() == 1
-    await page.get_by_role("combobox", name="Spender").click()
+    await page.get_by_role("button", name="Spender: 0 selected").click()
     async with page.expect_response(
         lambda response: "/insights/summary?" in response.url
         and "spender=" in response.url
     ):
-        await page.get_by_role("option", name="Alex Spender", exact=True).click()
+        await page.get_by_role("checkbox", name="Alex Spender", exact=True).click()
+    await page.keyboard.press("Escape")
     await page.wait_for_load_state("networkidle")
     await page.screenshot(
         path=str(tmp_path / f"selector-ID-{width}.png"), full_page=True
@@ -93,10 +94,20 @@ async def test_spender_selector_uses_user_id_with_real_backend(
     await page.screenshot(path=str(tmp_path / f"spender-{width}.png"), full_page=True)
 
     # Add category and merchant through real selectors: 2 matching expenses / $100.
-    await page.get_by_role("combobox").filter(has_text="Category").click()
-    await page.get_by_role("option", name="Groceries", exact=True).click()
-    await page.get_by_role("combobox").filter(has_text="Merchant").click()
-    await page.get_by_role("option", name="Market", exact=True).click()
+    await page.get_by_role("button", name="Category: 0 selected").click()
+    await page.get_by_role("checkbox", name="Groceries", exact=True).click()
+    await page.keyboard.press("Escape")
+    await page.get_by_role("button", name="Merchant: 0 selected").click()
+    async with page.expect_response(
+        lambda response: "/insights/summary?" in response.url
+        and parse_qs(urlparse(response.url).query).get("merchant") == ["Market"]
+        and parse_qs(urlparse(response.url).query).get("category")
+        == [str(data.category_id)]
+        and parse_qs(urlparse(response.url).query).get("spender")
+        == [str(data.owner.id)]
+    ):
+        await page.get_by_role("checkbox", name="Market", exact=True).click()
+    await page.keyboard.press("Escape")
     await expect(page.get_by_text("$100.00", exact=True).first).to_be_visible()
     await page.wait_for_load_state("networkidle")
     combined_responses = {}
@@ -135,7 +146,7 @@ async def test_spender_selector_uses_user_id_with_real_backend(
     assert "Other Store" not in await page.locator("body").inner_text()
     await page.wait_for_timeout(1700)
     await page.screenshot(path=str(tmp_path / f"combined-{width}.png"), full_page=True)
-    await page.get_by_role("button", name="Reset", exact=True).click()
+    await page.get_by_role("button", name="Clear all", exact=True).click()
     await expect(page.get_by_text("$160.00", exact=True).first).to_be_visible()
     await page.wait_for_load_state("networkidle")
 

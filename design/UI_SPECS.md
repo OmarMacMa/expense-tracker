@@ -353,6 +353,23 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 
 ## 6. Transaction list (`/transactions`)
 
+### v1.0.8 filter controls
+- Share the accumulating filter bar with Insights. Each dimension opens a
+  rounded tonal popover of labeled native checkboxes; checked values stay
+  selected while choosing another dimension.
+- Trigger pills show selected counts. Selected chips below the bar remove one
+  value; each popover has a clear-dimension action; Clear all resets the context.
+- OR within category/spender/merchant/tag/payment method; AND across dimensions.
+  Keep one period or month, never multiple windows.
+- Wrap controls/chips on mobile with 44px touch targets; constrain popover
+  width/scroll height to the viewport. Keyboard Tab/Space selects checkboxes,
+  Escape closes the popover and returns focus to the trigger.
+- Preserve the Ubuntu, Lavender + Sage tonal palette and grouped list layout
+  from the transaction mockups. No chart hiding or public Share action.
+- View all from Insights retains repeated-key URL filters and confirmed-only
+  status through reload and pagination. Filter option and data failures are
+  visible errors, never represented as a successful empty result.
+
 ### MVP
 - **Search bar** (top): search by merchant, notes, tags (case-insensitive contains).
 - **Filter bar**: time window, spender, category, merchant, tag, payment method.
@@ -393,6 +410,12 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 **Filter bar** (top, applies to all charts + list):
 - Time presets: This Week, Last Week, This Month, Last Month, Month Picker, YTD.
 - Spender, category, merchant, tag, payment method.
+
+v1.0.8 uses the shared accumulating checkbox/popover controls described under
+Transactions. Summary, trend, category donut, merchant leaderboard, spender
+breakdown and confirmed transaction preview all honor the entire selection.
+The active period stays exclusive, with a scalar month picker; choosing a preset
+clears the month without clearing any dimension.
 
 **Charts**:
 1. Spending trend line (same as Home: cumulative, current vs actual contributing-week avg within nine completed weeks or 3-month avg for monthly views). Weekly summary badges also show the actual contributing count.

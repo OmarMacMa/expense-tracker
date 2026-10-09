@@ -9,30 +9,22 @@ import { api } from '@/lib/api-client';
 import type { ApiError } from '@/lib/api-client';
 import type { Expense, ExpenseListResponse } from '@/types/api';
 import { useAuth } from './useAuth';
-
-export interface ExpenseFilters {
-  period?: string;
-  month?: string;
-  spender?: string;
-  category?: string;
-  merchant?: string;
-  tag?: string;
-  payment_method?: string;
-  search?: string;
-  status?: 'confirmed' | 'pending';
-}
+import {
+  canonicalFilters,
+  filtersToParams,
+  type ExpenseFilters,
+} from '@/lib/expenseFilters';
+export type { ExpenseFilters } from '@/lib/expenseFilters';
 
 export function useExpenseList(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
 
   return useInfiniteQuery<ExpenseListResponse>({
-    queryKey: ['expenses', currentSpace?.id, filters],
+    queryKey: ['expenses', currentSpace?.id, canonicalFilters(filters)],
     queryFn: ({ pageParam, signal }) => {
-      const params: Record<string, string> = { limit: '20' };
-      if (pageParam) params.cursor = pageParam as string;
-      Object.entries(filters).forEach(([k, v]) => {
-        if (v) params[k] = v;
-      });
+      const params = filtersToParams(filters);
+      params.set('limit', '20');
+      if (typeof pageParam === 'string') params.set('cursor', pageParam);
       return api.get<ExpenseListResponse>(
         `/spaces/${currentSpace?.id}/expenses`,
         params,

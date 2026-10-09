@@ -7,15 +7,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
-from app.models import Category, Expense, ExpenseLine, Space, Tag, User
-from app.models.expense import expense_line_tags
+from app.models import Category, Expense, ExpenseLine, Space, User
+from app.services.expense_filters import (
+    TextFilter,
+    UUIDFilter,
+    expense_filter_conditions,
+)
 from app.services.time_window import Timeframe, TimeWindowResolver
-
-
-def _escape_like(value: str) -> str:
-    """Escape SQL LIKE/ILIKE special characters."""
-    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-
 
 PERIOD_LABELS = {
     "this_week": "This Week",
@@ -78,11 +76,11 @@ def _expense_conditions(
     space_id: uuid.UUID,
     start_utc: datetime,
     end_utc: datetime,
-    spender_id: uuid.UUID | None = None,
-    category_id: uuid.UUID | None = None,
-    merchant: str | None = None,
-    tag: str | None = None,
-    payment_method_id: uuid.UUID | None = None,
+    spender_id: UUIDFilter = None,
+    category_id: UUIDFilter = None,
+    merchant: TextFilter = None,
+    tag: TextFilter = None,
+    payment_method_id: UUIDFilter = None,
 ) -> list[ColumnElement[bool]]:
     """Shared confirmed, space-scoped window and matching-expense filters."""
     conditions = [
@@ -92,37 +90,16 @@ def _expense_conditions(
         Expense.purchase_datetime <= end_utc,
         Expense.purchase_datetime <= datetime.now(UTC),
     ]
-    if spender_id:
-        conditions.append(Expense.spender_id == spender_id)
-    if payment_method_id:
-        conditions.append(Expense.payment_method_id == payment_method_id)
-    if merchant:
-        conditions.append(
-            Expense.merchant_normalized.ilike(
-                f"%{_escape_like(merchant.lower())}%", escape="\\"
-            )
+    conditions.extend(
+        expense_filter_conditions(
+            space_id,
+            spender_id=spender_id,
+            category_id=category_id,
+            merchant=merchant,
+            tag=tag,
+            payment_method_id=payment_method_id,
         )
-    if category_id:
-        conditions.append(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id).where(
-                    ExpenseLine.category_id == category_id
-                )
-            )
-        )
-    if tag:
-        tag_norm = tag.strip().lower().lstrip("#")
-        conditions.append(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id)
-                .join(
-                    expense_line_tags,
-                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
-                )
-                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
-                .where(Tag.name == tag_norm)
-            )
-        )
+    )
     return conditions
 
 
@@ -188,11 +165,11 @@ async def get_summary(
     space_id: uuid.UUID,
     period: str | None = None,
     month: str | None = None,
-    spender_id: uuid.UUID | None = None,
-    category_id: uuid.UUID | None = None,
-    merchant: str | None = None,
-    tag: str | None = None,
-    payment_method_id: uuid.UUID | None = None,
+    spender_id: UUIDFilter = None,
+    category_id: UUIDFilter = None,
+    merchant: TextFilter = None,
+    tag: TextFilter = None,
+    payment_method_id: UUIDFilter = None,
 ) -> dict:
     """Hero total + delta vs contributing weeks or three other prior periods."""
     space = await db.get(Space, space_id)
@@ -251,11 +228,11 @@ async def get_spending_trend(
     space_id: uuid.UUID,
     period: str | None = None,
     month: str | None = None,
-    spender_id: uuid.UUID | None = None,
-    category_id: uuid.UUID | None = None,
-    merchant: str | None = None,
-    tag: str | None = None,
-    payment_method_id: uuid.UUID | None = None,
+    spender_id: UUIDFilter = None,
+    category_id: UUIDFilter = None,
+    merchant: TextFilter = None,
+    tag: TextFilter = None,
+    payment_method_id: UUIDFilter = None,
 ) -> dict:
     """Cumulative spend vs contributing weeks or three prior non-yearly periods."""
     space = await db.get(Space, space_id)
@@ -408,11 +385,11 @@ async def get_category_breakdown(
     space_id: uuid.UUID,
     period: str | None = None,
     month: str | None = None,
-    spender_id: uuid.UUID | None = None,
-    merchant: str | None = None,
-    tag: str | None = None,
-    payment_method_id: uuid.UUID | None = None,
-    category_id: uuid.UUID | None = None,
+    spender_id: UUIDFilter = None,
+    merchant: TextFilter = None,
+    tag: TextFilter = None,
+    payment_method_id: UUIDFilter = None,
+    category_id: UUIDFilter = None,
 ) -> list[dict]:
     """Category totals within window."""
     space = await db.get(Space, space_id)
@@ -438,37 +415,18 @@ async def get_category_breakdown(
         .group_by(ExpenseLine.category_id, Category.name)
         .order_by(func.sum(ExpenseLine.amount).desc())
     )
-    if spender_id:
-        stmt = stmt.where(Expense.spender_id == spender_id)
-    if category_id:
-        stmt = stmt.where(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id).where(
-                    ExpenseLine.category_id == category_id
-                )
-            )
+    stmt = stmt.where(
+        *_expense_conditions(
+            space_id,
+            start_utc,
+            end_utc,
+            spender_id=spender_id,
+            category_id=category_id,
+            merchant=merchant,
+            tag=tag,
+            payment_method_id=payment_method_id,
         )
-    if merchant:
-        stmt = stmt.where(
-            Expense.merchant_normalized.ilike(
-                f"%{_escape_like(merchant.lower())}%", escape="\\"
-            )
-        )
-    if payment_method_id:
-        stmt = stmt.where(Expense.payment_method_id == payment_method_id)
-    if tag:
-        tag_norm = tag.strip().lower().lstrip("#")
-        stmt = stmt.where(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id)
-                .join(
-                    expense_line_tags,
-                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
-                )
-                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
-                .where(Tag.name == tag_norm)
-            )
-        )
+    )
 
     result = await db.execute(stmt)
     rows = result.all()
@@ -494,11 +452,11 @@ async def get_merchant_leaderboard(
     space_id: uuid.UUID,
     period: str | None = None,
     month: str | None = None,
-    spender_id: uuid.UUID | None = None,
-    category_id: uuid.UUID | None = None,
-    tag: str | None = None,
-    payment_method_id: uuid.UUID | None = None,
-    merchant: str | None = None,
+    spender_id: UUIDFilter = None,
+    category_id: UUIDFilter = None,
+    tag: TextFilter = None,
+    payment_method_id: UUIDFilter = None,
+    merchant: TextFilter = None,
 ) -> list[dict]:
     """Top merchants by amount in window."""
     space = await db.get(Space, space_id)
@@ -523,37 +481,18 @@ async def get_merchant_leaderboard(
         .order_by(func.sum(Expense.total_amount).desc())
         .limit(10)
     )
-    if spender_id:
-        stmt = stmt.where(Expense.spender_id == spender_id)
-    if merchant:
-        stmt = stmt.where(
-            Expense.merchant_normalized.ilike(
-                f"%{_escape_like(merchant.lower())}%", escape="\\"
-            )
+    stmt = stmt.where(
+        *_expense_conditions(
+            space_id,
+            start_utc,
+            end_utc,
+            spender_id=spender_id,
+            category_id=category_id,
+            merchant=merchant,
+            tag=tag,
+            payment_method_id=payment_method_id,
         )
-    if payment_method_id:
-        stmt = stmt.where(Expense.payment_method_id == payment_method_id)
-    if category_id:
-        stmt = stmt.where(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id).where(
-                    ExpenseLine.category_id == category_id
-                )
-            )
-        )
-    if tag:
-        tag_norm = tag.strip().lower().lstrip("#")
-        stmt = stmt.where(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id)
-                .join(
-                    expense_line_tags,
-                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
-                )
-                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
-                .where(Tag.name == tag_norm)
-            )
-        )
+    )
 
     result = await db.execute(stmt)
     rows = result.all()
@@ -566,11 +505,11 @@ async def get_spender_breakdown(
     space_id: uuid.UUID,
     period: str | None = None,
     month: str | None = None,
-    category_id: uuid.UUID | None = None,
-    merchant: str | None = None,
-    tag: str | None = None,
-    payment_method_id: uuid.UUID | None = None,
-    spender_id: uuid.UUID | None = None,
+    category_id: UUIDFilter = None,
+    merchant: TextFilter = None,
+    tag: TextFilter = None,
+    payment_method_id: UUIDFilter = None,
+    spender_id: UUIDFilter = None,
 ) -> list[dict]:
     """Totals per spender in window."""
     space = await db.get(Space, space_id)
@@ -595,37 +534,18 @@ async def get_spender_breakdown(
         .group_by(Expense.spender_id, User.display_name)
         .order_by(func.sum(Expense.total_amount).desc())
     )
-    if merchant:
-        stmt = stmt.where(
-            Expense.merchant_normalized.ilike(
-                f"%{_escape_like(merchant.lower())}%", escape="\\"
-            )
+    stmt = stmt.where(
+        *_expense_conditions(
+            space_id,
+            start_utc,
+            end_utc,
+            spender_id=spender_id,
+            category_id=category_id,
+            merchant=merchant,
+            tag=tag,
+            payment_method_id=payment_method_id,
         )
-    if spender_id:
-        stmt = stmt.where(Expense.spender_id == spender_id)
-    if payment_method_id:
-        stmt = stmt.where(Expense.payment_method_id == payment_method_id)
-    if category_id:
-        stmt = stmt.where(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id).where(
-                    ExpenseLine.category_id == category_id
-                )
-            )
-        )
-    if tag:
-        tag_norm = tag.strip().lower().lstrip("#")
-        stmt = stmt.where(
-            Expense.id.in_(
-                select(ExpenseLine.expense_id)
-                .join(
-                    expense_line_tags,
-                    ExpenseLine.id == expense_line_tags.c.expense_line_id,
-                )
-                .join(Tag, expense_line_tags.c.tag_id == Tag.id)
-                .where(Tag.name == tag_norm)
-            )
-        )
+    )
 
     result = await db.execute(stmt)
     rows = result.all()

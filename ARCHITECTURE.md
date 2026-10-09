@@ -334,11 +334,42 @@ GET /api/v1/spaces/{space_id}/insights/limit-progress        → all limits with
 &payment_method={method_id}
 ```
 
-The scalar filters apply to every aggregation, including its own dimension:
+**Accumulating filters (v1.0.8):** `spender`, `category`, `merchant`, `tag` and
+`payment_method` accept repeated existing query keys, for example
+`category={id1}&category={id2}&spender={user_id}`. One value remains compatible;
+no selected values means no predicate. Use OR within a dimension and AND across
+dimensions. Never comma-split merchant/tag names. Spenders use `User.id`
+(`SpaceMember.user_id`), not membership-row IDs. UUID query values are typed
+and malformed values return the standard 422 validation envelope.
+
+Services retain scalar callers while also accepting typed sequences. The shared
+`expense_filter_conditions` predicate builder injects the expense `space_id`;
+`apply_expense_filters` applies it to list queries and canonical
+`_expense_conditions` combines it with confirmed calendar windows. Category
+and tag subqueries also scope their resources to that space. Deduplicated IN
+subqueries avoid multiplying expense sums/counts when several selected tags match.
+Current and historical comparison queries apply the identical predicate set;
+the builder does not choose or modify historical windows/average denominators.
+The category, merchant and spender endpoints also honor their own dimension.
+
+Client `ExpenseFilters` uses arrays for the five dimensions and scalar
+`period`, `month`, `search`, `status`. `expenseFilters.ts` canonicalizes sets for
+query cache keys and explicitly appends repeated keys to `URLSearchParams`;
+the API client accepts these alongside existing scalar parameter records.
+Insights and Transactions use the URL as their explicit filter context.
+Search remains Transactions-only: Insights explicitly excludes any URL `search`
+value from its parsed UI, cache, chart/list queries and View all navigation.
+Insights previews and their View all link set `status=confirmed`; the expense
+list API accepts optional typed `status=confirmed|pending`, with an omitted
+status retaining the general Transactions all-status behavior. Configured
+limit progress is not altered by exploratory filters. Public sharing remains
+deferred.
+The filters apply to every aggregation, including its own dimension:
 `category-breakdown` accepts `category`, `merchant-leaderboard` accepts
 `merchant`, and `spender-breakdown` accepts `spender`. Spender is always
-`User.id` / `SpaceMember.user_id`, never `SpaceMember.id`. Filters combine with
-AND and all Insights queries remain space-scoped and confirmed-only. Category
+`User.id` / `SpaceMember.user_id`, never `SpaceMember.id`. Dimensions combine
+with AND (selections within each use OR); all Insights queries remain
+space-scoped and confirmed-only. Category
 and tag membership select whole expenses without duplicating totals; the donut
 groups all lines of those selected expenses.
 

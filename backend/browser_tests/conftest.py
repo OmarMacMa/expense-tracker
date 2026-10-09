@@ -89,10 +89,7 @@ def servers(tmp_path_factory) -> Generator[str, None, None]:
                     stderr=subprocess.STDOUT,
                 )
             )
-            for url in (
-                f"http://127.0.0.1:{BACKEND_PORT}/api/v1/health",
-                BASE_URL,
-            ):
+            for url in (f"http://127.0.0.1:{BACKEND_PORT}/api/v1/health", BASE_URL):
                 deadline = time.monotonic() + 45
                 while time.monotonic() < deadline:
                     if any(process.poll() is not None for process in processes):

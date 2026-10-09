@@ -16,16 +16,34 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 
 ---
 
-## 1.0.8 — Insights filter correctness
+## 1.0.8 — Insights and expense-entry improvements
 
+- Select multiple categories, spenders, merchants, tags and payment methods;
+  selections accumulate across dimensions (OR within, AND across).
+- All Insights totals, charts and confirmed transaction previews honor the
+  complete selection. Period/month remains one exclusive window.
+- Shared accessible filter controls on Insights and Transactions show counts,
+  removable selections, clear-dimension and clear-all actions.
+- Repeated existing URL query keys preserve context through "View all
+  transactions", reload and infinite pagination. Single-value URLs remain valid.
+- This is internal navigation context, not the deferred public Share button or
+  saved views. General Transactions retains its existing all-status default;
+  navigation from Insights carries the confirmed-only context.
 - Spender selection uses the member's user ID, never the membership record ID.
-- Every visible Insights chart honors all active scalar filters, including its
-  own dimension; filters combine with AND.
+- Every visible Insights chart honors all active filters, including its own
+  dimension, with backward-compatible single-value URLs.
 - Insights transactions use the same confirmed-only selection as the charts.
   The general Transactions list retains its existing status-inclusive default.
 - Failed Insights queries show an explicit error and retry, not empty results.
-- No automatic chart hiding, multi-select UI, amount filters or new transaction
-  list UI is included in this correctness fix.
+- Weekly comparison uses contributing nonzero matching weeks within only the
+  last nine completed calendar weeks, with dynamic counts; monthly remains three.
+- Responsive numeric trend axes keep Today inside the drawable chart bounds.
+- Save & Add Another persists once, resets expense fields and focuses amount.
+- Weekly/monthly limit edits persist and refresh all affected progress caches.
+- Amount ranges remain a separate pending v1.0.8 workstream; no automatic chart
+  hiding, public sharing, quarters or custom windows are added.
+
+---
 
 ## 1.0.0 — Core expense tracking (MVP)
 

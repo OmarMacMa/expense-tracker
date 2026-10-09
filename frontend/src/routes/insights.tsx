@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { TrendingDown, TrendingUp } from 'lucide-react';
-import { useExpenseList, type ExpenseFilters } from '@/hooks/useExpenses';
-import { usePeriod } from '@/hooks/usePeriod';
+import { useExpenseList } from '@/hooks/useExpenses';
+import { useExpenseFilters } from '@/hooks/useExpenseFilters';
+import { useExpenseFilterOptions } from '@/hooks/useExpenseFilterOptions';
+import { filtersToParams } from '@/lib/expenseFilters';
 import {
   useInsightsSummary,
   useSpendingTrend,
@@ -10,11 +12,6 @@ import {
   useMerchantLeaderboard,
   useSpenderBreakdown,
 } from '@/hooks/useInsights';
-import { useMembers } from '@/hooks/useMembers';
-import { useCategories } from '@/hooks/useCategories';
-import { useTags } from '@/hooks/useTags';
-import { usePaymentMethods } from '@/hooks/usePaymentMethods';
-import { useMerchantList } from '@/hooks/useMerchants';
 import { FilterBar } from '@/components/expenses/filter-bar';
 import { SpendingTrendChart } from '@/components/charts/spending-trend-chart';
 import { CategoryDonutChart } from '@/components/charts/category-donut-chart';
@@ -96,25 +93,10 @@ function QueryError({ onRetry }: { onRetry: () => void }) {
 }
 
 export default function Insights() {
-  const { period: globalPeriod } = usePeriod();
-  const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
+  const { queryFilters, setFilters } = useExpenseFilters('insights');
+  const filterOptions = useExpenseFilterOptions();
+  const transactionFilters = { ...queryFilters, status: 'confirmed' };
   const { format, currencyCode } = useCurrency();
-
-  // For data queries: use local period if set, otherwise fall back to global
-  const queryFilters = useMemo<ExpenseFilters>(() => {
-    const active = Object.fromEntries(
-      Object.entries(localFilters).filter(([, v]) => v),
-    );
-    if (!active.period) active.period = globalPeriod;
-    return active;
-  }, [globalPeriod, localFilters]);
-
-  // Filter data sources
-  const { data: members } = useMembers();
-  const { data: categories } = useCategories();
-  const { data: tagList } = useTags();
-  const { data: paymentMethodList } = usePaymentMethods();
-  const { data: merchantList } = useMerchantList();
 
   // Insights data
   const summaryQuery = useInsightsSummary(queryFilters);
@@ -129,7 +111,7 @@ export default function Insights() {
   const { data: spenderData, isLoading: spenderLoading } = spenderQuery;
 
   // Transaction list (same filters)
-  const expenseQuery = useExpenseList({ ...queryFilters, status: 'confirmed' });
+  const expenseQuery = useExpenseList(transactionFilters);
   const { data: expensePages, isLoading: expensesLoading } = expenseQuery;
 
   const allExpenses = useMemo(
@@ -186,13 +168,9 @@ export default function Insights() {
 
       {/* Filter bar */}
       <FilterBar
-        filters={localFilters}
-        onFiltersChange={setLocalFilters}
-        spenders={members}
-        categories={categories}
-        merchants={merchantList?.map((m) => m.name) ?? []}
-        tags={tagList}
-        paymentMethods={paymentMethodList}
+        filters={queryFilters}
+        onFiltersChange={setFilters}
+        {...filterOptions}
         showSearch={false}
         showPeriodChips
       />
@@ -305,7 +283,7 @@ export default function Insights() {
             {!expenseQuery.isError && groups.length > 0 && (
               <div className="mt-3 text-center">
                 <Link
-                  to="/transactions"
+                  to={`/transactions?${filtersToParams(transactionFilters)}`}
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   View all transactions →

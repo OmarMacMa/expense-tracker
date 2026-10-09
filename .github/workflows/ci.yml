@@ -92,6 +92,9 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Filter serialization regressions
+        working-directory: frontend
+        run: npm run test:filters
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
