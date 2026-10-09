@@ -7,6 +7,7 @@ from app.models import Category, Expense, ExpenseLine, PaymentMethod, Tag
 from app.models.expense import expense_line_tags
 from app.services.time_window import TimeWindowResolver
 from tests.membership_support import MembershipDatabase
+from tests.weekly_multi_support import seed_weekly_multi
 
 
 async def range_dataset(database: MembershipDatabase) -> dict:
@@ -120,3 +121,74 @@ async def range_dataset(database: MembershipDatabase) -> dict:
                 "payment_method": str(method.id),
             },
         }
+
+
+async def weekly_range_dataset(
+    database: MembershipDatabase, now: datetime | None = None
+) -> dict:
+    """Range narrows nine matching weeks to eight/four/zero within the lookback."""
+    data = await seed_weekly_multi(database, now)
+    async with database.sessions() as db:
+        rows = (
+            await db.scalars(
+                select(Expense).where(
+                    Expense.space_id == data["space"].id,
+                    Expense.spender_id == data["owner"].id,
+                    Expense.status == "confirmed",
+                    Expense.merchant == "Weekly Match",
+                    Expense.purchase_datetime < data["windows"][0][1],
+                )
+            )
+        ).all()
+        for row in rows:
+            line = await db.scalar(
+                select(ExpenseLine).where(ExpenseLine.expense_id == row.id)
+            )
+            amount = (
+                Decimal("50")
+                if row.purchase_datetime < data["windows"][8][0]
+                else (
+                    Decimal("100")
+                    if line.category_id == data["categories"][0].id
+                    else (
+                        Decimal("200")
+                        if line.category_id == data["categories"][1].id
+                        else Decimal("300")
+                    )
+                )
+            )
+            row.total_amount = line.amount = amount
+        tags = (
+            await db.scalars(select(Tag).where(Tag.space_id == data["space"].id))
+        ).all()
+        for index in range(24):
+            row = Expense(
+                space_id=data["space"].id,
+                spender_id=data["owner"].id,
+                merchant="Weekly Match",
+                merchant_normalized="weekly match",
+                purchase_datetime=data["now"] - timedelta(seconds=index + 1),
+                total_amount=Decimal("20"),
+                payment_method_id=data["method"].id,
+                status="confirmed",
+            )
+            db.add(row)
+            await db.flush()
+            # Two selected categories/tags on the same expense must not multiply totals.
+            for offset in range(2):
+                line = ExpenseLine(
+                    expense_id=row.id,
+                    category_id=data["categories"][(index + offset) % 3].id,
+                    amount=Decimal("10"),
+                    line_order=offset,
+                )
+                db.add(line)
+                await db.flush()
+                for tag in tags:
+                    await db.execute(
+                        expense_line_tags.insert().values(
+                            expense_line_id=line.id, tag_id=tag.id
+                        )
+                    )
+        await db.commit()
+    return data

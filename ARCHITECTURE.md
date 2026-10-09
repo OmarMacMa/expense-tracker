@@ -247,9 +247,6 @@ DELETE /api/v1/spaces/{space_id}/expenses/{expense_id}    → hard delete expens
 &tag={tag_name}             → filter by tag
 &payment_method={method_id} → filter by payment method
 &search={text}              → search merchant/notes/tags
-&min_amount=10.10           → inclusive expense-total minimum (1.0.8)
-&max_amount=1000            → inclusive expense-total maximum (1.0.8)
-&status=confirmed           → optional confirmed/pending; default includes both
 ```
 
 **Cursor pagination:**
@@ -317,7 +314,7 @@ PATCH  /api/v1/spaces/{space_id}/recurring/pending/{pending_id}            → p
 ### 4.10 Insights / analytics endpoints
 ```
 GET /api/v1/spaces/{space_id}/insights/summary              → hero total + delta vs average
-GET /api/v1/spaces/{space_id}/insights/spending-trend        → cumulative trend + 3-month avg
+GET /api/v1/spaces/{space_id}/insights/spending-trend        → cumulative trend + historical avg
 GET /api/v1/spaces/{space_id}/insights/category-breakdown    → category totals (bar + pie data)
 GET /api/v1/spaces/{space_id}/insights/merchant-leaderboard  → top merchants by amount (MVP); amount/count toggle (1.1.0+)
 GET /api/v1/spaces/{space_id}/insights/spender-breakdown     → totals per spender
@@ -335,25 +332,66 @@ GET /api/v1/spaces/{space_id}/insights/limit-progress        → all limits with
 &merchant={merchant_name}
 &tag={tag_name}
 &payment_method={method_id}
-&min_amount=10.10
-&max_amount=1000
 ```
 
-**Amount-range contract (1.0.8, issue #44):** scalar decimal query strings;
-omitted or blank bounds are unbounded. Values must be finite and nonnegative,
-and minimum must not exceed maximum (otherwise standard `422 VALIDATION_ERROR`).
-Both bounds compare inclusively against `Expense.total_amount`, not individual
-lines. The shared `amount_range_predicates` helper ANDs them with existing
-space-scoped filters before aggregation/pagination, including historical
-comparison windows. Decimal precision is retained without float conversion.
-Unscaled `NUMERIC` bound parameters avoid rounding to the column's two-decimal
-storage scale. Insights requests confirmed expenses explicitly; the general
-Transactions list retains its unfiltered status default.
-These parameters apply to all five analytics endpoints and the expense list;
-`limit-progress` remains configured-budget data and does not accept exploratory
-range filtering. Category/tag membership uses subqueries, not multiplying joins.
+**Accumulating filters (v1.0.8):** `spender`, `category`, `merchant`, `tag` and
+`payment_method` accept repeated existing query keys, for example
+`category={id1}&category={id2}&spender={user_id}`. One value remains compatible;
+no selected values means no predicate. Use OR within a dimension and AND across
+dimensions. Never comma-split merchant/tag names. Spenders use `User.id`
+(`SpaceMember.user_id`), not membership-row IDs. UUID query values are typed
+and malformed values return the standard 422 validation envelope.
+
+Services retain scalar callers while also accepting typed sequences. The shared
+`expense_filter_conditions` predicate builder injects the expense `space_id`;
+`apply_expense_filters` applies it to list queries and canonical
+`_expense_conditions` combines it with confirmed calendar windows. Category
+and tag subqueries also scope their resources to that space. Deduplicated IN
+subqueries avoid multiplying expense sums/counts when several selected tags match.
+Current and historical comparison queries apply the identical predicate set;
+the builder does not choose or modify historical windows/average denominators.
+The category, merchant and spender endpoints also honor their own dimension.
+
+Client `ExpenseFilters` uses arrays for the five dimensions and scalar
+`period`, `month`, `search`, `status`, `min_amount`, `max_amount`.
+`expenseFilters.ts` canonicalizes sets for
+query cache keys and explicitly appends repeated keys to `URLSearchParams`;
+the API client accepts these alongside existing scalar parameter records.
+Insights and Transactions use the URL as their explicit filter context.
+Search remains Transactions-only: Insights explicitly excludes any URL `search`
+value from its parsed UI, cache, chart/list queries and View all navigation.
+Insights previews and their View all link set `status=confirmed`; the expense
+list API accepts optional typed `status=confirmed|pending`, with an omitted
+status retaining the general Transactions all-status behavior. Configured
+limit progress is not altered by exploratory filters. Public sharing remains
+deferred.
+The filters apply to every aggregation, including its own dimension:
+`category-breakdown` accepts `category`, `merchant-leaderboard` accepts
+`merchant`, and `spender-breakdown` accepts `spender`. Spender is always
+`User.id` / `SpaceMember.user_id`, never `SpaceMember.id`. Dimensions combine
+with AND (selections within each use OR); all Insights queries remain
+space-scoped and confirmed-only. Category
+and tag membership select whole expenses without duplicating totals; the donut
+groups all lines of those selected expenses.
+
+Expense listing additionally accepts optional `status=confirmed|pending`.
+Insights requests `status=confirmed`; omitting it preserves the general
+Transactions list's existing status-inclusive behavior. This status parameter
+is scalar and independent of the visible filter controls.
+
+**Amount-range contract (1.0.8, #44):** all five analytics endpoints and the
+expense list accept scalar `min_amount`/`max_amount` decimal strings alongside
+repeated entity keys. Omitted/blank bounds are unbounded; finite nonnegative
+values and minimum <= maximum are required (standard `422 VALIDATION_ERROR`).
+Inclusive predicates compare expense totals, not line amounts, using unscaled
+`literal(Decimal, type_=Numeric())` binds to avoid storage-scale rounding.
+`expense_filter_conditions` includes these predicates before current/history
+aggregation and pagination, including nonzero contributing-week selection.
+Weekly history remains one bounded fetch over nine completed calendar weeks;
+monthly remains fixed three. Configured limit progress is not range-filtered.
 
 ### 4.11 Merchant suggestion endpoints
+
 ```
 GET /api/v1/spaces/{space_id}/merchants/suggest?q={query}   → autocomplete merchant names
 GET /api/v1/spaces/{space_id}/merchants/{name}/category      → latest category for merchant
@@ -590,7 +628,7 @@ All time-based analytics depend on correctly computing window boundaries in the 
 | Method | Input | Output | Description |
 |---|---|---|---|
 | `get_current_window(timeframe, ref_date?)` | `timeframe`: weekly/monthly/quarterly/yearly; `ref_date`: defaults to today in space TZ | `(start_utc, end_utc)` | UTC-converted boundaries of the current period |
-| `get_previous_windows(timeframe, count=3, ref_date?)` | Same + `count` | `list[(start_utc, end_utc)]` | N prior comparable windows for average computation. Returns fewer if insufficient history. |
+| `get_previous_windows(timeframe, count=3, ref_date?)` | Same + `count` | `list[(start_utc, end_utc)]` | Exactly N prior calendar windows, independent of expense history. |
 | `get_day_of_period(dt, timeframe)` | UTC datetime + timeframe | `int` (1-based) | Day index within the period, for cumulative trend alignment |
 | `localize_for_display(dt_utc)` | UTC datetime | Localized datetime | Convert UTC to space timezone for UI display |
 
@@ -615,17 +653,22 @@ All computed using the **space timezone**. Datetimes stored as UTC.
 | Quarterly | Jan 1 / Apr 1 / Jul 1 / Oct 1 | Mar 31 / Jun 30 / Sep 30 / Dec 31 |
 | Yearly | Jan 1 00:00:00 | Dec 31 23:59:59 |
 
-### 3-month average computation
+### Historical spending average computation
 - For a given period (e.g., "this month to date"):
   - Get cumulative daily spend for the current period
-  - Get cumulative daily spend for each of the prior 3 comparable periods
-  - Average the 3 prior periods by day-of-period
-  - If fewer than 3 prior periods exist, use as many as available
-- Result: two series (current cumulative, average cumulative) for trend line chart
+  - Use `TimeWindowResolver` to get the prior 9 completed weeks for weekly views or 3 completed months for monthly views, excluding the selected period
+  - Apply the same active expense filters to current and historical data; retain all matching confirmed expenses, including large bills (no outlier trimming)
+  - Weekly: exclude windows whose matching confirmed total is zero and divide by the actual contributing count (0–9); never look beyond the nine windows to fill samples
+  - Monthly: include zero months and divide by three, unchanged
+  - Preserve zero-spending days within included weeks, carrying cumulative totals through all seven days
+- Fetch the bounded weekly/monthly historical range once per summary/trend request and bucket with `TimeWindowResolver`; each uses two expense SELECTs, independent of baseline count. Yearly summary retains four aggregate SELECTs; yearly trend uses one and has no average.
+- Select Last Week via the resolver's previous local calendar window, not by subtracting 168 UTC hours; expense listing shares this reference selection
+- Non-weekly behavior is unchanged: three prior periods; yearly trends omit the average series
+- Summary and trend expose `average_period_count`. Weekly badges/legends show this actual count. No contributing weeks means null summary delta and an empty average series (no line/legend).
 
 ### Hero total + delta
 - `total` = sum of all confirmed expenses in selected window
-- `average` = mean of same metric across prior 3 comparable windows
+- `average` = mean of nonzero matching totals within the prior nine completed weekly windows, or three comparable windows for other timeframes (same weekly contributors as the trend)
 - `delta` = `((total - average) / average) * 100` → displayed as "+X%" or "-X%"
 - Edge case: if no prior data, delta is not shown
 

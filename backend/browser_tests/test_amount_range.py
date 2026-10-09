@@ -9,6 +9,14 @@ from browser_tests.conftest import BASE_URL, authenticate
 from tests.amount_range_support import range_dataset
 
 
+def amount_url_pattern(minimum: str, maximum: str) -> re.Pattern:
+    checks = "".join(
+        f"(?=.*[?&]{key}={re.escape(value)}(?:&|$))" if value else f"(?!.*[?&]{key}=)"
+        for key, value in (("min_amount", minimum), ("max_amount", maximum))
+    )
+    return re.compile(f"^{checks}.*$")
+
+
 @pytest.mark.parametrize("width", [390, 1440])
 async def test_real_range_apply_clear_context_and_precision(
     real_db, context, tmp_path, width
@@ -152,8 +160,12 @@ async def test_real_insights_one_sided_equal_blank_and_clear(real_db, context):
         await page.get_by_label("Minimum amount (USD)").fill(minimum)
         await page.get_by_label("Maximum amount (USD)").fill(maximum)
         await page.get_by_role("button", name="Apply range", exact=True).click()
+        await expect(page).to_have_url(amount_url_pattern(minimum, maximum))
         await expect(heading).to_contain_text(expected)
         await page.wait_for_load_state("networkidle")
+    await expect(
+        page.get_by_role("button", name="Remove applied amount range")
+    ).to_have_count(0)
     await page.get_by_label("Maximum amount (USD)").fill("10.10")
     await page.get_by_role("button", name="Apply range", exact=True).click()
     await expect(heading).to_contain_text("$10.11")
@@ -209,10 +221,10 @@ async def test_real_range_failure_is_not_an_empty_success(real_db, context):
     await page.get_by_label("Maximum amount (USD)").fill("20.20")
     await page.get_by_role("button", name="Apply range", exact=True).click()
     await expect(page.get_by_role("alert")).to_contain_text(
-        "Failed to load filtered insights or transactions", timeout=20000
+        "Unable to load data", timeout=20000
     )
     assert await page.get_by_text("No category data yet", exact=True).count() == 0
     await page.unroute("**/insights/category-breakdown?*max_amount=*", fail_chart)
-    await page.get_by_role("button", name="Try again", exact=True).click()
+    await page.get_by_role("button", name="Retry", exact=True).click()
     await expect(page.get_by_role("alert")).to_have_count(0)
     await expect(page.get_by_text("By Category", exact=True)).to_be_visible()

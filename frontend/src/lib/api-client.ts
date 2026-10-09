@@ -45,16 +45,20 @@ class ApiClient {
 
   async get<T>(
     path: string,
-    params?: Record<string, string>,
+    params?: Record<string, string> | URLSearchParams,
     signal?: AbortSignal,
   ): Promise<T> {
     const url = new URL(`${this.baseUrl}${path}`, window.location.origin);
     if (params) {
-      Object.entries(params).forEach(([key, value]) => {
+      const entries =
+        params instanceof URLSearchParams
+          ? params.entries()
+          : Object.entries(params);
+      for (const [key, value] of entries) {
         if (value !== undefined && value !== null && value !== '') {
-          url.searchParams.set(key, value);
+          url.searchParams.append(key, value);
         }
-      });
+      }
     }
     return this.request<T>(url.toString(), { method: 'GET', signal });
   }

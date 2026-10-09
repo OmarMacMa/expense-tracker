@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { TrendingDown, TrendingUp } from 'lucide-react';
-import { useExpenseList, type ExpenseFilters } from '@/hooks/useExpenses';
-import { usePeriod } from '@/hooks/usePeriod';
+import { useExpenseList } from '@/hooks/useExpenses';
+import { useExpenseFilters } from '@/hooks/useExpenseFilters';
+import { useExpenseFilterOptions } from '@/hooks/useExpenseFilterOptions';
+import { filtersToParams } from '@/lib/expenseFilters';
 import {
   useInsightsSummary,
   useSpendingTrend,
@@ -10,11 +12,6 @@ import {
   useMerchantLeaderboard,
   useSpenderBreakdown,
 } from '@/hooks/useInsights';
-import { useMembers } from '@/hooks/useMembers';
-import { useCategories } from '@/hooks/useCategories';
-import { useTags } from '@/hooks/useTags';
-import { usePaymentMethods } from '@/hooks/usePaymentMethods';
-import { useMerchantList } from '@/hooks/useMerchants';
 import { FilterBar } from '@/components/expenses/filter-bar';
 import { SpendingTrendChart } from '@/components/charts/spending-trend-chart';
 import { CategoryDonutChart } from '@/components/charts/category-donut-chart';
@@ -80,27 +77,26 @@ function TransactionListSkeleton() {
   );
 }
 
+function QueryError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div role="alert" className="py-4 text-sm text-destructive">
+      <p>Unable to load data. Please try again.</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-2 font-medium underline"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
 export default function Insights() {
-  const { period: globalPeriod } = usePeriod();
-  const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
+  const { queryFilters, setFilters } = useExpenseFilters('insights');
+  const filterOptions = useExpenseFilterOptions();
+  const transactionFilters = { ...queryFilters, status: 'confirmed' };
   const { format, currencyCode } = useCurrency();
-
-  // For data queries: use local period if set, otherwise fall back to global
-  const queryFilters = useMemo<ExpenseFilters>(() => {
-    const active = Object.fromEntries(
-      Object.entries(localFilters).filter(([, v]) => v),
-    );
-    if (!active.period) active.period = globalPeriod;
-    active.status = 'confirmed';
-    return active;
-  }, [globalPeriod, localFilters]);
-
-  // Filter data sources
-  const { data: members } = useMembers();
-  const { data: categories } = useCategories();
-  const { data: tagList } = useTags();
-  const { data: paymentMethodList } = usePaymentMethods();
-  const { data: merchantList } = useMerchantList();
 
   // Insights data
   const summaryQuery = useInsightsSummary(queryFilters);
@@ -115,23 +111,16 @@ export default function Insights() {
   const { data: spenderData, isLoading: spenderLoading } = spenderQuery;
 
   // Transaction list (same filters)
-  const expenseQuery = useExpenseList(queryFilters);
+  const expenseQuery = useExpenseList(transactionFilters);
   const { data: expensePages, isLoading: expensesLoading } = expenseQuery;
-  const queries = [
+  const fetching = [
     summaryQuery,
     trendQuery,
     categoryQuery,
     merchantQuery,
     spenderQuery,
     expenseQuery,
-  ];
-  const failed = queries.some((query) => query.isError);
-  const fetching = queries.some((query) => query.isFetching);
-  const transactionParams = new URLSearchParams(
-    Object.entries(queryFilters).filter((entry): entry is [string, string] =>
-      Boolean(entry[1]),
-    ),
-  );
+  ].some((query) => query.isFetching);
 
   const allExpenses = useMemo(
     () => (expensePages?.pages[0]?.data ?? []).slice(0, 15),
@@ -152,7 +141,9 @@ export default function Insights() {
         <h1 className="text-2xl font-bold text-foreground md:text-[1.3rem]">
           Insights
         </h1>
-        {summary && !failed && (
+        {summaryQuery.isError ? (
+          <QueryError onRetry={() => void summaryQuery.refetch()} />
+        ) : summary ? (
           <div className="mt-1 flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               {summary.period_label}
@@ -172,22 +163,22 @@ export default function Insights() {
                 ) : (
                   <TrendingDown className="h-3.5 w-3.5" />
                 )}
-                {Math.abs(summary.delta_pct!).toFixed(0)}% vs avg
+                {Math.abs(summary.delta_pct!).toFixed(0)}% vs{' '}
+                {queryFilters.period === 'this_week' ||
+                queryFilters.period === 'last_week'
+                  ? `${summary.average_period_count}-week avg`
+                  : 'avg'}
               </span>
             )}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Filter bar */}
       <FilterBar
-        filters={localFilters}
-        onFiltersChange={setLocalFilters}
-        spenders={members}
-        categories={categories}
-        merchants={merchantList?.map((m) => m.name) ?? []}
-        tags={tagList}
-        paymentMethods={paymentMethodList}
+        filters={queryFilters}
+        onFiltersChange={setFilters}
+        {...filterOptions}
         showSearch={false}
         showPeriodChips
       />
@@ -196,126 +187,125 @@ export default function Insights() {
           Updating insights and transactions…
         </p>
       )}
-      {failed && (
-        <div role="alert" className="text-sm text-destructive">
-          Failed to load filtered insights or transactions.
-          <button
-            className="ml-2 font-medium underline"
-            onClick={() => {
-              queries.forEach((query) => {
-                if (query.isError) void query.refetch();
-              });
-            }}
-          >
-            Try again
-          </button>
-        </div>
-      )}
 
       {/* Main content — desktop split, mobile stacked */}
-      {!failed && (
-        <div className="flex flex-col gap-5 lg:flex-row">
-          {/* Charts panel */}
-          <div className="flex flex-col gap-4 lg:w-[60%] lg:shrink-0">
-            {/* Spending trend */}
-            <ChartCard title="Spending Trend">
-              {trendLoading || !trendData ? (
+      <div className="flex flex-col gap-5 lg:flex-row">
+        {/* Charts panel */}
+        <div className="flex flex-col gap-4 lg:w-[60%] lg:shrink-0">
+          {/* Spending trend */}
+          <ChartCard title="Spending Trend">
+            {trendQuery.isError ? (
+              <QueryError onRetry={() => void trendQuery.refetch()} />
+            ) : trendLoading || !trendData ? (
+              <ChartSkeleton />
+            ) : (
+              <SpendingTrendChart
+                data={trendData}
+                periodLabel={queryFilters.period ?? 'this_month'}
+                currencyCode={currencyCode}
+              />
+            )}
+          </ChartCard>
+
+          {/* Two-column grid for category + merchant on desktop */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Category donut */}
+            <ChartCard title="By Category">
+              {categoryQuery.isError ? (
+                <QueryError onRetry={() => void categoryQuery.refetch()} />
+              ) : categoryLoading || !categoryData ? (
                 <ChartSkeleton />
+              ) : categoryData.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No category data yet
+                </p>
               ) : (
-                <SpendingTrendChart
-                  data={trendData}
-                  periodLabel={queryFilters.period ?? 'this_month'}
+                <CategoryDonutChart
+                  data={categoryData}
+                  totalAmount={(
+                    categoryData.reduce(
+                      (total, category) =>
+                        total + Math.round(Number(category.total) * 100),
+                      0,
+                    ) / 100
+                  ).toFixed(2)}
                   currencyCode={currencyCode}
                 />
               )}
             </ChartCard>
 
-            {/* Two-column grid for category + merchant on desktop */}
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* Category donut */}
-              <ChartCard title="By Category">
-                {categoryLoading || !categoryData ? (
-                  <ChartSkeleton />
-                ) : categoryData.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    No category data yet
-                  </p>
-                ) : (
-                  <CategoryDonutChart
-                    data={categoryData}
-                    totalAmount={summary?.total_spent ?? '0'}
-                    currencyCode={currencyCode}
-                  />
-                )}
-              </ChartCard>
-
-              {/* Merchant leaderboard */}
-              <ChartCard title="Top Merchants">
-                {merchantLoading || !merchantData ? (
-                  <ChartSkeleton />
-                ) : (
-                  <MerchantLeaderboard
-                    data={merchantData}
-                    maxItems={10}
-                    currencyCode={currencyCode}
-                  />
-                )}
-              </ChartCard>
-            </div>
-
-            {/* Spender breakdown */}
-            <ChartCard title="By Spender">
-              {spenderLoading || !spenderData ? (
+            {/* Merchant leaderboard */}
+            <ChartCard title="Top Merchants">
+              {merchantQuery.isError ? (
+                <QueryError onRetry={() => void merchantQuery.refetch()} />
+              ) : merchantLoading || !merchantData ? (
                 <ChartSkeleton />
               ) : (
-                <SpenderBreakdownChart
-                  data={spenderData}
+                <MerchantLeaderboard
+                  data={merchantData}
+                  maxItems={10}
                   currencyCode={currencyCode}
                 />
               )}
             </ChartCard>
           </div>
 
-          {/* Transaction list panel */}
-          <div className="min-w-0 lg:flex-1">
-            <div className="rounded-2xl bg-card p-4 shadow-[var(--shadow-card)] md:p-5">
-              <h3 className="mb-4 text-[13px] font-bold uppercase tracking-widest text-muted-foreground">
-                Transactions
-              </h3>
+          {/* Spender breakdown */}
+          <ChartCard title="By Spender">
+            {spenderQuery.isError ? (
+              <QueryError onRetry={() => void spenderQuery.refetch()} />
+            ) : spenderLoading || !spenderData ? (
+              <ChartSkeleton />
+            ) : (
+              <SpenderBreakdownChart
+                data={spenderData}
+                currencyCode={currencyCode}
+              />
+            )}
+          </ChartCard>
+        </div>
 
-              {expensesLoading ? (
-                <TransactionListSkeleton />
-              ) : groups.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-2xl">
-                    📭
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    No transactions match these filters
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {groups.map((group) => (
-                    <TransactionGroup key={group.label} group={group} />
-                  ))}
-                </div>
-              )}
+        {/* Transaction list panel */}
+        <div className="min-w-0 lg:flex-1">
+          <div className="rounded-2xl bg-card p-4 shadow-[var(--shadow-card)] md:p-5">
+            <h3 className="mb-4 text-[13px] font-bold uppercase tracking-widest text-muted-foreground">
+              Transactions
+            </h3>
 
-              {groups.length > 0 && (
-                <div className="mt-3 text-center">
-                  <Link
-                    to={`/transactions?${transactionParams}`}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    View all transactions →
-                  </Link>
+            {expenseQuery.isError ? (
+              <QueryError onRetry={() => void expenseQuery.refetch()} />
+            ) : expensesLoading ? (
+              <TransactionListSkeleton />
+            ) : groups.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-2xl">
+                  📭
                 </div>
-              )}
-            </div>
+                <p className="text-sm text-muted-foreground">
+                  No transactions match these filters
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {groups.map((group) => (
+                  <TransactionGroup key={group.label} group={group} />
+                ))}
+              </div>
+            )}
+
+            {!expenseQuery.isError && groups.length > 0 && (
+              <div className="mt-3 text-center">
+                <Link
+                  to={`/transactions?${filtersToParams(transactionFilters)}`}
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  View all transactions →
+                </Link>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

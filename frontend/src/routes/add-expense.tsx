@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ArrowLeft,
@@ -92,8 +92,31 @@ export default function AddExpense() {
   const [highlightedTag, setHighlightedTag] = useState(-1);
 
   // Refs
+  const amountInputRef = useRef<HTMLInputElement>(null);
   const merchantInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
+  const submittingRef = useRef(false);
+  const focusNextAmountRef = useRef(false);
+  const merchantBlurTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const tagBlurTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+
+  const clearBlurTimers = useCallback(() => {
+    clearTimeout(merchantBlurTimer.current);
+    clearTimeout(tagBlurTimer.current);
+  }, []);
+
+  useEffect(() => clearBlurTimers, [clearBlurTimers]);
+
+  useEffect(() => {
+    if (!createExpense.isPending && focusNextAmountRef.current) {
+      focusNextAmountRef.current = false;
+      amountInputRef.current?.focus();
+    }
+  });
 
   // Data hooks
   const { data: merchantSuggestions } = useMerchantSuggest(merchantQuery);
@@ -120,12 +143,15 @@ export default function AddExpense() {
   }
 
   const handleMerchantInput = useCallback((value: string) => {
+    clearTimeout(merchantBlurTimer.current);
+    setMerchant('');
     setMerchantQuery(value);
     setMerchantOpen(value.length >= 1);
     setHighlightedMerchant(-1);
   }, []);
 
   const handleMerchantSelect = useCallback((name: string) => {
+    clearTimeout(merchantBlurTimer.current);
     setMerchant(name);
     setMerchantQuery(name);
     setMerchantOpen(false);
@@ -175,6 +201,7 @@ export default function AddExpense() {
 
   const handleAddTag = useCallback(
     (tag: { id: string; name: string }, options: { focus?: boolean } = {}) => {
+      clearTimeout(tagBlurTimer.current);
       const { focus = true } = options;
       setSelectedTags((prev) =>
         prev.some((t) => t.id === tag.id) ? prev : [...prev, tag],
@@ -222,6 +249,7 @@ export default function AddExpense() {
 
   const handleTagInput = useCallback(
     (value: string) => {
+      clearTimeout(tagBlurTimer.current);
       // Treat comma as a tag separator (mobile-friendly)
       if (value.endsWith(',')) {
         const stripped = value.slice(0, -1);
@@ -300,38 +328,103 @@ export default function AddExpense() {
     return dt.toISOString();
   }, [purchaseDate, purchaseTime]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!amount || parseFloat(amount) <= 0) return;
+  const resetForNextExpense = useCallback(() => {
+    clearBlurTimers();
+    const now = new Date();
+    setAmount('');
+    setMerchant('');
+    setMerchantQuery('');
+    setCategoryId('');
+    setCategorySuggested(false);
+    setSuggestedFromMerchant('');
+    setLastSuggestedMerchant('');
+    setPurchaseDate(now);
+    setPurchaseTime(formatTimeValue(now));
+    setSpenderId(user?.id ?? '');
+    setPaymentMethodId('');
+    setSelectedTags([]);
+    setTagInput('');
+    setNotes('');
+    setMerchantOpen(false);
+    setCategoryOpen(false);
+    setDateOpen(false);
+    setSpenderOpen(false);
+    setPaymentMethodOpen(false);
+    setTagDropdownOpen(false);
+    setHighlightedMerchant(-1);
+    setHighlightedTag(-1);
+    focusNextAmountRef.current = true;
+    createExpense.reset();
+  }, [clearBlurTimers, createExpense, user?.id]);
 
-    const payload: Record<string, unknown> = {
-      merchant: merchant.trim(),
-      amount: parseFloat(amount),
-      purchase_datetime: buildPurchaseDatetime(),
-      spender_id: effectiveSpenderId,
-      category_id: categoryId || null,
-      payment_method_id: paymentMethodId || null,
-      notes: notes.trim() || null,
-      tags: selectedTags.map((t) => t.name),
-    };
+  const handleSubmit = useCallback(
+    async (addAnother: boolean) => {
+      // React's pending render alone cannot block two events in the same turn.
+      if (submittingRef.current) return;
+      if (!amount || parseFloat(amount) <= 0) return;
 
-    try {
-      await createExpense.mutateAsync(payload);
-      navigate('/transactions');
-    } catch {
-      // Error handled by mutation state
-    }
-  }, [
-    amount,
-    merchant,
-    buildPurchaseDatetime,
-    effectiveSpenderId,
-    notes,
-    categoryId,
-    paymentMethodId,
-    selectedTags,
-    createExpense,
-    navigate,
-  ]);
+      const pendingTag = tagInput.replace(/^#+/, '').toLowerCase().trim();
+      if (pendingTag) {
+        const validationError = validateTagName(pendingTag);
+        if (validationError) {
+          toast.error(validationError);
+          return;
+        }
+      }
+      if (!purchaseTime) {
+        toast.error('Please enter a purchase time.');
+        return;
+      }
+
+      clearBlurTimers();
+      const payload: Record<string, unknown> = {
+        merchant: merchantQuery.trim(),
+        amount: parseFloat(amount),
+        purchase_datetime: buildPurchaseDatetime(),
+        spender_id: effectiveSpenderId,
+        category_id: categoryId || null,
+        payment_method_id: paymentMethodId || null,
+        notes: notes.trim() || null,
+        // Include an uncommitted tag without changing the draft on failure.
+        tags: [
+          ...new Set([
+            ...selectedTags.map((t) => t.name),
+            ...(pendingTag ? [pendingTag] : []),
+          ]),
+        ],
+      };
+
+      submittingRef.current = true;
+      try {
+        await createExpense.mutateAsync(payload);
+        if (addAnother) {
+          resetForNextExpense();
+        } else {
+          navigate('/transactions');
+        }
+      } catch {
+        // The mutation displays the API error; keep every draft field intact.
+      } finally {
+        submittingRef.current = false;
+      }
+    },
+    [
+      amount,
+      merchantQuery,
+      tagInput,
+      purchaseTime,
+      clearBlurTimers,
+      buildPurchaseDatetime,
+      effectiveSpenderId,
+      notes,
+      categoryId,
+      paymentMethodId,
+      selectedTags,
+      createExpense,
+      navigate,
+      resetForNextExpense,
+    ],
+  );
 
   const selectedCategory = categories?.find((c) => c.id === categoryId);
   const selectedMember = members?.find((m) => m.user_id === effectiveSpenderId);
@@ -349,11 +442,23 @@ export default function AddExpense() {
 
   return (
     <div className="flex min-h-full justify-center px-4 py-6 md:px-10 md:py-8">
-      <div className="w-full max-w-[720px]">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          const submitter = (event.nativeEvent as SubmitEvent).submitter;
+          void handleSubmit(
+            submitter instanceof HTMLButtonElement &&
+              submitter.value === 'another',
+          );
+        }}
+        className="w-full max-w-[720px]"
+      >
         {/* Top bar */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-lg font-medium md:hidden">New Expense</h1>
           <button
+            type="button"
+            disabled={createExpense.isPending}
             onClick={() => navigate(-1)}
             className="hidden items-center gap-1 text-sm text-primary hover:underline md:inline-flex"
           >
@@ -361,6 +466,8 @@ export default function AddExpense() {
             Back to Home
           </button>
           <button
+            type="button"
+            disabled={createExpense.isPending}
             onClick={() => navigate(-1)}
             className="flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary md:hidden"
             aria-label="Go back"
@@ -370,7 +477,10 @@ export default function AddExpense() {
         </div>
 
         {/* Form card */}
-        <div className="rounded-2xl bg-card p-6 shadow-[var(--shadow-card)] md:p-9">
+        <fieldset
+          disabled={createExpense.isPending}
+          className="min-w-0 rounded-2xl bg-card p-6 shadow-[var(--shadow-card)] md:p-9"
+        >
           {/* Hero amount */}
           <div className="pb-7 pt-1 text-center">
             <p className="mb-1.5 text-[0.72rem] font-medium uppercase tracking-wider text-muted-foreground">
@@ -381,6 +491,8 @@ export default function AddExpense() {
             </div>
             <div className="mx-auto h-2 w-12 rounded-full bg-accent" />
             <Input
+              ref={amountInputRef}
+              aria-label="Amount"
               type="number"
               inputMode="decimal"
               step="0.01"
@@ -407,14 +519,20 @@ export default function AddExpense() {
             </Label>
             <Input
               ref={merchantInputRef}
+              aria-label="Merchant"
               placeholder="Enter merchant name..."
               value={merchantQuery}
               onChange={(e) => handleMerchantInput(e.target.value)}
               onFocus={() => {
+                clearTimeout(merchantBlurTimer.current);
                 if (merchantQuery.length >= 1) setMerchantOpen(true);
               }}
               onBlur={() => {
-                setTimeout(() => setMerchantOpen(false), 200);
+                clearTimeout(merchantBlurTimer.current);
+                merchantBlurTimer.current = setTimeout(
+                  () => setMerchantOpen(false),
+                  200,
+                );
                 setMerchant(merchantQuery);
               }}
               onKeyDown={handleMerchantKeyDown}
@@ -603,6 +721,7 @@ export default function AddExpense() {
               <div className="flex h-12 items-center gap-2.5 rounded-xl bg-secondary px-4">
                 <Clock className="size-4 shrink-0 text-muted-foreground" />
                 <input
+                  aria-label="Time"
                   type="time"
                   value={purchaseTime}
                   onChange={(e) => setPurchaseTime(e.target.value)}
@@ -704,23 +823,28 @@ export default function AddExpense() {
               ))}
               <input
                 ref={tagInputRef}
+                aria-label="Tags"
                 type="text"
                 value={tagInput}
                 onChange={(e) => handleTagInput(e.target.value)}
                 onKeyDown={handleTagKeyDown}
                 onFocus={() => {
+                  clearTimeout(tagBlurTimer.current);
                   if (tagInput.startsWith('#') && tagInput.length > 1) {
                     setTagDropdownOpen(true);
                   }
                 }}
-                onBlur={() =>
-                  setTimeout(() => {
+                onBlur={() => {
+                  clearTimeout(tagBlurTimer.current);
+                  if (submittingRef.current) return;
+                  tagBlurTimer.current = setTimeout(() => {
+                    if (submittingRef.current) return;
                     setTagDropdownOpen(false);
                     if (tagInput.trim()) {
                       commitTagFromInput(tagInput, { focus: false });
                     }
-                  }, 200)
-                }
+                  }, 200);
+                }}
                 placeholder={
                   selectedTags.length === 0
                     ? 'Type # to add tags (comma to add)...'
@@ -766,6 +890,7 @@ export default function AddExpense() {
               Notes
             </Label>
             <Textarea
+              aria-label="Notes"
               placeholder="Add notes..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -775,18 +900,18 @@ export default function AddExpense() {
           </div>
 
           {/* Actions */}
-          <div className="mt-7 flex flex-col-reverse items-center gap-1 border-t-0 pt-5 md:flex-row md:justify-end md:gap-3">
+          <div className="mt-7 flex flex-col items-center gap-3 border-t-0 pt-5 md:flex-row md:justify-end">
             <Button
               type="button"
               variant="ghost"
               onClick={() => navigate(-1)}
-              className="h-11 w-full rounded-[20px] text-[0.88rem] font-normal text-muted-foreground md:w-auto md:px-6"
+              className="order-3 h-11 w-full rounded-[20px] text-[0.88rem] font-normal text-muted-foreground md:order-none md:w-auto md:px-6"
             >
               Cancel
             </Button>
             <Button
-              type="button"
-              onClick={handleSubmit}
+              type="submit"
+              value="save"
               disabled={
                 !amount || parseFloat(amount) <= 0 || createExpense.isPending
               }
@@ -794,17 +919,31 @@ export default function AddExpense() {
             >
               {createExpense.isPending ? 'Saving...' : 'Save Expense'}
             </Button>
+            <Button
+              type="submit"
+              value="another"
+              variant="secondary"
+              disabled={
+                !amount || parseFloat(amount) <= 0 || createExpense.isPending
+              }
+              className="h-11 w-full rounded-[20px] bg-[#D4E8DD] text-[0.88rem] font-medium text-[#2E4A3D] hover:bg-[#D4E8DD]/80 md:w-auto md:px-6"
+            >
+              Save &amp; Add Another
+            </Button>
           </div>
 
           {/* Error display */}
           {createExpense.isError && (
-            <p className="mt-3 text-center text-sm text-destructive">
+            <p
+              role="alert"
+              className="mt-3 text-center text-sm text-destructive"
+            >
               {(createExpense.error as Error)?.message ||
                 'Failed to save expense. Please try again.'}
             </p>
           )}
-        </div>
-      </div>
+        </fieldset>
+      </form>
     </div>
   );
 }

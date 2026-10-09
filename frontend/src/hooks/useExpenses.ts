@@ -9,31 +9,22 @@ import { api } from '@/lib/api-client';
 import type { ApiError } from '@/lib/api-client';
 import type { Expense, ExpenseListResponse } from '@/types/api';
 import { useAuth } from './useAuth';
-import type { AmountRange } from '@/lib/amount-range';
-
-export interface ExpenseFilters extends AmountRange {
-  period?: string;
-  month?: string;
-  spender?: string;
-  category?: string;
-  merchant?: string;
-  tag?: string;
-  payment_method?: string;
-  search?: string;
-  status?: 'confirmed' | 'pending';
-}
+import {
+  canonicalFilters,
+  filtersToParams,
+  type ExpenseFilters,
+} from '@/lib/expenseFilters';
+export type { ExpenseFilters } from '@/lib/expenseFilters';
 
 export function useExpenseList(filters: ExpenseFilters = {}) {
   const { currentSpace } = useAuth();
 
   return useInfiniteQuery<ExpenseListResponse>({
-    queryKey: ['expenses', currentSpace?.id, filters],
+    queryKey: ['expenses', currentSpace?.id, canonicalFilters(filters)],
     queryFn: ({ pageParam, signal }) => {
-      const params: Record<string, string> = { limit: '20' };
-      if (pageParam) params.cursor = pageParam as string;
-      Object.entries(filters).forEach(([k, v]) => {
-        if (v) params[k] = v;
-      });
+      const params = filtersToParams(filters);
+      params.set('limit', '20');
+      if (typeof pageParam === 'string') params.set('cursor', pageParam);
       return api.get<ExpenseListResponse>(
         `/spaces/${currentSpace?.id}/expenses`,
         params,
@@ -72,6 +63,7 @@ export function useCreateExpense() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['merchants'] });
     },
     onError: (error: ApiError) => {
       toast.error(error?.data?.error?.message || 'Failed to create expense');
