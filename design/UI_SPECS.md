@@ -322,7 +322,21 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
   7. Tags (text input with `#`-triggered inline autocomplete, Obsidian-style).
   8. Notes (text area).
 - **Actions**: "Save" primary button, "Cancel" / back navigation.
-- On save: navigates back to previous page; data refreshes in background.
+- On confirmed Save: navigates to Transactions; data refreshes in background.
+
+### 1.0.8 — Save & Add Another
+- Keep "Save Expense" as the primary action; add a sage tonal "Save & Add Another"
+  action beside it on desktop and as a full-width 44px action below it on mobile.
+  Cancel follows the save actions on mobile. All actions remain keyboard accessible.
+- Save & Add Another creates exactly one expense and stays at `/expenses/new`.
+  Clear amount, merchant/category suggestions, tags (including input), notes,
+  dropdowns and errors; restore logged-in spender, current purchase datetime and
+  the existing empty payment selection. Focus Amount for the next entry.
+- Disable both save actions and draft editing during submission. Ordinary Enter
+  submission uses Save; Enter/Space on Save & Add Another uses that action.
+- Failure keeps the draft and shows standard error feedback, with no success,
+  reset or navigation. Refresh expense, Insights, tag and merchant caches after
+  confirmed creation; do not reload the page or purge unrelated app state.
 
 ### 2.0.0 additions — Split purchase
 - "Split" toggle appears next to Amount field (pill-style, off by default).
