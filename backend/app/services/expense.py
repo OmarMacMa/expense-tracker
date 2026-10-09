@@ -3,6 +3,7 @@ import binascii
 import json
 import uuid
 from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import HTTPException
 from sqlalchemy import and_, delete, func, or_, select
@@ -212,6 +213,7 @@ async def list_expenses(
     search: str | None = None,
     period: str | None = None,
     month: str | None = None,
+    status: Literal["confirmed", "pending"] | None = None,
 ) -> dict:
     """List expenses with cursor pagination and filters.
 
@@ -257,6 +259,8 @@ async def list_expenses(
             )
 
     # Apply filters
+    if status:
+        stmt = stmt.where(Expense.status == status)
     if spender_id:
         stmt = stmt.where(Expense.spender_id == spender_id)
 

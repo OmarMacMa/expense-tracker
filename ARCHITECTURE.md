@@ -334,6 +334,19 @@ GET /api/v1/spaces/{space_id}/insights/limit-progress        → all limits with
 &payment_method={method_id}
 ```
 
+The scalar filters apply to every aggregation, including its own dimension:
+`category-breakdown` accepts `category`, `merchant-leaderboard` accepts
+`merchant`, and `spender-breakdown` accepts `spender`. Spender is always
+`User.id` / `SpaceMember.user_id`, never `SpaceMember.id`. Filters combine with
+AND and all Insights queries remain space-scoped and confirmed-only. Category
+and tag membership select whole expenses without duplicating totals; the donut
+groups all lines of those selected expenses.
+
+Expense listing additionally accepts optional `status=confirmed|pending`.
+Insights requests `status=confirmed`; omitting it preserves the general
+Transactions list's existing status-inclusive behavior. This status parameter
+is scalar and independent of the visible filter controls.
+
 ### 4.11 Merchant suggestion endpoints
 ```
 GET /api/v1/spaces/{space_id}/merchants/suggest?q={query}   → autocomplete merchant names

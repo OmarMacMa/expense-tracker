@@ -328,6 +328,14 @@ Analysis playground.
 - Time: this week/last week, this month/last month, month picker, YTD. Quarter picker added in 2.0.0.
 - Spender, category, merchant, tag, payment method. Beneficiary filter added in 2.0.0.
 
+As of v1.0.8, all visible charts (including a chart's own grouping dimension)
+and the Insights transaction list honor the same AND-combined filters and
+confirmed-only expense selection. Spender values are user IDs, not membership
+IDs. Category/tag filters select matching expenses once; category distribution
+retains all lines of those expenses so its total agrees with the summary.
+Charts remain visible when filtering. Query failures show an error with retry,
+not an empty-data result.
+
 **Charts (MVP)**: spending trend line, category distribution pie, merchant leaderboard (amount), spender breakdown.
 
 **Charts (2.0.0+)**: category bar comparison (current vs 3-month avg), limit progress bars.

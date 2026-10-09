@@ -80,6 +80,21 @@ function TransactionListSkeleton() {
   );
 }
 
+function QueryError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div role="alert" className="py-4 text-sm text-destructive">
+      <p>Unable to load data. Please try again.</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-2 font-medium underline"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
 export default function Insights() {
   const { period: globalPeriod } = usePeriod();
   const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
@@ -102,19 +117,20 @@ export default function Insights() {
   const { data: merchantList } = useMerchantList();
 
   // Insights data
-  const { data: summary } = useInsightsSummary(queryFilters);
-  const { data: trendData, isLoading: trendLoading } =
-    useSpendingTrend(queryFilters);
-  const { data: categoryData, isLoading: categoryLoading } =
-    useCategoryBreakdown(queryFilters);
-  const { data: merchantData, isLoading: merchantLoading } =
-    useMerchantLeaderboard(queryFilters);
-  const { data: spenderData, isLoading: spenderLoading } =
-    useSpenderBreakdown(queryFilters);
+  const summaryQuery = useInsightsSummary(queryFilters);
+  const trendQuery = useSpendingTrend(queryFilters);
+  const categoryQuery = useCategoryBreakdown(queryFilters);
+  const merchantQuery = useMerchantLeaderboard(queryFilters);
+  const spenderQuery = useSpenderBreakdown(queryFilters);
+  const { data: summary } = summaryQuery;
+  const { data: trendData, isLoading: trendLoading } = trendQuery;
+  const { data: categoryData, isLoading: categoryLoading } = categoryQuery;
+  const { data: merchantData, isLoading: merchantLoading } = merchantQuery;
+  const { data: spenderData, isLoading: spenderLoading } = spenderQuery;
 
   // Transaction list (same filters)
-  const { data: expensePages, isLoading: expensesLoading } =
-    useExpenseList(queryFilters);
+  const expenseQuery = useExpenseList({ ...queryFilters, status: 'confirmed' });
+  const { data: expensePages, isLoading: expensesLoading } = expenseQuery;
 
   const allExpenses = useMemo(
     () => (expensePages?.pages[0]?.data ?? []).slice(0, 15),
@@ -135,7 +151,9 @@ export default function Insights() {
         <h1 className="text-2xl font-bold text-foreground md:text-[1.3rem]">
           Insights
         </h1>
-        {summary && (
+        {summaryQuery.isError ? (
+          <QueryError onRetry={() => void summaryQuery.refetch()} />
+        ) : summary ? (
           <div className="mt-1 flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               {summary.period_label}
@@ -159,7 +177,7 @@ export default function Insights() {
               </span>
             )}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Filter bar */}
@@ -181,7 +199,9 @@ export default function Insights() {
         <div className="flex flex-col gap-4 lg:w-[60%] lg:shrink-0">
           {/* Spending trend */}
           <ChartCard title="Spending Trend">
-            {trendLoading || !trendData ? (
+            {trendQuery.isError ? (
+              <QueryError onRetry={() => void trendQuery.refetch()} />
+            ) : trendLoading || !trendData ? (
               <ChartSkeleton />
             ) : (
               <SpendingTrendChart
@@ -196,7 +216,9 @@ export default function Insights() {
           <div className="grid gap-4 md:grid-cols-2">
             {/* Category donut */}
             <ChartCard title="By Category">
-              {categoryLoading || !categoryData ? (
+              {categoryQuery.isError ? (
+                <QueryError onRetry={() => void categoryQuery.refetch()} />
+              ) : categoryLoading || !categoryData ? (
                 <ChartSkeleton />
               ) : categoryData.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
@@ -205,7 +227,13 @@ export default function Insights() {
               ) : (
                 <CategoryDonutChart
                   data={categoryData}
-                  totalAmount={summary?.total_spent ?? '0'}
+                  totalAmount={(
+                    categoryData.reduce(
+                      (total, category) =>
+                        total + Math.round(Number(category.total) * 100),
+                      0,
+                    ) / 100
+                  ).toFixed(2)}
                   currencyCode={currencyCode}
                 />
               )}
@@ -213,7 +241,9 @@ export default function Insights() {
 
             {/* Merchant leaderboard */}
             <ChartCard title="Top Merchants">
-              {merchantLoading || !merchantData ? (
+              {merchantQuery.isError ? (
+                <QueryError onRetry={() => void merchantQuery.refetch()} />
+              ) : merchantLoading || !merchantData ? (
                 <ChartSkeleton />
               ) : (
                 <MerchantLeaderboard
@@ -227,7 +257,9 @@ export default function Insights() {
 
           {/* Spender breakdown */}
           <ChartCard title="By Spender">
-            {spenderLoading || !spenderData ? (
+            {spenderQuery.isError ? (
+              <QueryError onRetry={() => void spenderQuery.refetch()} />
+            ) : spenderLoading || !spenderData ? (
               <ChartSkeleton />
             ) : (
               <SpenderBreakdownChart
@@ -245,7 +277,9 @@ export default function Insights() {
               Transactions
             </h3>
 
-            {expensesLoading ? (
+            {expenseQuery.isError ? (
+              <QueryError onRetry={() => void expenseQuery.refetch()} />
+            ) : expensesLoading ? (
               <TransactionListSkeleton />
             ) : groups.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -264,7 +298,7 @@ export default function Insights() {
               </div>
             )}
 
-            {groups.length > 0 && (
+            {!expenseQuery.isError && groups.length > 0 && (
               <div className="mt-3 text-center">
                 <Link
                   to="/transactions"
