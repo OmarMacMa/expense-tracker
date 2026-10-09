@@ -290,6 +290,11 @@ Cover API endpoints end-to-end (with test database):
 - Auth flow: Google OAuth mock → JWT cookie → authenticated requests.
 - Expense CRUD: create (single + split), read, update (all fields), delete.
 - Insights queries: verify correct aggregation results for known test data.
+- Insights filtering: use at least two members with distinct user/membership
+  UUIDs; verify selector requests use user IDs against the real API. Assert
+  own-dimension and AND-combined filters align summary, trend, category, merchant,
+  spender and confirmed transaction totals; exclude other-space and pending
+  data. Query failures must render errors and retry rather than empty success.
 - Invite lifecycle: generate link → join → link invalidated → expired link rejected.
 - Limit alerts: create limit → add expenses → verify warning/alert thresholds.
 - Recurring lifecycle: create template → trigger generation → confirm/deny pending.

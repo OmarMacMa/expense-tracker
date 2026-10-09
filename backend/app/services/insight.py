@@ -412,6 +412,7 @@ async def get_category_breakdown(
     merchant: str | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    category_id: uuid.UUID | None = None,
 ) -> list[dict]:
     """Category totals within window."""
     space = await db.get(Space, space_id)
@@ -439,6 +440,14 @@ async def get_category_breakdown(
     )
     if spender_id:
         stmt = stmt.where(Expense.spender_id == spender_id)
+    if category_id:
+        stmt = stmt.where(
+            Expense.id.in_(
+                select(ExpenseLine.expense_id).where(
+                    ExpenseLine.category_id == category_id
+                )
+            )
+        )
     if merchant:
         stmt = stmt.where(
             Expense.merchant_normalized.ilike(
@@ -489,6 +498,7 @@ async def get_merchant_leaderboard(
     category_id: uuid.UUID | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    merchant: str | None = None,
 ) -> list[dict]:
     """Top merchants by amount in window."""
     space = await db.get(Space, space_id)
@@ -515,6 +525,12 @@ async def get_merchant_leaderboard(
     )
     if spender_id:
         stmt = stmt.where(Expense.spender_id == spender_id)
+    if merchant:
+        stmt = stmt.where(
+            Expense.merchant_normalized.ilike(
+                f"%{_escape_like(merchant.lower())}%", escape="\\"
+            )
+        )
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
     if category_id:
@@ -554,6 +570,7 @@ async def get_spender_breakdown(
     merchant: str | None = None,
     tag: str | None = None,
     payment_method_id: uuid.UUID | None = None,
+    spender_id: uuid.UUID | None = None,
 ) -> list[dict]:
     """Totals per spender in window."""
     space = await db.get(Space, space_id)
@@ -584,6 +601,8 @@ async def get_spender_breakdown(
                 f"%{_escape_like(merchant.lower())}%", escape="\\"
             )
         )
+    if spender_id:
+        stmt = stmt.where(Expense.spender_id == spender_id)
     if payment_method_id:
         stmt = stmt.where(Expense.payment_method_id == payment_method_id)
     if category_id:

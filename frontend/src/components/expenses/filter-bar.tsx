@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import type { ExpenseFilters } from '@/hooks/useExpenses';
+import type { SpaceMember } from '@/types/api';
 import { cn } from '@/lib/utils';
 
 const PERIOD_OPTIONS = [
@@ -21,7 +22,7 @@ const PERIOD_OPTIONS = [
 interface FilterBarProps {
   filters: ExpenseFilters;
   onFiltersChange: (filters: ExpenseFilters) => void;
-  spenders?: { id: string; display_name: string }[];
+  spenders?: Pick<SpaceMember, 'user_id' | 'display_name'>[];
   categories?: { id: string; name: string }[];
   merchants?: string[];
   tags?: { id: string; name: string }[];
@@ -132,6 +133,7 @@ export function FilterBar({
             onValueChange={(v) => updateFilter('spender', v)}
           >
             <SelectTrigger
+              aria-label="Spender"
               className={`shrink-0 rounded-full border-none px-3.5 py-1.5 text-[13px] font-medium shadow-none ${
                 filters.spender
                   ? 'bg-accent text-accent-foreground'
@@ -142,7 +144,7 @@ export function FilterBar({
             </SelectTrigger>
             <SelectContent>
               {spenders.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
+                <SelectItem key={s.user_id} value={s.user_id}>
                   {s.display_name}
                 </SelectItem>
               ))}

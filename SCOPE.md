@@ -16,6 +16,17 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 
 ---
 
+## 1.0.8 — Insights filter correctness
+
+- Spender selection uses the member's user ID, never the membership record ID.
+- Every visible Insights chart honors all active scalar filters, including its
+  own dimension; filters combine with AND.
+- Insights transactions use the same confirmed-only selection as the charts.
+  The general Transactions list retains its existing status-inclusive default.
+- Failed Insights queries show an explicit error and retry, not empty results.
+- No automatic chart hiding, multi-select UI, amount filters or new transaction
+  list UI is included in this correctness fix.
+
 ## 1.0.0 — Core expense tracking (MVP)
 
 Ship fast, validate the core expense-tracking loop for one couple.
