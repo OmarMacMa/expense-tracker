@@ -16,7 +16,9 @@ from app.auth.jwt import create_access_token
 from app.models import User
 from tests.membership_support import MembershipDatabase
 
-BASE_URL = "http://127.0.0.1:5176"
+BACKEND_PORT = int(os.environ.get("BROWSER_BACKEND_PORT", "8126"))
+FRONTEND_PORT = int(os.environ.get("BROWSER_FRONTEND_PORT", "5176"))
+BASE_URL = f"http://127.0.0.1:{FRONTEND_PORT}"
 
 
 @pytest.fixture(scope="session")
@@ -26,10 +28,10 @@ def servers(tmp_path_factory) -> Generator[str, None, None]:
     logs = tmp_path_factory.mktemp("invite-servers")
     env = os.environ.copy()
     env["ENVIRONMENT"] = "development"
-    env["VITE_BACKEND_URL"] = "http://127.0.0.1:8126"
+    env["VITE_BACKEND_URL"] = f"http://127.0.0.1:{BACKEND_PORT}"
     # Validate the DB target before any server or data mutation.
     MembershipDatabase()
-    for port in (8126, 5176):
+    for port in (BACKEND_PORT, FRONTEND_PORT):
         import socket
 
         with socket.socket() as sock:
@@ -51,7 +53,7 @@ def servers(tmp_path_factory) -> Generator[str, None, None]:
                         "--host",
                         "127.0.0.1",
                         "--port",
-                        "8126",
+                        str(BACKEND_PORT),
                         "--no-access-log",
                     ],
                     cwd=root,
@@ -78,7 +80,7 @@ def servers(tmp_path_factory) -> Generator[str, None, None]:
                         "--host",
                         "127.0.0.1",
                         "--port",
-                        "5176",
+                        str(FRONTEND_PORT),
                         "--strictPort",
                     ],
                     cwd=root.parent / "frontend",
@@ -87,7 +89,10 @@ def servers(tmp_path_factory) -> Generator[str, None, None]:
                     stderr=subprocess.STDOUT,
                 )
             )
-            for url in ("http://127.0.0.1:8126/api/v1/health", BASE_URL):
+            for url in (
+                f"http://127.0.0.1:{BACKEND_PORT}/api/v1/health",
+                BASE_URL,
+            ):
                 deadline = time.monotonic() + 45
                 while time.monotonic() < deadline:
                     if any(process.poll() is not None for process in processes):
