@@ -353,7 +353,8 @@ the builder does not choose or modify historical windows/average denominators.
 The category, merchant and spender endpoints also honor their own dimension.
 
 Client `ExpenseFilters` uses arrays for the five dimensions and scalar
-`period`, `month`, `search`, `status`. `expenseFilters.ts` canonicalizes sets for
+`period`, `month`, `search`, `status`, `min_amount`, `max_amount`.
+`expenseFilters.ts` canonicalizes sets for
 query cache keys and explicitly appends repeated keys to `URLSearchParams`;
 the API client accepts these alongside existing scalar parameter records.
 Insights and Transactions use the URL as their explicit filter context.
@@ -378,7 +379,19 @@ Insights requests `status=confirmed`; omitting it preserves the general
 Transactions list's existing status-inclusive behavior. This status parameter
 is scalar and independent of the visible filter controls.
 
+**Amount-range contract (1.0.8, #44):** all five analytics endpoints and the
+expense list accept scalar `min_amount`/`max_amount` decimal strings alongside
+repeated entity keys. Omitted/blank bounds are unbounded; finite nonnegative
+values and minimum <= maximum are required (standard `422 VALIDATION_ERROR`).
+Inclusive predicates compare expense totals, not line amounts, using unscaled
+`literal(Decimal, type_=Numeric())` binds to avoid storage-scale rounding.
+`expense_filter_conditions` includes these predicates before current/history
+aggregation and pagination, including nonzero contributing-week selection.
+Weekly history remains one bounded fetch over nine completed calendar weeks;
+monthly remains fixed three. Configured limit progress is not range-filtered.
+
 ### 4.11 Merchant suggestion endpoints
+
 ```
 GET /api/v1/spaces/{space_id}/merchants/suggest?q={query}   → autocomplete merchant names
 GET /api/v1/spaces/{space_id}/merchants/{name}/category      → latest category for merchant

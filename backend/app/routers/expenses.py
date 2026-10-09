@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.middleware.space import get_current_space_member
 from app.models import SpaceMember
+from app.routers.amount_range import get_amount_range
+from app.schemas.amount_range import AmountRange
 from app.schemas.expense import (
     ExpenseCreate,
     ExpenseListResponse,
@@ -51,6 +53,7 @@ async def list_expenses_endpoint(
     tag: list[str] | None = Query(None),
     payment_method: list[uuid.UUID] | None = Query(None),
     search: str | None = Query(None),
+    amount_range: AmountRange = Depends(get_amount_range),
     status: Literal["confirmed", "pending"] | None = Query(None),
     _member: SpaceMember = Depends(get_current_space_member),
     db: AsyncSession = Depends(get_db),
@@ -70,6 +73,8 @@ async def list_expenses_endpoint(
         status=status,
         period=period,
         month=month,
+        min_amount=amount_range.min_amount,
+        max_amount=amount_range.max_amount,
     )
     return ExpenseListResponse(
         data=[ExpenseResponse(**d) for d in result["data"]],

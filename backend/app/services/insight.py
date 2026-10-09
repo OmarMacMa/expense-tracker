@@ -81,6 +81,8 @@ def _expense_conditions(
     merchant: TextFilter = None,
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> list[ColumnElement[bool]]:
     """Shared confirmed, space-scoped window and matching-expense filters."""
     conditions = [
@@ -98,6 +100,8 @@ def _expense_conditions(
             merchant=merchant,
             tag=tag,
             payment_method_id=payment_method_id,
+            min_amount=min_amount,
+            max_amount=max_amount,
         )
     )
     return conditions
@@ -170,6 +174,8 @@ async def get_summary(
     merchant: TextFilter = None,
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> dict:
     """Hero total + delta vs contributing weeks or three other prior periods."""
     space = await db.get(Space, space_id)
@@ -185,6 +191,8 @@ async def get_summary(
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method_id,
+        min_amount=min_amount,
+        max_amount=max_amount,
     )
 
     total = await _sum_expenses_in_window(
@@ -233,6 +241,8 @@ async def get_spending_trend(
     merchant: TextFilter = None,
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> dict:
     """Cumulative spend vs contributing weeks or three prior non-yearly periods."""
     space = await db.get(Space, space_id)
@@ -257,6 +267,8 @@ async def get_spending_trend(
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method_id,
+        min_amount=min_amount,
+        max_amount=max_amount,
     )
     current_series = _to_cumulative(current_daily, period_days=period_days)
 
@@ -275,6 +287,8 @@ async def get_spending_trend(
             merchant=merchant,
             tag=tag,
             payment_method_id=payment_method_id,
+            min_amount=min_amount,
+            max_amount=max_amount,
         )
         average_period_count = len(history)
         all_prev_dailies = [
@@ -390,6 +404,8 @@ async def get_category_breakdown(
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
     category_id: UUIDFilter = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> list[dict]:
     """Category totals within window."""
     space = await db.get(Space, space_id)
@@ -425,6 +441,8 @@ async def get_category_breakdown(
             merchant=merchant,
             tag=tag,
             payment_method_id=payment_method_id,
+            min_amount=min_amount,
+            max_amount=max_amount,
         )
     )
 
@@ -457,6 +475,8 @@ async def get_merchant_leaderboard(
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
     merchant: TextFilter = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> list[dict]:
     """Top merchants by amount in window."""
     space = await db.get(Space, space_id)
@@ -491,6 +511,8 @@ async def get_merchant_leaderboard(
             merchant=merchant,
             tag=tag,
             payment_method_id=payment_method_id,
+            min_amount=min_amount,
+            max_amount=max_amount,
         )
     )
 
@@ -510,6 +532,8 @@ async def get_spender_breakdown(
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
     spender_id: UUIDFilter = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> list[dict]:
     """Totals per spender in window."""
     space = await db.get(Space, space_id)
@@ -544,6 +568,8 @@ async def get_spender_breakdown(
             merchant=merchant,
             tag=tag,
             payment_method_id=payment_method_id,
+            min_amount=min_amount,
+            max_amount=max_amount,
         )
     )
 

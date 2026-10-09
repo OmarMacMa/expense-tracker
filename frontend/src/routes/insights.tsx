@@ -113,6 +113,14 @@ export default function Insights() {
   // Transaction list (same filters)
   const expenseQuery = useExpenseList(transactionFilters);
   const { data: expensePages, isLoading: expensesLoading } = expenseQuery;
+  const fetching = [
+    summaryQuery,
+    trendQuery,
+    categoryQuery,
+    merchantQuery,
+    spenderQuery,
+    expenseQuery,
+  ].some((query) => query.isFetching);
 
   const allExpenses = useMemo(
     () => (expensePages?.pages[0]?.data ?? []).slice(0, 15),
@@ -174,6 +182,11 @@ export default function Insights() {
         showSearch={false}
         showPeriodChips
       />
+      {fetching && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Updating insights and transactions…
+        </p>
+      )}
 
       {/* Main content — desktop split, mobile stacked */}
       <div className="flex flex-col gap-5 lg:flex-row">

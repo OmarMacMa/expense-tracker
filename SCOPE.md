@@ -40,8 +40,13 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 - Responsive numeric trend axes keep Today inside the drawable chart bounds.
 - Save & Add Another persists once, resets expense fields and focuses amount.
 - Weekly/monthly limit edits persist and refresh all affected progress caches.
-- Amount ranges remain a separate pending v1.0.8 workstream; no automatic chart
-  hiding, public sharing, quarters or custom windows are added.
+- Issue #44: inclusive optional minimum/maximum expense-total ranges in Insights
+  and Transactions. Blank bounds are unbounded; finite nonnegative Decimals and
+  minimum <= maximum are validated. Ranges AND with entity selections and apply
+  to current and historical comparisons, including contributing-week selection.
+- Exploratory ranges never change stored amounts or configured limit progress.
+  No automatic outlier trimming, chart hiding, public sharing, quarters or custom
+  windows are added.
 
 ---
 

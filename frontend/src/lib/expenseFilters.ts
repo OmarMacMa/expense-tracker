@@ -1,3 +1,5 @@
+import type { AmountRange } from './amount-range';
+
 export const FILTER_DIMENSIONS = [
   'spender',
   'category',
@@ -9,7 +11,7 @@ export const FILTER_DIMENSIONS = [
 export type FilterDimension = (typeof FILTER_DIMENSIONS)[number];
 export type ExpenseFilterContext = 'transactions' | 'insights';
 
-export interface ExpenseFilters {
+export interface ExpenseFilters extends AmountRange {
   period?: string;
   month?: string;
   spender?: string[];
@@ -21,7 +23,14 @@ export interface ExpenseFilters {
   status?: string;
 }
 
-const SCALAR_KEYS = ['period', 'month', 'search', 'status'] as const;
+const SCALAR_KEYS = [
+  'period',
+  'month',
+  'search',
+  'status',
+  'min_amount',
+  'max_amount',
+] as const;
 
 export function canonicalFilters(
   filters: ExpenseFilters,

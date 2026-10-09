@@ -2,6 +2,7 @@
 
 import uuid
 from collections.abc import Sequence
+from decimal import Decimal
 from typing import TypeVar
 
 from sqlalchemy import Select, or_, select
@@ -9,6 +10,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.models import Category, Expense, ExpenseLine, Tag
 from app.models.expense import expense_line_tags
+from app.services.amount_range import amount_range_predicates
 
 T = TypeVar("T", str, uuid.UUID)
 UUIDFilter = uuid.UUID | Sequence[uuid.UUID] | None
@@ -36,6 +38,8 @@ def expense_filter_conditions(
     merchant: TextFilter = None,
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> list[ColumnElement[bool]]:
     """AND dimensions, OR selections; subqueries never multiply expenses."""
     spenders = filter_values(spender_id)
@@ -49,7 +53,10 @@ def expense_filter_conditions(
             if name.strip().lstrip("#")
         )
     )
-    conditions = [Expense.space_id == space_id]
+    conditions = [
+        Expense.space_id == space_id,
+        *amount_range_predicates(min_amount, max_amount),
+    ]
     if spenders:
         conditions.append(Expense.spender_id.in_(spenders))
     if methods:
@@ -97,6 +104,8 @@ def apply_expense_filters(
     merchant: TextFilter = None,
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> Select:
     """Apply the same predicates to expense lists and analytics."""
     return stmt.where(
@@ -107,5 +116,7 @@ def apply_expense_filters(
             merchant=merchant,
             tag=tag,
             payment_method_id=payment_method_id,
+            min_amount=min_amount,
+            max_amount=max_amount,
         )
     )

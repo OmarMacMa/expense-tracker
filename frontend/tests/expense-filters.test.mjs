@@ -31,6 +31,49 @@ async function loadTypeScriptModule(path) {
 const { canonicalFilters, filtersFromParams, filtersToParams } =
   await loadTypeScriptModule('../src/lib/expenseFilters.ts');
 const { api } = await loadTypeScriptModule('../src/lib/api-client.ts');
+const { parseAmountRange } = await loadTypeScriptModule(
+  '../src/lib/amount-range.ts',
+);
+
+test('amount scalars retain precision alongside repeated entities and Insights omits search', () => {
+  const filters = {
+    category: ['c', 'a', 'b', 'a'],
+    tag: ['#RED', 'blue'],
+    min_amount: '10.100000000000000001',
+    max_amount: '20.199999999999999999',
+    status: 'confirmed',
+    search: 'hidden',
+  };
+  const canonical = canonicalFilters(filters, 'insights');
+  const params = filtersToParams(canonical);
+  assert.deepEqual(params.getAll('category'), ['a', 'b', 'c']);
+  assert.equal(params.get('min_amount'), filters.min_amount);
+  assert.equal(params.get('max_amount'), filters.max_amount);
+  assert.equal(params.has('search'), false);
+  assert.deepEqual(filtersFromParams(params, 'insights'), canonical);
+  assert.notDeepEqual(
+    canonicalFilters({ ...filters, min_amount: '0' }),
+    canonicalFilters(filters),
+  );
+});
+
+test('range validation compares exact decimal strings and localized input without floats', () => {
+  assert.deepEqual(parseAmountRange('0', '0').range, {
+    min_amount: '0',
+    max_amount: '0',
+  });
+  assert.equal(
+    parseAmountRange('20.200000000000000002', '20.200000000000000001').error,
+    'Minimum must not exceed maximum.',
+  );
+  assert.deepEqual(parseAmountRange('10,100000000000000001', '', ',').range, {
+    min_amount: '10.100000000000000001',
+    max_amount: undefined,
+  });
+  for (const value of ['NaN', 'Infinity', '-1', '10.', '1e2']) {
+    assert.ok(parseAmountRange(value, '').error);
+  }
+});
 
 test('repeated keys round trip without comma-splitting merchant names', () => {
   const filters = {

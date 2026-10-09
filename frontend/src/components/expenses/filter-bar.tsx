@@ -19,6 +19,7 @@ import {
   type FilterDimension,
 } from '@/lib/expenseFilters';
 import { cn } from '@/lib/utils';
+import { AmountRangeFilter } from './amount-range-filter';
 
 const PERIOD_OPTIONS = [
   { value: 'this_week', label: 'This Week' },
@@ -283,6 +284,17 @@ export function FilterBar({
           selections are retained.
         </p>
       )}
+      <AmountRangeFilter
+        key={`${filters.min_amount ?? ''}|${filters.max_amount ?? ''}`}
+        range={filters}
+        onApply={(range) =>
+          onFiltersChange((current) => ({
+            ...current,
+            min_amount: range.min_amount,
+            max_amount: range.max_amount,
+          }))
+        }
+      />
       <div className="flex flex-wrap gap-2" aria-label="Selected filters">
         {FILTER_DIMENSIONS.flatMap((key) =>
           (filters[key] ?? []).map((value) => {

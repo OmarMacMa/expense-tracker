@@ -3,6 +3,7 @@ import binascii
 import json
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Literal
 
 from fastapi import HTTPException
@@ -219,6 +220,8 @@ async def list_expenses(
     period: str | None = None,
     month: str | None = None,
     status: Literal["confirmed", "pending"] | None = None,
+    min_amount: Decimal | None = None,
+    max_amount: Decimal | None = None,
 ) -> dict:
     """List expenses with cursor pagination and filters.
 
@@ -271,6 +274,8 @@ async def list_expenses(
         merchant=merchant,
         tag=tag,
         payment_method_id=payment_method_id,
+        min_amount=min_amount,
+        max_amount=max_amount,
     )
     if status:
         stmt = stmt.where(Expense.status == status)
