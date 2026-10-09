@@ -258,6 +258,22 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
    - X-axis: days in the period (1–7 for week, 1–28/31 for month).
    - Y-axis: cumulative dollar amount.
    - Subtle grid, clean axis labels.
+   - **v1.0.8 chart polish (Home and Insights, #65)**: use a numeric day
+     domain from the full selected-window series, not the last expense or
+     today's cutoff. Weekly labels are Mon–Sun; month labels use a uniform
+     integer-day stride chosen from the actual plot width (28–31-day months).
+     Never append a closer final tick or let automatic collision removal create
+     irregular spacing. YTD keeps calendar-month abbreviations on the real
+     day-of-year scale, thinning by a uniform month stride when needed (calendar
+     months intentionally have different day lengths). Longer future windows
+     reuse the supplied span; no quarter/custom selector is added.
+   - Today is a subtle dashed reference with muted 10px Ubuntu text, inset 6px
+     below the plot top and aligned inward at either edge. The full label stays
+     inside the SVG on first/last days and mobile/desktop. The current line ends
+     at today, while the historic average continues across the selected window.
+     Past/future windows (`current_day: null`) have no Today marker. Preserve
+     currency formatting, tooltip values, legend semantics and 200px chart
+     height; axis gutters accommodate endpoint labels and large currency values.
 
 4. **Category donut chart**:
    - Donut/pie chart showing spend breakdown by category.

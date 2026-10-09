@@ -21,6 +21,7 @@ export interface SpendingTrend {
   timeframe: SpendingTrendTimeframe;
   year: number;
   current_day?: number | null;
+  average_period_count?: number;
 }
 
 export interface CategoryBreakdown {
