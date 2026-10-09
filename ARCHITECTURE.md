@@ -314,7 +314,7 @@ PATCH  /api/v1/spaces/{space_id}/recurring/pending/{pending_id}            → p
 ### 4.10 Insights / analytics endpoints
 ```
 GET /api/v1/spaces/{space_id}/insights/summary              → hero total + delta vs average
-GET /api/v1/spaces/{space_id}/insights/spending-trend        → cumulative trend + 3-month avg
+GET /api/v1/spaces/{space_id}/insights/spending-trend        → cumulative trend + historical avg
 GET /api/v1/spaces/{space_id}/insights/category-breakdown    → category totals (bar + pie data)
 GET /api/v1/spaces/{space_id}/insights/merchant-leaderboard  → top merchants by amount (MVP); amount/count toggle (1.1.0+)
 GET /api/v1/spaces/{space_id}/insights/spender-breakdown     → totals per spender
@@ -584,7 +584,7 @@ All time-based analytics depend on correctly computing window boundaries in the 
 | Method | Input | Output | Description |
 |---|---|---|---|
 | `get_current_window(timeframe, ref_date?)` | `timeframe`: weekly/monthly/quarterly/yearly; `ref_date`: defaults to today in space TZ | `(start_utc, end_utc)` | UTC-converted boundaries of the current period |
-| `get_previous_windows(timeframe, count=3, ref_date?)` | Same + `count` | `list[(start_utc, end_utc)]` | N prior comparable windows for average computation. Returns fewer if insufficient history. |
+| `get_previous_windows(timeframe, count=3, ref_date?)` | Same + `count` | `list[(start_utc, end_utc)]` | Exactly N prior calendar windows, independent of expense history. |
 | `get_day_of_period(dt, timeframe)` | UTC datetime + timeframe | `int` (1-based) | Day index within the period, for cumulative trend alignment |
 | `localize_for_display(dt_utc)` | UTC datetime | Localized datetime | Convert UTC to space timezone for UI display |
 
@@ -609,17 +609,22 @@ All computed using the **space timezone**. Datetimes stored as UTC.
 | Quarterly | Jan 1 / Apr 1 / Jul 1 / Oct 1 | Mar 31 / Jun 30 / Sep 30 / Dec 31 |
 | Yearly | Jan 1 00:00:00 | Dec 31 23:59:59 |
 
-### 3-month average computation
+### Historical spending average computation
 - For a given period (e.g., "this month to date"):
   - Get cumulative daily spend for the current period
-  - Get cumulative daily spend for each of the prior 3 comparable periods
-  - Average the 3 prior periods by day-of-period
-  - If fewer than 3 prior periods exist, use as many as available
-- Result: two series (current cumulative, average cumulative) for trend line chart
+  - Use `TimeWindowResolver` to get the prior 9 completed weeks for weekly views or 3 completed months for monthly views, excluding the selected period
+  - Apply the same active expense filters to current and historical data; retain all matching confirmed expenses, including large bills (no outlier trimming)
+  - Weekly: exclude windows whose matching confirmed total is zero and divide by the actual contributing count (0–9); never look beyond the nine windows to fill samples
+  - Monthly: include zero months and divide by three, unchanged
+  - Preserve zero-spending days within included weeks, carrying cumulative totals through all seven days
+- Fetch the bounded weekly/monthly historical range once per summary/trend request and bucket with `TimeWindowResolver`; each uses two expense SELECTs, independent of baseline count. Yearly summary retains four aggregate SELECTs; yearly trend uses one and has no average.
+- Select Last Week via the resolver's previous local calendar window, not by subtracting 168 UTC hours; expense listing shares this reference selection
+- Non-weekly behavior is unchanged: three prior periods; yearly trends omit the average series
+- Summary and trend expose `average_period_count`. Weekly badges/legends show this actual count. No contributing weeks means null summary delta and an empty average series (no line/legend).
 
 ### Hero total + delta
 - `total` = sum of all confirmed expenses in selected window
-- `average` = mean of same metric across prior 3 comparable windows
+- `average` = mean of nonzero matching totals within the prior nine completed weekly windows, or three comparable windows for other timeframes (same weekly contributors as the trend)
 - `delta` = `((total - average) / average) * 100` → displayed as "+X%" or "-X%"
 - Edge case: if no prior data, delta is not shown
 

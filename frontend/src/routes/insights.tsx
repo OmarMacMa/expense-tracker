@@ -173,7 +173,11 @@ export default function Insights() {
                 ) : (
                   <TrendingDown className="h-3.5 w-3.5" />
                 )}
-                {Math.abs(summary.delta_pct!).toFixed(0)}% vs avg
+                {Math.abs(summary.delta_pct!).toFixed(0)}% vs{' '}
+                {queryFilters.period === 'this_week' ||
+                queryFilters.period === 'last_week'
+                  ? `${summary.average_period_count}-week avg`
+                  : 'avg'}
               </span>
             )}
           </div>

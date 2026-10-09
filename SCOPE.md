@@ -104,10 +104,10 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - In-app alerts only (2–3 cards on Home)
 
 ### Home dashboard
-- Hero total spent (current week or month) + delta vs 3-month average
+- Hero total spent (current week or month) + delta vs nonzero weeks within nine completed weeks (weekly) or 3-month average (monthly)
 - Week / Month toggle
 - Limit alerts (2–3 max)
-- Spending trend line (cumulative, current period vs 3-month avg)
+- Spending trend line (cumulative, current period vs actual contributing-week avg within nine completed weeks, or 3-month avg for monthly views)
 - Category distribution pie/donut
 - Merchant leaderboard (top by amount only)
 - Latest transactions count + link to full list
@@ -173,8 +173,12 @@ Ship fast, validate the core expense-tracking loop for one couple.
 
 ---
 
-## 1.0.8 — Approved daily-entry improvement
+## 1.0.8 — User-approved next-release scope
 
+- Weekly spending averages (#68): only the nine completed calendar weeks before the selected week; exclude zero-total weeks after active filters, divide by the actual contributing count, retain all positive expenses and zero-spending days, and show actual-count labels on Home/Insights. No contributors means no delta or average line/legend. DST-safe Last Week selection and bounded historical queries are tightly coupled fixes. Monthly/quarterly/yearly behavior remains unchanged.
+- The release branch also includes chart Today/axis corrections (#65), spender
+  filter correctness, and weekly-limit editing (#39). Multi-select filters and
+  amount-range filtering (#44) remain approved for this release.
 - Issue #11: Add "Save & Add Another" alongside ordinary Save. Create one expense,
   remain at `/expenses/new`, clear the draft and focus Amount for the next entry.
 - Restore the logged-in spender, current purchase datetime and existing payment
