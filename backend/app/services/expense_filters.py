@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from typing import TypeVar
 
 from sqlalchemy import Select, or_, select
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.models import Category, Expense, ExpenseLine, Tag
 from app.models.expense import expense_line_tags
@@ -27,8 +28,7 @@ def escape_like(value: str) -> str:
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def apply_expense_filters(
-    stmt: Select,
+def expense_filter_conditions(
     space_id: uuid.UUID,
     *,
     spender_id: UUIDFilter = None,
@@ -36,7 +36,7 @@ def apply_expense_filters(
     merchant: TextFilter = None,
     tag: TextFilter = None,
     payment_method_id: UUIDFilter = None,
-) -> Select:
+) -> list[ColumnElement[bool]]:
     """AND dimensions, OR selections; subqueries never multiply expenses."""
     spenders = filter_values(spender_id)
     categories = filter_values(category_id)
@@ -49,13 +49,13 @@ def apply_expense_filters(
             if name.strip().lstrip("#")
         )
     )
-    stmt = stmt.where(Expense.space_id == space_id)
+    conditions = [Expense.space_id == space_id]
     if spenders:
-        stmt = stmt.where(Expense.spender_id.in_(spenders))
+        conditions.append(Expense.spender_id.in_(spenders))
     if methods:
-        stmt = stmt.where(Expense.payment_method_id.in_(methods))
+        conditions.append(Expense.payment_method_id.in_(methods))
     if merchants:
-        stmt = stmt.where(
+        conditions.append(
             or_(
                 *(
                     Expense.merchant_normalized.ilike(
@@ -66,7 +66,7 @@ def apply_expense_filters(
             )
         )
     if categories:
-        stmt = stmt.where(
+        conditions.append(
             Expense.id.in_(
                 select(ExpenseLine.expense_id)
                 .join(Category, ExpenseLine.category_id == Category.id)
@@ -74,7 +74,7 @@ def apply_expense_filters(
             )
         )
     if tags:
-        stmt = stmt.where(
+        conditions.append(
             Expense.id.in_(
                 select(ExpenseLine.expense_id)
                 .join(
@@ -85,4 +85,27 @@ def apply_expense_filters(
                 .where(Tag.space_id == space_id, Tag.name.in_(tags))
             )
         )
-    return stmt
+    return conditions
+
+
+def apply_expense_filters(
+    stmt: Select,
+    space_id: uuid.UUID,
+    *,
+    spender_id: UUIDFilter = None,
+    category_id: UUIDFilter = None,
+    merchant: TextFilter = None,
+    tag: TextFilter = None,
+    payment_method_id: UUIDFilter = None,
+) -> Select:
+    """Apply the same predicates to expense lists and analytics."""
+    return stmt.where(
+        *expense_filter_conditions(
+            space_id,
+            spender_id=spender_id,
+            category_id=category_id,
+            merchant=merchant,
+            tag=tag,
+            payment_method_id=payment_method_id,
+        )
+    )

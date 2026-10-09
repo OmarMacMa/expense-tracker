@@ -96,7 +96,7 @@ A consistent color system is used across all status indicators (limit progress, 
 **Application rules:**
 - **Limit alert cards** (Home): hidden when healthy (< `warning_pct`). Show on Home only at warning (amber), critical (red), or exceeded (purple). Progress bar fill color matches the state.
 - **Limit list view** (`/limits`): all limits shown regardless of state. Progress bar uses green / amber / red / purple based on the limit's `warning_pct` and the fixed 90% critical threshold.
-- **Delta badge** (Home hero): green + ↓ arrow when below 3-month average, red + ↑ arrow when above. Hidden entirely when no prior data exists.
+- **Delta badge** (Home hero): green + ↓ arrow when below the historical average (nonzero weeks within nine completed weeks for weekly views, 3-month for monthly views), red + ↑ arrow when above. Hidden entirely when no contributing history exists.
 - **Color is never the sole indicator** — always paired with text labels, percentages, or icons (accessibility requirement).
 
 ---
@@ -237,7 +237,7 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 - The top row respects the phone's **camera notch / Dynamic Island** — space selector sits left of it, avatar sits right.
 - **Week / Month toggle** (top-right, below avatar): pill-style toggle. Controls the time window for the entire page.
 - **Hero total** (left-aligned, large): currency-formatted total spent for the selected window.
-- **Delta badge** (below hero total): percentage vs 3-month average. Green with ↓ arrow if under average, red/orange with ↑ arrow if over. Hidden if no prior data exists.
+- **Delta badge** (below hero total): percentage vs contributing-week average (weekly) or 3-month average (monthly). Weekly label includes the backend's actual count, e.g. "vs 4-week avg". Green with ↓ arrow if under average, red/orange with ↑ arrow if over. Hidden if no contributing history exists.
 
 ### MVP sections (top to bottom, scrollable)
 
@@ -254,10 +254,26 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 3. **Spending trend line chart**:
    - Cumulative line chart, two lines:
      - **Solid line**: current period's cumulative spend day-by-day.
-     - **Dashed/lighter line**: 3-month average cumulative spend.
+     - **Dashed/lighter line**: average cumulative spend over nonzero-total weeks within the prior nine completed calendar weeks (weekly) or three completed months including zero months (monthly), excluding the selected period. Weekly contributors use the same filters as the summary. Preserve zero-spending days inside included weeks. Legend shows the actual backend count, e.g. "4-week avg", "8-week avg", "9-week avg", or "3-month avg". No weekly contributors means no average line or legend.
    - X-axis: days in the period (1–7 for week, 1–28/31 for month).
    - Y-axis: cumulative dollar amount.
    - Subtle grid, clean axis labels.
+   - **v1.0.8 chart polish (Home and Insights, #65)**: use a numeric day
+     domain from the full selected-window series, not the last expense or
+     today's cutoff. Weekly labels are Mon–Sun; month labels use a uniform
+     integer-day stride chosen from the actual plot width (28–31-day months).
+     Never append a closer final tick or let automatic collision removal create
+     irregular spacing. YTD keeps calendar-month abbreviations on the real
+     day-of-year scale, thinning by a uniform month stride when needed (calendar
+     months intentionally have different day lengths). Longer future windows
+     reuse the supplied span; no quarter/custom selector is added.
+   - Today is a subtle dashed reference with muted 10px Ubuntu text, inset 6px
+     below the plot top and aligned inward at either edge. The full label stays
+     inside the SVG on first/last days and mobile/desktop. The current line ends
+     at today, while the historic average continues across the selected window.
+     Past/future windows (`current_day: null`) have no Today marker. Preserve
+     currency formatting, tooltip values, legend semantics and 200px chart
+     height; axis gutters accommodate endpoint labels and large currency values.
 
 4. **Category donut chart**:
    - Donut/pie chart showing spend breakdown by category.
@@ -306,7 +322,21 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
   7. Tags (text input with `#`-triggered inline autocomplete, Obsidian-style).
   8. Notes (text area).
 - **Actions**: "Save" primary button, "Cancel" / back navigation.
-- On save: navigates back to previous page; data refreshes in background.
+- On confirmed Save: navigates to Transactions; data refreshes in background.
+
+### 1.0.8 — Save & Add Another
+- Keep "Save Expense" as the primary action; add a sage tonal "Save & Add Another"
+  action beside it on desktop and as a full-width 44px action below it on mobile.
+  Cancel follows the save actions on mobile. All actions remain keyboard accessible.
+- Save & Add Another creates exactly one expense and stays at `/expenses/new`.
+  Clear amount, merchant/category suggestions, tags (including input), notes,
+  dropdowns and errors; restore logged-in spender, current purchase datetime and
+  the existing empty payment selection. Focus Amount for the next entry.
+- Disable both save actions and draft editing during submission. Ordinary Enter
+  submission uses Save; Enter/Space on Save & Add Another uses that action.
+- Failure keeps the draft and shows standard error feedback, with no success,
+  reset or navigation. Refresh expense, Insights, tag and merchant caches after
+  confirmed creation; do not reload the page or purge unrelated app state.
 
 ### 2.0.0 additions — Split purchase
 - "Split" toggle appears next to Amount field (pill-style, off by default).
@@ -388,12 +418,17 @@ The active period stays exclusive, with a scalar month picker; choosing a preset
 clears the month without clearing any dimension.
 
 **Charts**:
-1. Spending trend line (same as Home: cumulative, current vs 3-month avg).
+1. Spending trend line (same as Home: cumulative, current vs actual contributing-week avg within nine completed weeks or 3-month avg for monthly views). Weekly summary badges also show the actual contributing count.
 2. Category distribution pie/donut.
 3. Merchant leaderboard (by amount).
 4. Spender breakdown (bar or pie, totals per spender).
 
 **Transaction list**: same component as `/transactions` but filtered by Insights filters.
+
+**v1.0.8 filter correctness**: keep every chart visible and apply all selected
+dimensions, including each chart's own dimension. Insights transactions are
+confirmed-only, matching chart totals. A failed summary/chart/list query shows
+an inline error and Retry action instead of an empty state or permanent skeleton.
 
 ### 1.1.0 additions
 - **Share button**: copies URL with encoded filter state.

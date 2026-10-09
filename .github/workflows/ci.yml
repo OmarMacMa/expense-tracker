@@ -95,6 +95,25 @@ jobs:
       - name: Filter serialization regressions
         working-directory: frontend
         run: npm run test:filters
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install chart browser tooling
+        run: |
+          pip install -r frontend/browser_tests/requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Chart geometry and tooltip regressions
+        env:
+          CHART_ARTIFACTS: ${{ runner.temp }}/chart-artifacts
+        run: python -m pytest frontend/browser_tests -q
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chart-browser-evidence
+          path: ${{ runner.temp }}/chart-artifacts
 
   invite-browser:
     name: Invite recovery (real backend + browser)

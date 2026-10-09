@@ -63,6 +63,7 @@ export function useCreateExpense() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
       queryClient.invalidateQueries({ queryKey: ['tags'] });
+      queryClient.invalidateQueries({ queryKey: ['merchants'] });
     },
     onError: (error: ApiError) => {
       toast.error(error?.data?.error?.message || 'Failed to create expense');

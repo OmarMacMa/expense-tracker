@@ -19,6 +19,7 @@ export type SpendingTrendTimeframe =
 export interface SpendingTrend {
   current_series: TrendPoint[];
   average_series: TrendPoint[];
+  average_period_count: number;
   timeframe: SpendingTrendTimeframe;
   year: number;
   current_day?: number | null;

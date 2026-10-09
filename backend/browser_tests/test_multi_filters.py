@@ -1,4 +1,5 @@
 import json
+import re
 from decimal import Decimal
 from urllib.parse import parse_qs, urlparse
 
@@ -11,7 +12,9 @@ from tests.filter_support import filter_dataset
 
 
 async def select_values(page, label, values):
-    await page.get_by_role("button", name=f"{label}:", exact=False).click()
+    await page.get_by_role(
+        "button", name=re.compile(rf"^{re.escape(label)}: \d+ selected$")
+    ).click()
     dialog = page.get_by_role("dialog", name=f"Select {label.lower()}")
     if label == "Category" and len(values) > 1:
         # Several events before the router's next render must still accumulate.
@@ -194,23 +197,9 @@ async def test_single_value_cache_keys_and_empty_vs_failure(real_db, context):
     )
     await page.reload()
     await expect(
-        page.get_by_role("alert").filter(has_text="Failed to load summary")
-    ).to_be_visible(timeout=15000)
-    await expect(
-        page.get_by_role("alert").filter(has_text="Failed to load spending trend")
-    ).to_be_visible()
-    await expect(
-        page.get_by_role("alert").filter(has_text="Failed to load transactions")
-    ).to_be_visible()
-    await expect(
-        page.get_by_role("alert").filter(has_text="Failed to load categories")
-    ).to_be_visible()
-    await expect(
-        page.get_by_role("alert").filter(has_text="Failed to load merchants")
-    ).to_be_visible()
-    await expect(
-        page.get_by_role("alert").filter(has_text="Failed to load spenders")
-    ).to_be_visible()
+        page.get_by_role("alert").filter(has_text="Unable to load data")
+    ).to_have_count(6, timeout=15000)
+    await expect(page.get_by_role("button", name="Retry", exact=True)).to_have_count(6)
     await expect(
         page.get_by_text("No transactions match these filters")
     ).not_to_be_visible()

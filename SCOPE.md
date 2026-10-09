@@ -16,7 +16,7 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 
 ---
 
-## 1.0.8 — Accumulating Insights filters
+## 1.0.8 — Insights and expense-entry improvements
 
 - Select multiple categories, spenders, merchants, tags and payment methods;
   selections accumulate across dimensions (OR within, AND across).
@@ -29,7 +29,19 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 - This is internal navigation context, not the deferred public Share button or
   saved views. General Transactions retains its existing all-status default;
   navigation from Insights carries the confirmed-only context.
-- Amount ranges and weekly average changes are separate v1.0.8 workstreams.
+- Spender selection uses the member's user ID, never the membership record ID.
+- Every visible Insights chart honors all active filters, including its own
+  dimension, with backward-compatible single-value URLs.
+- Insights transactions use the same confirmed-only selection as the charts.
+  The general Transactions list retains its existing status-inclusive default.
+- Failed Insights queries show an explicit error and retry, not empty results.
+- Weekly comparison uses contributing nonzero matching weeks within only the
+  last nine completed calendar weeks, with dynamic counts; monthly remains three.
+- Responsive numeric trend axes keep Today inside the drawable chart bounds.
+- Save & Add Another persists once, resets expense fields and focuses amount.
+- Weekly/monthly limit edits persist and refresh all affected progress caches.
+- Amount ranges remain a separate pending v1.0.8 workstream; no automatic chart
+  hiding, public sharing, quarters or custom windows are added.
 
 ---
 
@@ -110,10 +122,10 @@ Ship fast, validate the core expense-tracking loop for one couple.
 - In-app alerts only (2–3 cards on Home)
 
 ### Home dashboard
-- Hero total spent (current week or month) + delta vs 3-month average
+- Hero total spent (current week or month) + delta vs nonzero weeks within nine completed weeks (weekly) or 3-month average (monthly)
 - Week / Month toggle
 - Limit alerts (2–3 max)
-- Spending trend line (cumulative, current period vs 3-month avg)
+- Spending trend line (cumulative, current period vs actual contributing-week avg within nine completed weeks, or 3-month avg for monthly views)
 - Category distribution pie/donut
 - Merchant leaderboard (top by amount only)
 - Latest transactions count + link to full list
@@ -179,6 +191,23 @@ Ship fast, validate the core expense-tracking loop for one couple.
 
 ---
 
+## 1.0.8 — User-approved next-release scope
+
+- Weekly spending averages (#68): only the nine completed calendar weeks before the selected week; exclude zero-total weeks after active filters, divide by the actual contributing count, retain all positive expenses and zero-spending days, and show actual-count labels on Home/Insights. No contributors means no delta or average line/legend. DST-safe Last Week selection and bounded historical queries are tightly coupled fixes. Monthly/quarterly/yearly behavior remains unchanged.
+- The release branch also includes chart Today/axis corrections (#65), spender
+  filter correctness, and weekly-limit editing (#39). Multi-select filters and
+  amount-range filtering (#44) remain approved for this release.
+- Issue #11: Add "Save & Add Another" alongside ordinary Save. Create one expense,
+  remain at `/expenses/new`, clear the draft and focus Amount for the next entry.
+- Restore the logged-in spender, current purchase datetime and existing payment
+  default (no selection); currency continues to follow the current space.
+- Both actions block concurrent submissions. Failures retain the entire draft
+  and display standard errors without resetting or navigating.
+- This item is brought forward from 1.1.0 by user approval; form deduplication,
+  date-only migration and API idempotency remain separate work.
+
+---
+
 ## 1.1.0 — Automation & sharing
 
 Add recurring expenses and shareable analytics.
@@ -215,7 +244,6 @@ Add recurring expenses and shareable analytics.
 - React.lazy() code splitting for routes (bundle size reduction)
 - Deduplicate add/edit expense forms (extract shared ExpenseForm component)
 - Wire filters into transaction list page (match Insights filter bar)
-- Add "Save & Add Another" button to expense form
 - Optimize spending trend: SQL GROUP BY instead of in-memory aggregation
 - Add partial index for confirmed expenses
 - Add Content Security Policy headers
