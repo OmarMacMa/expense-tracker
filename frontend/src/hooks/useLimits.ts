@@ -44,6 +44,7 @@ export function useUpdateLimit() {
     onSuccess: () => {
       toast.success('Limit updated');
       queryClient.invalidateQueries({ queryKey: ['limits'] });
+      queryClient.invalidateQueries({ queryKey: ['insights', 'limits'] });
     },
     onError: (error: ApiError) => {
       toast.error(error?.data?.error?.message || 'Failed to update limit');
