@@ -107,7 +107,8 @@ async def test_spender_selector_uses_user_id_with_real_backend(
         == [str(data.owner.id)]
     ):
         await page.get_by_role("checkbox", name="Market", exact=True).click()
-    await page.keyboard.press("Escape")
+    await page.get_by_role("button", name="Merchant: 1 selected").click()
+    await expect(page.get_by_role("dialog", name="Select merchant")).to_have_count(0)
     await expect(page.get_by_text("$100.00", exact=True).first).to_be_visible()
     await page.wait_for_load_state("networkidle")
     combined_responses = {}
