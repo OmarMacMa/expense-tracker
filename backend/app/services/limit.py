@@ -136,6 +136,8 @@ async def update_limit(
 
     if "name" in update_data:
         limit.name = update_data["name"]
+    if "timeframe" in update_data:
+        limit.timeframe = update_data["timeframe"]
     if "threshold_amount" in update_data:
         limit.threshold_amount = update_data["threshold_amount"]
     if "warning_pct" in update_data:
