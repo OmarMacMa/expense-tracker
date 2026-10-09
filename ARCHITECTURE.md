@@ -295,6 +295,13 @@ PATCH  /api/v1/spaces/{space_id}/limits/{limit_id}     → partial update limit
 DELETE /api/v1/spaces/{space_id}/limits/{limit_id}     → delete limit
 ```
 
+Limit PATCH accepts `timeframe` (`weekly` or `monthly`). Omitted fields remain
+unchanged; null or unsupported timeframes return 422 without saving. A timeframe
+change recalculates current progress through `TimeWindowResolver` in the space
+timezone, preserving threshold, warning percentage and filters unless supplied.
+The frontend invalidates both the limit list and Insights/Home limit-progress
+caches after an edit.
+
 ### 4.9 Recurring endpoints (1.1.0+)
 ```
 GET    /api/v1/spaces/{space_id}/recurring                                 → list templates

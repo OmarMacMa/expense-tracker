@@ -16,8 +16,8 @@ from app.auth.jwt import create_access_token
 from app.models import User
 from tests.membership_support import MembershipDatabase
 
-BACKEND_PORT = int(os.environ.get("TEST_BACKEND_PORT", "8126"))
-FRONTEND_PORT = int(os.environ.get("TEST_FRONTEND_PORT", "5176"))
+BACKEND_PORT = int(os.environ.get("BROWSER_BACKEND_PORT", "8126"))
+FRONTEND_PORT = int(os.environ.get("BROWSER_FRONTEND_PORT", "5176"))
 BASE_URL = f"http://127.0.0.1:{FRONTEND_PORT}"
 
 
