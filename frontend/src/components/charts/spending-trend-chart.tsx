@@ -8,12 +8,20 @@ import {
   Line,
   ReferenceLine,
   ComposedChart,
+  usePlotArea,
 } from 'recharts';
 import type {
   SpendingTrend,
   SpendingTrendTimeframe,
 } from '@/hooks/useInsights';
 import { formatCurrency, getCurrencySymbol } from '@/lib/expense-utils';
+import {
+  getTrendDomain,
+  getTrendTicks,
+  MONTH_NAMES,
+  trendDayDate,
+  WEEKDAYS,
+} from '@/lib/spendingTrendAxis';
 
 const PERIOD_DISPLAY: Record<string, string> = {
   this_week: 'This week',
@@ -24,7 +32,6 @@ const PERIOD_DISPLAY: Record<string, string> = {
 };
 
 const AVG_LABEL: Partial<Record<SpendingTrendTimeframe, string>> = {
-  weekly: '3-week avg',
   monthly: '3-month avg',
   quarterly: '3-quarter avg',
 };
@@ -35,40 +42,47 @@ interface SpendingTrendChartProps {
   currencyCode?: string;
 }
 
-const MONTH_NAMES = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
-/** Returns the 1-based day-of-year for the 1st of each month in the given year.
- * Uses Date.UTC so DST transitions don't shift month boundaries. */
-function getMonthStartDays(year: number): number[] {
-  const jan1 = Date.UTC(year, 0, 1);
-  return MONTH_NAMES.map(
-    (_, m) => Math.floor((Date.UTC(year, m, 1) - jan1) / 86_400_000) + 1,
-  );
-}
-
 /** Converts a 1-based day-of-year to its month abbreviation for the given year. */
 function dayOfYearToMonthName(day: number, year: number): string {
-  const date = new Date(Date.UTC(year, 0, day));
+  const date = trendDayDate(day, year);
   return MONTH_NAMES[date.getUTCMonth()];
 }
 
 /** Converts a 1-based day-of-year to a "Mon DD" string (zero-padded day). */
 function dayOfYearToMonthDay(day: number, year: number): string {
-  const date = new Date(Date.UTC(year, 0, day));
+  const date = trendDayDate(day, year);
   return `${MONTH_NAMES[date.getUTCMonth()]} ${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function TrendXAxis({ data }: Pick<SpendingTrendChartProps, 'data'>) {
+  const plotArea = usePlotArea();
+  const domain = getTrendDomain(data);
+  return (
+    <XAxis
+      dataKey="day"
+      type="number"
+      scale="linear"
+      domain={domain}
+      allowDataOverflow
+      padding={{ left: 12, right: 12 }}
+      ticks={getTrendTicks(
+        domain,
+        Math.max(0, (plotArea?.width ?? 0) - 24),
+        data.timeframe,
+        data.year,
+      )}
+      interval={0}
+      tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+      tickLine={false}
+      axisLine={false}
+      tickFormatter={(day: number) => {
+        if (data.timeframe === 'weekly') return WEEKDAYS[(day - 1) % 7];
+        if (data.timeframe === 'yearly')
+          return dayOfYearToMonthName(day, data.year);
+        return `${day}`;
+      }}
+    />
+  );
 }
 
 export function SpendingTrendChart({
@@ -79,12 +93,21 @@ export function SpendingTrendChart({
   const symbol = getCurrencySymbol(currencyCode);
   const isWeekly = data.timeframe === 'weekly';
   const isYearly = data.timeframe === 'yearly';
-  const hasAverage = data.average_series.length > 0;
-  const avgLabel = AVG_LABEL[data.timeframe];
-  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const hasAverage =
+    data.average_series.length > 0 && data.average_period_count !== 0;
+  const avgLabel = isWeekly
+    ? data.average_period_count != null
+      ? `${data.average_period_count}-week avg`
+      : 'Weekly avg'
+    : AVG_LABEL[data.timeframe];
   const trendYear = data.year;
-  const monthStartDays = isYearly ? getMonthStartDays(trendYear) : undefined;
-  const currentDay = data.current_day ?? null;
+  const domain = getTrendDomain(data);
+  const currentDay =
+    data.current_day != null &&
+    data.current_day >= domain[0] &&
+    data.current_day <= domain[1]
+      ? data.current_day
+      : null;
   const chartData = data.current_series.map((point) => {
     const avgPoint = data.average_series.find((a) => a.day === point.day);
     return {
@@ -100,11 +123,11 @@ export function SpendingTrendChart({
   });
 
   return (
-    <div>
+    <div data-testid="spending-trend-chart">
       <ResponsiveContainer width="100%" height={200}>
         <ComposedChart
           data={chartData}
-          margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
+          margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
         >
           <defs>
             <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
@@ -117,19 +140,9 @@ export function SpendingTrendChart({
             stroke="var(--border)"
             vertical={false}
           />
-          <XAxis
-            dataKey="day"
-            tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-            tickLine={false}
-            axisLine={false}
-            ticks={monthStartDays}
-            tickFormatter={(v) => {
-              if (isWeekly) return weekdays[(v - 1) % 7] || `${v}`;
-              if (isYearly) return dayOfYearToMonthName(v, trendYear);
-              return `${v}`;
-            }}
-          />
+          <TrendXAxis data={data} />
           <YAxis
+            width="auto"
             tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
             tickLine={false}
             axisLine={false}
@@ -150,7 +163,7 @@ export function SpendingTrendChart({
                 <div className="rounded-lg border border-border bg-card px-3 py-2 shadow-[var(--shadow-card)]">
                   <p className="mb-1 text-xs font-medium text-muted-foreground">
                     {isWeekly
-                      ? weekdays[(label as number) - 1] || `Day ${label}`
+                      ? WEEKDAYS[(label as number) - 1] || `Day ${label}`
                       : isYearly
                         ? dayOfYearToMonthDay(label as number, trendYear)
                         : `Day ${label}`}
@@ -198,7 +211,11 @@ export function SpendingTrendChart({
               strokeOpacity={0.5}
               label={{
                 value: 'Today',
-                position: 'top',
+                position:
+                  currentDay <= (domain[0] + domain[1]) / 2
+                    ? 'insideTopLeft'
+                    : 'insideTopRight',
+                offset: 6,
                 fill: 'var(--muted-foreground)',
                 fontSize: 10,
               }}

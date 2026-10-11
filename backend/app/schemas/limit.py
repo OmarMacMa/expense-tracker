@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -44,11 +45,21 @@ class LimitUpdate(BaseModel):
     """PATCH — partial update."""
 
     name: str | None = Field(None, min_length=1, max_length=100)
+    timeframe: Literal["weekly", "monthly"] | None = None
     threshold_amount: Decimal | None = Field(
         None, ge=Decimal("0.01"), le=Decimal("999999.99")
     )
     warning_pct: Decimal | None = Field(None, ge=Decimal("0"), le=Decimal("1"))
     filters: list[LimitFilterCreate] | None = None
+
+    @field_validator("timeframe")
+    @classmethod
+    def validate_timeframe(
+        cls, value: Literal["weekly", "monthly"] | None
+    ) -> Literal["weekly", "monthly"]:
+        if value is None:
+            raise ValueError("timeframe must be weekly or monthly when provided")
+        return value
 
     @field_validator("warning_pct")
     @classmethod

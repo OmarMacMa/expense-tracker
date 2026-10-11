@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import { TrendingDown, TrendingUp } from 'lucide-react';
-import { useExpenseList, type ExpenseFilters } from '@/hooks/useExpenses';
-import { usePeriod } from '@/hooks/usePeriod';
+import { useExpenseList } from '@/hooks/useExpenses';
+import { useExpenseFilters } from '@/hooks/useExpenseFilters';
+import { useExpenseFilterOptions } from '@/hooks/useExpenseFilterOptions';
+import { filtersToParams } from '@/lib/expenseFilters';
 import {
   useInsightsSummary,
   useSpendingTrend,
@@ -10,11 +12,6 @@ import {
   useMerchantLeaderboard,
   useSpenderBreakdown,
 } from '@/hooks/useInsights';
-import { useMembers } from '@/hooks/useMembers';
-import { useCategories } from '@/hooks/useCategories';
-import { useTags } from '@/hooks/useTags';
-import { usePaymentMethods } from '@/hooks/usePaymentMethods';
-import { useMerchantList } from '@/hooks/useMerchants';
 import { FilterBar } from '@/components/expenses/filter-bar';
 import { SpendingTrendChart } from '@/components/charts/spending-trend-chart';
 import { CategoryDonutChart } from '@/components/charts/category-donut-chart';
@@ -80,41 +77,50 @@ function TransactionListSkeleton() {
   );
 }
 
+function QueryError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div role="alert" className="py-4 text-sm text-destructive">
+      <p>Unable to load data. Please try again.</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-2 font-medium underline"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
 export default function Insights() {
-  const { period: globalPeriod } = usePeriod();
-  const [localFilters, setLocalFilters] = useState<ExpenseFilters>({});
+  const { queryFilters, setFilters } = useExpenseFilters('insights');
+  const filterOptions = useExpenseFilterOptions();
+  const transactionFilters = { ...queryFilters, status: 'confirmed' };
   const { format, currencyCode } = useCurrency();
 
-  // For data queries: use local period if set, otherwise fall back to global
-  const queryFilters = useMemo<ExpenseFilters>(() => {
-    const active = Object.fromEntries(
-      Object.entries(localFilters).filter(([, v]) => v),
-    );
-    if (!active.period) active.period = globalPeriod;
-    return active;
-  }, [globalPeriod, localFilters]);
-
-  // Filter data sources
-  const { data: members } = useMembers();
-  const { data: categories } = useCategories();
-  const { data: tagList } = useTags();
-  const { data: paymentMethodList } = usePaymentMethods();
-  const { data: merchantList } = useMerchantList();
-
   // Insights data
-  const { data: summary } = useInsightsSummary(queryFilters);
-  const { data: trendData, isLoading: trendLoading } =
-    useSpendingTrend(queryFilters);
-  const { data: categoryData, isLoading: categoryLoading } =
-    useCategoryBreakdown(queryFilters);
-  const { data: merchantData, isLoading: merchantLoading } =
-    useMerchantLeaderboard(queryFilters);
-  const { data: spenderData, isLoading: spenderLoading } =
-    useSpenderBreakdown(queryFilters);
+  const summaryQuery = useInsightsSummary(queryFilters);
+  const trendQuery = useSpendingTrend(queryFilters);
+  const categoryQuery = useCategoryBreakdown(queryFilters);
+  const merchantQuery = useMerchantLeaderboard(queryFilters);
+  const spenderQuery = useSpenderBreakdown(queryFilters);
+  const { data: summary } = summaryQuery;
+  const { data: trendData, isLoading: trendLoading } = trendQuery;
+  const { data: categoryData, isLoading: categoryLoading } = categoryQuery;
+  const { data: merchantData, isLoading: merchantLoading } = merchantQuery;
+  const { data: spenderData, isLoading: spenderLoading } = spenderQuery;
 
   // Transaction list (same filters)
-  const { data: expensePages, isLoading: expensesLoading } =
-    useExpenseList(queryFilters);
+  const expenseQuery = useExpenseList(transactionFilters);
+  const { data: expensePages, isLoading: expensesLoading } = expenseQuery;
+  const fetching = [
+    summaryQuery,
+    trendQuery,
+    categoryQuery,
+    merchantQuery,
+    spenderQuery,
+    expenseQuery,
+  ].some((query) => query.isFetching);
 
   const allExpenses = useMemo(
     () => (expensePages?.pages[0]?.data ?? []).slice(0, 15),
@@ -135,7 +141,9 @@ export default function Insights() {
         <h1 className="text-2xl font-bold text-foreground md:text-[1.3rem]">
           Insights
         </h1>
-        {summary && (
+        {summaryQuery.isError ? (
+          <QueryError onRetry={() => void summaryQuery.refetch()} />
+        ) : summary ? (
           <div className="mt-1 flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               {summary.period_label}
@@ -155,25 +163,30 @@ export default function Insights() {
                 ) : (
                   <TrendingDown className="h-3.5 w-3.5" />
                 )}
-                {Math.abs(summary.delta_pct!).toFixed(0)}% vs avg
+                {Math.abs(summary.delta_pct!).toFixed(0)}% vs{' '}
+                {queryFilters.period === 'this_week' ||
+                queryFilters.period === 'last_week'
+                  ? `${summary.average_period_count}-week avg`
+                  : 'avg'}
               </span>
             )}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Filter bar */}
       <FilterBar
-        filters={localFilters}
-        onFiltersChange={setLocalFilters}
-        spenders={members}
-        categories={categories}
-        merchants={merchantList?.map((m) => m.name) ?? []}
-        tags={tagList}
-        paymentMethods={paymentMethodList}
+        filters={queryFilters}
+        onFiltersChange={setFilters}
+        {...filterOptions}
         showSearch={false}
         showPeriodChips
       />
+      {fetching && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Updating insights and transactions…
+        </p>
+      )}
 
       {/* Main content — desktop split, mobile stacked */}
       <div className="flex flex-col gap-5 lg:flex-row">
@@ -181,7 +194,9 @@ export default function Insights() {
         <div className="flex flex-col gap-4 lg:w-[60%] lg:shrink-0">
           {/* Spending trend */}
           <ChartCard title="Spending Trend">
-            {trendLoading || !trendData ? (
+            {trendQuery.isError ? (
+              <QueryError onRetry={() => void trendQuery.refetch()} />
+            ) : trendLoading || !trendData ? (
               <ChartSkeleton />
             ) : (
               <SpendingTrendChart
@@ -196,7 +211,9 @@ export default function Insights() {
           <div className="grid gap-4 md:grid-cols-2">
             {/* Category donut */}
             <ChartCard title="By Category">
-              {categoryLoading || !categoryData ? (
+              {categoryQuery.isError ? (
+                <QueryError onRetry={() => void categoryQuery.refetch()} />
+              ) : categoryLoading || !categoryData ? (
                 <ChartSkeleton />
               ) : categoryData.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">
@@ -205,7 +222,13 @@ export default function Insights() {
               ) : (
                 <CategoryDonutChart
                   data={categoryData}
-                  totalAmount={summary?.total_spent ?? '0'}
+                  totalAmount={(
+                    categoryData.reduce(
+                      (total, category) =>
+                        total + Math.round(Number(category.total) * 100),
+                      0,
+                    ) / 100
+                  ).toFixed(2)}
                   currencyCode={currencyCode}
                 />
               )}
@@ -213,7 +236,9 @@ export default function Insights() {
 
             {/* Merchant leaderboard */}
             <ChartCard title="Top Merchants">
-              {merchantLoading || !merchantData ? (
+              {merchantQuery.isError ? (
+                <QueryError onRetry={() => void merchantQuery.refetch()} />
+              ) : merchantLoading || !merchantData ? (
                 <ChartSkeleton />
               ) : (
                 <MerchantLeaderboard
@@ -227,7 +252,9 @@ export default function Insights() {
 
           {/* Spender breakdown */}
           <ChartCard title="By Spender">
-            {spenderLoading || !spenderData ? (
+            {spenderQuery.isError ? (
+              <QueryError onRetry={() => void spenderQuery.refetch()} />
+            ) : spenderLoading || !spenderData ? (
               <ChartSkeleton />
             ) : (
               <SpenderBreakdownChart
@@ -245,7 +272,9 @@ export default function Insights() {
               Transactions
             </h3>
 
-            {expensesLoading ? (
+            {expenseQuery.isError ? (
+              <QueryError onRetry={() => void expenseQuery.refetch()} />
+            ) : expensesLoading ? (
               <TransactionListSkeleton />
             ) : groups.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -264,10 +293,10 @@ export default function Insights() {
               </div>
             )}
 
-            {groups.length > 0 && (
+            {!expenseQuery.isError && groups.length > 0 && (
               <div className="mt-3 text-center">
                 <Link
-                  to="/transactions"
+                  to={`/transactions?${filtersToParams(transactionFilters)}`}
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   View all transactions →

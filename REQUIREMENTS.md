@@ -280,7 +280,7 @@ Cover business logic in isolation:
 - Limit calculation: given a set of expenses and a limit definition, verify correct progress computation.
 - Recurring generation: verify pending expenses are created correctly, idempotency works, backfill handles gaps.
 - Split line validation: verify sum validation, rejection of mismatched totals.
-- 3-month average computation: verify correct averaging with varying data availability (0, 1, 2, 3+ prior periods).
+- Historical average computation: weekly summary/trend use the same filtered nonzero weeks within exactly nine completed calendar windows, excluding selected/tenth weeks and pending/future expenses. Verify actual denominators 4/8/9, large expenses retained, daily carry-forward, null delta/empty average with no contributors, actual-count labels in Home/Insights, DST-safe Last Week selection shared with expense listing, and a constant two expense SELECTs per endpoint. Monthly averages retain three completed months including zero months; yearly trends have no average.
 - Category deletion: verify expense lines are reassigned to "Uncategorized".
 - Tag normalization: verify deduplication, casing, trimming.
 - Time window calculations: verify correct boundaries for all timeframes across timezone edge cases.
@@ -290,6 +290,11 @@ Cover API endpoints end-to-end (with test database):
 - Auth flow: Google OAuth mock → JWT cookie → authenticated requests.
 - Expense CRUD: create (single + split), read, update (all fields), delete.
 - Insights queries: verify correct aggregation results for known test data.
+- Insights filtering: use at least two members with distinct user/membership
+  UUIDs; verify selector requests use user IDs against the real API. Assert
+  own-dimension and AND-combined filters align summary, trend, category, merchant,
+  spender and confirmed transaction totals; exclude other-space and pending
+  data. Query failures must render errors and retry rather than empty success.
 - Invite lifecycle: generate link → join → link invalidated → expired link rejected.
 - Limit alerts: create limit → add expenses → verify warning/alert thresholds.
 - Recurring lifecycle: create template → trigger generation → confirm/deny pending.

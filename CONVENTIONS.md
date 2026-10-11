@@ -347,6 +347,27 @@ This provides enough data for dashboard charts, Insights filters, and limit aler
 
 ---
 
+### Insights filter regression checks
+
+Use an independently initialized local database ending in `_test`, apply
+`alembic upgrade head`, and set `DATABASE_URL` before running tests from
+`backend`:
+
+```powershell
+python -m pytest tests\real_db\test_insights_filters.py
+python -m pytest browser_tests\test_insights_filters.py
+python -m pytest tests\real_db\test_insights_filters.py browser_tests\test_insights_filters.py
+```
+
+Browser tests require `requirements-browser.txt`, Chromium
+(`python -m playwright install chromium`), and frontend dependencies. The real
+React/backend harness accepts `BROWSER_BACKEND_PORT` and
+`BROWSER_FRONTEND_PORT` (defaults 8126/5176). Use unused, explicitly assigned
+ports when running concurrent worktrees; the harness refuses occupied ports.
+It stops only owned servers and fixtures delete only their created records.
+
+---
+
 ## 6) Dependency management
 
 ### Frontend
@@ -360,6 +381,27 @@ This provides enough data for dashboard charts, Insights filters, and limit aler
 - Use a virtual environment (`venv`) — never install globally
 - Core dependencies: `fastapi`, `uvicorn`, `sqlalchemy[asyncio]`, `asyncpg`, `alembic`, `pydantic`, `pydantic-settings`, `python-jose[cryptography]`, `httpx`, `structlog`, `slowapi`
 - Dev dependencies in a separate `requirements-dev.txt`: `pytest`, `pytest-asyncio`, `httpx`, `black`, `ruff`
+
+### Controlled chart browser regressions
+- `frontend/browser_tests/` uses Python Playwright against the real React Home
+  and Insights routes with explicit API fixtures. It needs no database or Google
+  sign-in; it verifies rendering, not live API/authentication integration.
+- Install its pinned `requirements.txt` in an isolated virtual environment and
+  run `python -m playwright install chromium`. Restore frontend dependencies
+  with `npm ci` first.
+- When several sessions use different Playwright versions, set
+  `PLAYWRIGHT_BROWSERS_PATH` to an isolated session directory before both browser
+  installation and test execution, so shared-cache cleanup cannot remove an
+  active session's browser.
+- From the repository root, run
+  `python -m pytest frontend/browser_tests -q`. The fixture starts/stops only its
+  own Vite process; `CHART_TEST_PORT` defaults to 5182 and refuses occupied ports.
+  Set `CHART_ARTIFACTS` to a session artifact directory to retain screenshots,
+  SVG geometry JSON and server logs; otherwise pytest temporary storage is used.
+- Coverage includes #65's original top-label clipping reproduction, full label
+  bounds at first/last days, uniform numeric ticks and live resize, all month
+  lengths, weekly/YTD labels, current-line cutoff/full comparison, null markers,
+  zero/large values, currency tooltips and supplied weekly average counts.
 
 ---
 

@@ -153,7 +153,10 @@ export default function Home() {
                 )}
               >
                 {summary.delta_pct > 0 ? '↑' : '↓'}{' '}
-                {Math.abs(summary.delta_pct).toFixed(1)}% vs avg
+                {Math.abs(summary.delta_pct).toFixed(1)}% vs{' '}
+                {period === 'this_week'
+                  ? `${summary.average_period_count}-week avg`
+                  : 'avg'}
               </span>
             )}
           </div>

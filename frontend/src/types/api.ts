@@ -132,6 +132,7 @@ export interface LimitProgress {
 export interface InsightsSummary {
   total_spent: string;
   delta_pct: number | null;
+  average_period_count: number;
   period_label: string;
   window_start: string;
   window_end: string;
