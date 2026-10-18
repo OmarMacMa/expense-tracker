@@ -31,9 +31,13 @@ export function TopBar({ user, spaceName, onLogout }: TopBarProps) {
   return (
     <header className="flex items-center justify-between px-5 pt-3 pb-1">
       {/* Space name */}
-      <div className="rounded-full bg-[#F3F1F8] px-3 py-1.5 text-[0.8rem] font-medium text-muted-foreground">
+      <Link
+        to="/home"
+        aria-label={`${spaceName ?? 'My Space'} — Home`}
+        className="rounded-full bg-[#F3F1F8] px-3 py-1.5 text-[0.8rem] font-medium text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+      >
         {spaceName ?? 'My Space'}
-      </div>
+      </Link>
 
       {/* Avatar with dropdown */}
       {user && (

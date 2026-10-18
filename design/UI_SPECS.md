@@ -108,10 +108,13 @@ A consistent color system is used across all status indicators (limit progress, 
 **Top bar** (present on all views):
 
 ```
-| SpaceSelector  |  (camera notch)  |  Avatar |
+| Space name     |  (camera notch)  |  Avatar |
 ```
 
-- **Space selector** (top-left): dropdown to switch spaces. Only visible if user belongs to >1 space.
+- **Space name** (top-left): the existing tonal pill links to `/home` without
+  changing the active space. Its accessible name includes the space name and
+  "Home", with a visible keyboard-focus indicator. Multi-space selection remains
+  deferred.
 - Center gap respects the phone's **camera notch / Dynamic Island**.
 - **Avatar** (top-right): user profile icon/photo. Tapping opens a profile menu with: **Settings** link, **Sign out** action.
 
@@ -176,6 +179,9 @@ MVP:
 ```
 
 - "+ Add Expense" must be prominently visible at all times.
+- **Logo / App Name**: one React Router link to `/home`; clicking either the logo
+  or text activates it. Accessible name: "Expense Tracker — Home", with a visible
+  keyboard-focus indicator. Navigation preserves the active space and session.
 - Space selector (top of sidebar or next to logo) only visible if user belongs to >1 space.
 - **MVP nav links**: Home, Transactions, Limits, Insights, Settings.
 - **1.1.0+ nav links**: Home, Recurring (with pending badge), Limits, Insights, Settings. Transactions accessible from Home "View all →" and within Insights.

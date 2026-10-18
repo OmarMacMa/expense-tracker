@@ -16,6 +16,13 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
 
 ---
 
+## 1.0.9 — Navigation and usability
+
+- Authenticated Home links (#77): desktop logo/app name and the existing mobile
+  space-name pill navigate to `/home`, preserving layout, space and session.
+  Both links support keyboard navigation and visible focus. Public landing-page
+  authentication behavior is unchanged.
+
 ## 1.0.8 — Insights and expense-entry improvements
 
 - Select multiple categories, spenders, merchants, tags and payment methods;
