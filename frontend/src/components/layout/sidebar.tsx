@@ -49,14 +49,21 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
   return (
     <nav className="flex h-full w-[248px] flex-col bg-[#F3F1F8] p-6 pb-4">
       {/* Logo */}
-      <div className="mb-6 flex items-center gap-2.5 px-2">
-        <div className="flex size-8 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-primary-foreground">
+      <Link
+        to="/home"
+        aria-label="Expense Tracker — Home"
+        className="mb-6 flex items-center gap-2.5 rounded-xl px-2 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+      >
+        <div
+          aria-hidden="true"
+          className="flex size-8 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-primary-foreground"
+        >
           E
         </div>
         <span className="text-[1.15rem] font-bold text-foreground">
           Expense Tracker
         </span>
-      </div>
+      </Link>
 
       {/* Add Expense CTA */}
       <Button
