@@ -1,3 +1,4 @@
+from contextlib import AsyncExitStack
 from decimal import Decimal
 from urllib.parse import parse_qs, urlparse
 
@@ -33,10 +34,26 @@ async def test_integrated_range_arrays_history_navigation_and_clear(
     for maximum, count in (("299.99", 8), ("199.99", 4), ("99.99", 0)):
         await page.get_by_label("Minimum amount (USD)").fill("0")
         await page.get_by_label("Maximum amount (USD)").fill(maximum)
-        async with page.expect_response(
-            lambda response: "/insights/spending-trend?" in response.url
-            and parse_qs(urlparse(response.url).query).get("max_amount") == [maximum]
-        ):
+        # All six queries are independent; the trend response alone is not a
+        # barrier for checking the entire filtered page.
+        async with AsyncExitStack() as responses:
+            for endpoint in (
+                "summary",
+                "spending-trend",
+                "category-breakdown",
+                "merchant-leaderboard",
+                "spender-breakdown",
+                "expenses",
+            ):
+                await responses.enter_async_context(
+                    page.expect_response(
+                        lambda response, endpoint=endpoint: urlparse(
+                            response.url
+                        ).path.endswith(f"/{endpoint}")
+                        and parse_qs(urlparse(response.url).query).get("max_amount")
+                        == [maximum]
+                    )
+                )
             await page.get_by_role("button", name="Apply range", exact=True).click()
         await page.wait_for_load_state("networkidle")
         await expect(header).to_contain_text("$540.00")

@@ -1,3 +1,4 @@
+from contextlib import AsyncExitStack, asynccontextmanager
 from decimal import Decimal
 from urllib.parse import parse_qs, urlparse
 
@@ -19,6 +20,32 @@ async def test_weekly_multi_contributors_and_surface_agreement(
     await page.set_viewport_size({"width": width, "height": 844})
     received = []
     page.on("response", lambda response: received.append(response))
+
+    @asynccontextmanager
+    async def expect_surfaces(categories):
+        async with AsyncExitStack() as pending:
+            for endpoint in (
+                "summary",
+                "spending-trend",
+                "category-breakdown",
+                "merchant-leaderboard",
+                "spender-breakdown",
+                "expenses",
+            ):
+                await pending.enter_async_context(
+                    page.expect_response(
+                        lambda response, endpoint=endpoint: urlparse(
+                            response.url
+                        ).path.endswith(f"/{endpoint}")
+                        and set(
+                            parse_qs(urlparse(response.url).query).get("category", [])
+                        )
+                        == {str(category.id) for category in categories}
+                        and parse_qs(urlparse(response.url).query).get("payment_method")
+                        == [str(data["method"].id)]
+                    )
+                )
+            yield
 
     async def surface_data(categories):
         responses = {}
@@ -61,10 +88,7 @@ async def test_weekly_multi_contributors_and_surface_agreement(
     await select_values(page, "Spender", ["Weekly Owner"])
     await select_values(page, "Merchant", ["Weekly Match"])
     await select_values(page, "Tag", ["#weekly-red", "#weekly-blue"])
-    async with page.expect_response(
-        lambda response: "/insights/spending-trend?" in response.url
-        and "payment_method=" in response.url
-    ):
+    async with expect_surfaces(data["categories"][:3]):
         await select_values(page, "Payment Method", ["Weekly Card"])
     await page.wait_for_load_state("networkidle")
     header = page.locator("h1").locator("..")
@@ -89,9 +113,10 @@ async def test_weekly_multi_contributors_and_surface_agreement(
         ("Weekly C", 8, "$40.00"),
         ("Weekly B", 4, "$20.00"),
     ):
-        await page.get_by_role(
-            "button", name=f"Remove category: {category}", exact=True
-        ).click()
+        async with expect_surfaces(data["categories"][: 2 if count == 8 else 1]):
+            await page.get_by_role(
+                "button", name=f"Remove category: {category}", exact=True
+            ).click()
         await expect(page.get_by_text(f"{count}-week avg", exact=True)).to_be_visible()
         await expect(header).to_contain_text(total)
         await page.wait_for_load_state("networkidle")
@@ -108,10 +133,7 @@ async def test_weekly_multi_contributors_and_surface_agreement(
     await expect(
         page.get_by_role("button", name="Category: 0 selected", exact=True)
     ).to_be_visible()
-    async with page.expect_response(
-        lambda response: "/insights/spending-trend?" in response.url
-        and str(data["categories"][3].id) in response.url
-    ):
+    async with expect_surfaces(data["categories"][3:]):
         await select_values(page, "Category", ["Zero history"])
     await page.wait_for_load_state("networkidle")
     await expect(header).to_contain_text("$0.00")

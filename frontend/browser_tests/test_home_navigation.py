@@ -5,9 +5,10 @@ import pytest
 from playwright.sync_api import expect
 
 
-def open_app(browser, base_url, *, width, authenticated=True):
+def open_app(browser, base_url, *, width, authenticated=True, include_expense=False):
     context = browser.new_context(viewport={"width": width, "height": 844})
     context.add_init_script(
+        "if (!localStorage.getItem('expense-tracker:period')) "
         "localStorage.setItem('expense-tracker:period', 'this_week')"
     )
     unexpected = []
@@ -41,7 +42,33 @@ def open_app(browser, base_url, *, width, authenticated=True):
         elif path.startswith("/api/v1/spaces/navigation-space/"):
             endpoint = path.rsplit("/", 1)[-1]
             if endpoint == "expenses":
-                body = {"data": [], "next_cursor": None}
+                body = {
+                    "data": (
+                        [
+                            {
+                                "id": "navigation-expense",
+                                "space_id": "navigation-space",
+                                "merchant": "Example merchant",
+                                "purchase_datetime": "2026-02-05T12:00:00Z",
+                                "total_amount": "10.00",
+                                "spender": {
+                                    "id": "navigation-user",
+                                    "display_name": "Navigation Reviewer",
+                                    "email": "navigation@example.test",
+                                },
+                                "payment_method_id": None,
+                                "notes": None,
+                                "status": "confirmed",
+                                "lines": [],
+                                "created_at": "2026-02-05T12:00:00Z",
+                                "updated_at": "2026-02-05T12:00:00Z",
+                            }
+                        ]
+                        if include_expense
+                        else []
+                    ),
+                    "next_cursor": None,
+                }
             elif endpoint == "summary":
                 body = {
                     "total_spent": "0",

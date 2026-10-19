@@ -4,6 +4,7 @@ import { useExpenseList } from '@/hooks/useExpenses';
 import { useExpenseFilters } from '@/hooks/useExpenseFilters';
 import { useExpenseFilterOptions } from '@/hooks/useExpenseFilterOptions';
 import { FilterBar } from '@/components/expenses/filter-bar';
+import { PeriodSelector } from '@/components/expenses/period-selector';
 import {
   TransactionGroup,
   groupExpensesByDate,
@@ -52,6 +53,8 @@ export default function TransactionList() {
     filters: localFilters,
     queryFilters,
     setFilters,
+    selection,
+    setPeriodOverride,
   } = useExpenseFilters();
   const filterOptions = useExpenseFilterOptions();
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -115,6 +118,13 @@ export default function TransactionList() {
         filters={queryFilters}
         onFiltersChange={setFilters}
         {...filterOptions}
+        periodControl={
+          <PeriodSelector
+            selection={selection}
+            mode="analysis"
+            onChange={setPeriodOverride}
+          />
+        }
       />
 
       {/* Content */}

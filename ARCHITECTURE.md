@@ -358,6 +358,17 @@ Client `ExpenseFilters` uses arrays for the five dimensions and scalar
 query cache keys and explicitly appends repeated keys to `URLSearchParams`;
 the API client accepts these alongside existing scalar parameter records.
 Insights and Transactions use the URL as their explicit filter context.
+In v1.0.9 their period selection also has a remembered fallback: explicit valid
+URL period/month, then the view's saved selection, then This Month.
+Overrides use localStorage keys scoped by user ID, space ID and view; only
+period/month are stored, not the other filters or expense data. Home retains the
+existing `expense-tracker:period` preference independently. `useExpenseFilters` keeps synchronous
+URL-backed functional updates while preserving remembered periods on unrelated
+filter edits. Home changes never affect analysis selections. Clear all deletes
+the saved selection and other filters, returning that view to This Month.
+View all navigation serializes the effective period, including a remembered month.
+The shared `PeriodSelector` presents the same effective window as the queries;
+selected months are named in the Insights header and chart legend.
 Search remains Transactions-only: Insights explicitly excludes any URL `search`
 value from its parsed UI, cache, chart/list queries and View all navigation.
 Insights previews and their View all link set `status=confirmed`; the expense

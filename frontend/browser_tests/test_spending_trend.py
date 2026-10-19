@@ -113,15 +113,22 @@ def open_chart(
         )
     page = context.new_page()
     page.on("pageerror", lambda error: errors.append(str(error)))
-    page.goto(f"{chart_server}/{view}", wait_until="domcontentloaded", timeout=60000)
+    query = f"?period={period}" if view == "insights" else ""
+    page.goto(
+        f"{chart_server}/{view}{query}",
+        wait_until="domcontentloaded",
+        timeout=60000,
+    )
     page.wait_for_load_state("networkidle", timeout=60000)
     page.evaluate("document.fonts.ready")
     if data["timeframe"] == "yearly":
-        page.get_by_role("button", name="YTD", exact=True).click()
+        page.get_by_role("button", name=re.compile(r"^Period:")).click()
+        page.get_by_role("radio", name="Year to Date", exact=True).click()
         page.wait_for_load_state("networkidle")
     elif view == "insights" and period in {"last_week", "last_month"}:
+        page.get_by_role("button", name=re.compile(r"^Period:")).click()
         page.get_by_role(
-            "button",
+            "radio",
             name="Last Week" if period == "last_week" else "Last Month",
             exact=True,
         ).click()

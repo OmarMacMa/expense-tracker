@@ -34,6 +34,48 @@ const { api } = await loadTypeScriptModule('../src/lib/api-client.ts');
 const { parseAmountRange } = await loadTypeScriptModule(
   '../src/lib/amount-range.ts',
 );
+const { readPeriodSelection, parseStoredPeriod, periodLabel } =
+  await loadTypeScriptModule('../src/lib/periodSelection.ts');
+
+test('period preferences validate known windows and normalize explicit months', () => {
+  assert.deepEqual(readPeriodSelection({ period: 'last_week' }), {
+    period: 'last_week',
+  });
+  assert.deepEqual(readPeriodSelection({ period: 'ytd', month: '2026-02' }), {
+    period: 'this_month',
+    month: '2026-02',
+  });
+  assert.equal(readPeriodSelection({ month: '2026-13' }), null);
+  assert.equal(readPeriodSelection({ month: '0000-01' }), null);
+  assert.equal(readPeriodSelection({ period: 'unsupported' }), null);
+  assert.equal(
+    periodLabel({ period: 'this_month', month: '2026-02' }),
+    'February 2026',
+  );
+  assert.equal(periodLabel({ period: 'ytd' }), 'Year to Date');
+});
+
+test('corrupted or legacy period preferences cannot select an unsupported window', () => {
+  for (const raw of [
+    null,
+    '',
+    '{broken',
+    'null',
+    '[]',
+    '4',
+    '{"period":4}',
+    '{"month":"2026-99"}',
+  ]) {
+    assert.equal(parseStoredPeriod(raw), null);
+  }
+  assert.deepEqual(parseStoredPeriod('{"period":"last_month"}'), {
+    period: 'last_month',
+  });
+  assert.deepEqual(parseStoredPeriod('{"month":"2025-12"}'), {
+    period: 'this_month',
+    month: '2025-12',
+  });
+});
 
 test('amount scalars retain precision alongside repeated entities and Insights omits search', () => {
   const filters = {

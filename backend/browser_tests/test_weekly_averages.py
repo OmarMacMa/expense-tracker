@@ -95,7 +95,8 @@ async def test_real_weekly_labels_home_and_insights(
         await page.screenshot(
             path=str(tmp_path / f"{route[1:]}-{width}-{count}.png"), full_page=True
         )
-    await page.get_by_role("button", name="Last Week", exact=True).click()
+    await page.get_by_role("button", name=re.compile(r"^Period:")).click()
+    await page.get_by_role("radio", name="Last Week", exact=True).click()
     await page.wait_for_load_state("networkidle")
     await expect(page.get_by_text("Today", exact=True)).to_have_count(0)
 
