@@ -234,20 +234,29 @@ Public page for unauthenticated visitors. Authenticated users redirect to `/home
 ### Top area layout (mobile)
 
 ```
-| SpaceSelector  |  (camera notch)  |       Avatar |
-|                |                  | Week | Month |
-| $3,247.50      |                  |              |
-| ↑12% vs avg   |                  |              |
+| Space name     |  (camera notch)  | Avatar |
+| $3,247.50                               |
+| ↑12% vs avg                             |
+| [Calendar range] Period: This Month   v |
 ```
 
-- The top row respects the phone's **camera notch / Dynamic Island** — space selector sits left of it, avatar sits right.
-- **Week / Month toggle** (top-right, below avatar): pill-style toggle. Controls the time window for the entire page.
+- The top row respects the phone's **camera notch / Dynamic Island** — space name sits left of it, avatar sits right.
+- **Period selector (1.0.9+)**: a compact, single-line lavender tonal pill with a
+  16px calendar-range icon (distinct from the purchase-date calendar), visible
+  "Period:" prefix, bold effective value and chevron. Height/touch target 44px,
+  content-sized width on both mobile and desktop, never a full-width banner.
+  Place it below the hero amount on mobile and alongside the amount on desktop.
+  On Insights/Transactions it leads the existing filter row; search stays above
+  the row on Transactions. No large icon tile or permanent explanatory row.
+  Home offers This Week / This Month. Popup options use native radio controls
+  with 44px rows; Enter/Space opens, arrows select presets, Escape closes and
+  focus returns to the trigger.
 - **Hero total** (left-aligned, large): currency-formatted total spent for the selected window.
 - **Delta badge** (below hero total): percentage vs contributing-week average (weekly) or 3-month average (monthly). Weekly label includes the backend's actual count, e.g. "vs 4-week avg". Green with ↓ arrow if under average, red/orange with ↑ arrow if over. Hidden if no contributing history exists.
 
 ### MVP sections (top to bottom, scrollable)
 
-1. **Hero + toggle** (described above).
+1. **Hero + Period selector** (described above).
 
 2. **Limit alert cards** (2–3 max):
    - Each card: limit name + percentage (e.g., "Groceries at 92%"), progress bar, spent vs threshold (e.g., "$368 / $400").
@@ -435,6 +444,20 @@ Transactions. Summary, trend, category donut, merchant leaderboard, spender
 breakdown and confirmed transaction preview all honor the entire selection.
 The active period stays exclusive, with a scalar month picker; choosing a preset
 clears the month without clearing any dimension.
+
+In v1.0.9 the shared compact Period selector replaces preset chips and the
+standalone month field. It shows This Week, Last Week, This Month, Last Month,
+Year to Date, or the selected month's full name/year. "Choose a month" reveals a
+labeled month input inside the popup; explicit "Apply month" applies a valid
+draft and closes it. Escape cancels a draft. No month input remains on the page.
+The popup explains "Following Home", "Saved for this view", or "Default for other
+views". Only overrides have a small dot on the closed trigger; its accessible
+description also identifies the mode. "Use Home period" lives inside the popup
+with the current Home value. Returning to inheritance removes only period
+and month; category/spender/tag/merchant/payment/range/search context stays intact.
+Local overrides persist across navigation/reload independently for each view,
+scoped to the signed-in user and space. An explicit URL period/month takes
+precedence. Clear all removes the override and other filters and follows Home.
 
 **Charts**:
 1. Spending trend line (same as Home: cumulative, current vs actual contributing-week avg within nine completed weeks or 3-month avg for monthly views). Weekly summary badges also show the actual contributing count.

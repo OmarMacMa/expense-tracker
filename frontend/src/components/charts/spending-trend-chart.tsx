@@ -226,7 +226,7 @@ export function SpendingTrendChart({
       <div className="mt-2.5 flex gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-full bg-[#7C6FA0]" />
-          {PERIOD_DISPLAY[periodLabel ?? ''] ?? 'Current period'}
+          {PERIOD_DISPLAY[periodLabel ?? ''] ?? periodLabel ?? 'Current period'}
         </span>
         {hasAverage && avgLabel && (
           <span className="flex items-center gap-1.5">

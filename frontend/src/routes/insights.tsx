@@ -13,6 +13,8 @@ import {
   useSpenderBreakdown,
 } from '@/hooks/useInsights';
 import { FilterBar } from '@/components/expenses/filter-bar';
+import { PeriodSelector } from '@/components/expenses/period-selector';
+import { periodLabel } from '@/lib/periodSelection';
 import { SpendingTrendChart } from '@/components/charts/spending-trend-chart';
 import { CategoryDonutChart } from '@/components/charts/category-donut-chart';
 import { MerchantLeaderboard } from '@/components/charts/merchant-leaderboard';
@@ -93,7 +95,15 @@ function QueryError({ onRetry }: { onRetry: () => void }) {
 }
 
 export default function Insights() {
-  const { queryFilters, setFilters } = useExpenseFilters('insights');
+  const {
+    queryFilters,
+    setFilters,
+    periodOverride,
+    homePeriod,
+    setPeriodOverride,
+    useHomePeriod,
+  } = useExpenseFilters('insights');
+  const selection = periodOverride ?? { period: homePeriod };
   const filterOptions = useExpenseFilterOptions();
   const transactionFilters = { ...queryFilters, status: 'confirmed' };
   const { format, currencyCode } = useCurrency();
@@ -146,7 +156,7 @@ export default function Insights() {
         ) : summary ? (
           <div className="mt-1 flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
-              {summary.period_label}
+              {periodLabel(selection)}
             </span>
             <span className="text-lg font-bold text-foreground">
               {format(summary.total_spent)}
@@ -180,7 +190,15 @@ export default function Insights() {
         onFiltersChange={setFilters}
         {...filterOptions}
         showSearch={false}
-        showPeriodChips
+        periodControl={
+          <PeriodSelector
+            selection={selection}
+            mode={periodOverride ? 'override' : 'inherited'}
+            homePeriod={homePeriod}
+            onChange={setPeriodOverride}
+            onUseHome={useHomePeriod}
+          />
+        }
       />
       {fetching && (
         <p role="status" className="text-sm text-muted-foreground">
@@ -201,7 +219,9 @@ export default function Insights() {
             ) : (
               <SpendingTrendChart
                 data={trendData}
-                periodLabel={queryFilters.period ?? 'this_month'}
+                periodLabel={
+                  selection.month ? periodLabel(selection) : selection.period
+                }
                 currencyCode={currencyCode}
               />
             )}

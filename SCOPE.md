@@ -22,6 +22,11 @@ Follows **Semantic Versioning (SemVer)**: `MAJOR.MINOR.PATCH`
   space-name pill navigate to `/home`, preserving layout, space and session.
   Both links support keyboard navigation and visible focus. Public landing-page
   authentication behavior is unchanged.
+- Shared Period selector (#82): recognizable calendar-range icon, visible Period
+  label and effective value on Home, Insights and Transactions. Home persists
+  This Week / This Month as the shared default. Each analysis view remembers its
+  own override per user and space, with explicit URLs taking precedence and a
+  "Use Home period" action that preserves all other filters. No new timeframes.
 
 ## 1.0.8 — Insights and expense-entry improvements
 

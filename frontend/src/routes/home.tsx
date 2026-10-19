@@ -15,6 +15,7 @@ import { CategoryDonutChart } from '@/components/charts/category-donut-chart';
 import { MerchantLeaderboard } from '@/components/charts/merchant-leaderboard';
 import { TransactionItem } from '@/components/expenses/transaction-item';
 import { usePeriod } from '@/hooks/usePeriod';
+import { PeriodSelector } from '@/components/expenses/period-selector';
 import type { LimitProgress } from '@/types/api';
 
 function Skeleton({ className }: { className?: string }) {
@@ -162,31 +163,17 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Period toggle */}
-        <div className="flex overflow-hidden rounded-full bg-muted">
-          <button
-            className={cn(
-              'px-5 py-2 text-[13px] font-medium transition-all',
-              period === 'this_week'
-                ? 'rounded-full bg-primary text-primary-foreground'
-                : 'text-muted-foreground',
-            )}
-            onClick={() => setPeriod('this_week')}
-          >
-            Week
-          </button>
-          <button
-            className={cn(
-              'px-5 py-2 text-[13px] font-medium transition-all',
-              period === 'this_month'
-                ? 'rounded-full bg-primary text-primary-foreground'
-                : 'text-muted-foreground',
-            )}
-            onClick={() => setPeriod('this_month')}
-          >
-            Month
-          </button>
-        </div>
+        <PeriodSelector
+          selection={{ period }}
+          mode="home"
+          onChange={(selection) => {
+            if (
+              selection.period === 'this_week' ||
+              selection.period === 'this_month'
+            )
+              setPeriod(selection.period);
+          }}
+        />
       </div>
 
       {/* Limit alerts */}

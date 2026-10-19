@@ -66,17 +66,22 @@ async def test_accumulating_filters_view_all_and_clear(
     # The rendered summary, not just transport, reflects three categories AND owner.
     header = page.locator("h1").locator("..")
     await expect(header).to_contain_text("$240.00")
-    await page.get_by_role("button", name="Last Month", exact=True).click()
+    await page.get_by_role("button", name=re.compile(r"^Period:")).click()
+    await page.get_by_role("radio", name="Last Month", exact=True).click()
     await expect(header).to_contain_text("$30.00")
     previous_month = (
         TimeWindowResolver("UTC")
         .get_previous_windows("monthly", count=1)[0][0]
         .strftime("%Y-%m")
     )
+    await page.get_by_role("button", name=re.compile(r"^Period:")).click()
+    await page.get_by_role("button", name="Choose a month…", exact=True).click()
     await page.get_by_label("Month picker").fill(previous_month)
+    await page.get_by_role("button", name="Apply month", exact=True).click()
     await expect(header).to_contain_text("$30.00")
     assert parse_qs(urlparse(page.url).query)["month"] == [previous_month]
-    await page.get_by_role("button", name="This Month", exact=True).click()
+    await page.get_by_role("button", name=re.compile(r"^Period:")).click()
+    await page.get_by_role("radio", name="This Month", exact=True).click()
     await expect(header).to_contain_text("$240.00")
     assert "month" not in parse_qs(urlparse(page.url).query)
     assert parse_qs(urlparse(page.url).query)["category"] == params["category"]

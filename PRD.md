@@ -309,7 +309,12 @@ Full-page form at `/expenses/new`. Fields in order:
 ### 6.9 Home dashboard
 High-signal entry point. Shows:
 1. **Hero number**: Total spent for selected window + **delta vs contributing-week average (weekly) or 3-month average (monthly)** (e.g., "-8% vs 4-week avg").
-2. **Time toggle**: "This Week" / "This Month" — all content updates.
+2. **Period selector**: "This Week" / "This Month" — all content updates.
+   This is the remembered shared default. Insights and Transactions use the same
+   recognizable control with broader existing options; each remembers its own
+   override per user/space across navigation and reload. Explicit URL selections
+   take priority. "Use Home period" restores inheritance without clearing other
+   filters, and the visible value always matches the requested window.
 3. **Alerts** (2–3 max): limits breached/near-breached.
 4. **Pending recurring**: confirmations card. — **1.1.0+**
 5. **Core graphs (MVP)**:
@@ -409,7 +414,7 @@ not an empty-data result.
 
 ### 8.3 Home
 - Hero total + delta vs average.
-- Week/Month toggle.
+- Shared Period selector (This Week / This Month).
 - Alerts, pending recurring, graph cards, latest transactions, monthly wrap.
 
 ### 8.4 Add Expense

@@ -1,12 +1,5 @@
 import { ChevronDown, Search, X } from 'lucide-react';
-import type { Dispatch, SetStateAction } from 'react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -21,14 +14,6 @@ import {
 import { cn } from '@/lib/utils';
 import { AmountRangeFilter } from './amount-range-filter';
 
-const PERIOD_OPTIONS = [
-  { value: 'this_week', label: 'This Week' },
-  { value: 'last_week', label: 'Last Week' },
-  { value: 'this_month', label: 'This Month' },
-  { value: 'last_month', label: 'Last Month' },
-  { value: 'ytd', label: 'YTD' },
-];
-
 interface FilterBarProps {
   filters: ExpenseFilters;
   onFiltersChange: Dispatch<SetStateAction<ExpenseFilters>>;
@@ -38,7 +23,7 @@ interface FilterBarProps {
   tags?: { id: string; name: string }[];
   paymentMethods?: { id: string; label: string }[];
   showSearch?: boolean;
-  showPeriodChips?: boolean;
+  periodControl: ReactNode;
   optionsError?: boolean;
 }
 
@@ -136,7 +121,7 @@ export function FilterBar({
   tags = [],
   paymentMethods = [],
   showSearch = true,
-  showPeriodChips = false,
+  periodControl,
   optionsError = false,
 }: FilterBarProps) {
   const dimensions: Record<
@@ -178,9 +163,6 @@ export function FilterBar({
       const values = update(current[key] ?? []);
       return { ...current, [key]: values.length ? values : undefined };
     });
-  const updatePeriod = (period: string) =>
-    onFiltersChange((current) => ({ ...current, period, month: undefined }));
-
   return (
     <div className="space-y-3">
       {showSearch && (
@@ -198,58 +180,8 @@ export function FilterBar({
           />
         </div>
       )}
-      {showPeriodChips && (
-        <div className="flex flex-wrap gap-2">
-          {PERIOD_OPTIONS.map((opt) => (
-            <button
-              type="button"
-              key={opt.value}
-              aria-pressed={!filters.month && filters.period === opt.value}
-              onClick={() => updatePeriod(opt.value)}
-              className={cn(
-                'min-h-11 rounded-full px-3.5 text-[13px] font-medium transition-colors',
-                !filters.month && filters.period === opt.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-muted-foreground hover:bg-secondary/80',
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
       <div className="flex flex-wrap gap-2">
-        {!showPeriodChips && (
-          <Select
-            value={filters.month ? '' : (filters.period ?? '')}
-            onValueChange={updatePeriod}
-          >
-            <SelectTrigger className="min-h-11 rounded-full border-none bg-secondary px-3.5 text-[13px] shadow-none">
-              <SelectValue placeholder="Period" />
-            </SelectTrigger>
-            <SelectContent>
-              {PERIOD_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Input
-          type="month"
-          aria-label="Month picker"
-          value={filters.month ?? ''}
-          onChange={(e) => {
-            const month = e.target.value || undefined;
-            onFiltersChange((current) => ({
-              ...current,
-              month,
-              period: 'this_month',
-            }));
-          }}
-          className="h-11 w-44 rounded-full border-none bg-secondary text-[13px]"
-        />
+        {periodControl}
         {FILTER_DIMENSIONS.map((key) => {
           const { label, options } = dimensions[key];
           const selected = filters[key] ?? [];

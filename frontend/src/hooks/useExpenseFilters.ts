@@ -1,6 +1,12 @@
 import { useSearchParams } from 'react-router';
-import type { SetStateAction } from 'react';
+import { useEffect, type SetStateAction } from 'react';
 import { usePeriod } from './usePeriod';
+import { useAuth } from './useAuth';
+import {
+  parseStoredPeriod,
+  readPeriodSelection,
+  type PeriodSelection,
+} from '@/lib/periodSelection';
 import {
   canonicalFilters,
   filtersFromParams,
@@ -14,27 +20,76 @@ export function useExpenseFilters(
 ) {
   const [params, setParams] = useSearchParams();
   const { period } = usePeriod();
+  const { user, currentSpace } = useAuth();
+  const storageKey =
+    user && currentSpace
+      ? `expense-tracker:period-override:${user.id}:${currentSpace.id}:${context}`
+      : null;
   const filters = filtersFromParams(params, context);
+  const urlPeriod = readPeriodSelection(filters);
+  const rememberedPeriod = storageKey
+    ? parseStoredPeriod(localStorage.getItem(storageKey))
+    : null;
+  const periodOverride = urlPeriod ?? rememberedPeriod;
+  const serializedUrlPeriod = urlPeriod ? JSON.stringify(urlPeriod) : null;
   const queryFilters: ExpenseFilters = {
     ...filters,
-    period: filters.period ?? (filters.month ? 'this_month' : period),
+    ...(periodOverride ?? { period }),
+    month: periodOverride?.month,
   };
+
+  useEffect(() => {
+    if (storageKey && serializedUrlPeriod) {
+      localStorage.setItem(storageKey, serializedUrlPeriod);
+    }
+  }, [storageKey, serializedUrlPeriod]);
+
   const setFilters = (next: SetStateAction<ExpenseFilters>) => {
     // History updates synchronously, even while React Router transitions render.
     // Read the latest URL so rapid checkbox events cannot overwrite each other.
-    const current = filtersFromParams(
+    const currentUrl = filtersFromParams(
       new URLSearchParams(window.location.search),
       context,
     );
-    setParams(
-      filtersToParams(
-        canonicalFilters(
-          typeof next === 'function' ? next(current) : next,
-          context,
-        ),
-      ),
-      { replace: true },
+    const current: ExpenseFilters = {
+      ...currentUrl,
+      ...(readPeriodSelection(currentUrl) ??
+        (storageKey
+          ? parseStoredPeriod(localStorage.getItem(storageKey))
+          : null) ??
+        {}),
+    };
+    const updated = canonicalFilters(
+      typeof next === 'function' ? next(current) : next,
+      context,
     );
+    const selected = readPeriodSelection(updated);
+    if (storageKey) {
+      if (selected) localStorage.setItem(storageKey, JSON.stringify(selected));
+      else localStorage.removeItem(storageKey);
+    }
+    setParams(filtersToParams(updated), { replace: true });
   };
-  return { filters, queryFilters, setFilters };
+  const setPeriodOverride = (selection: PeriodSelection) =>
+    setFilters((current) => ({
+      ...current,
+      period: selection.period,
+      month: selection.month,
+    }));
+  const useHomePeriod = () =>
+    setFilters((current) => ({
+      ...current,
+      period: undefined,
+      month: undefined,
+    }));
+
+  return {
+    filters,
+    queryFilters,
+    setFilters,
+    periodOverride,
+    homePeriod: period,
+    setPeriodOverride,
+    useHomePeriod,
+  };
 }
