@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { CalendarRange, ChevronDown, RotateCcw } from 'lucide-react';
+import { CalendarRange, ChevronDown } from 'lucide-react';
 import {
   Popover,
   PopoverContent,
@@ -13,22 +13,17 @@ import {
   readPeriodSelection,
   type PeriodSelection,
 } from '@/lib/periodSelection';
-import type { Period } from '@/hooks/usePeriod';
 
 interface PeriodSelectorProps {
   selection: PeriodSelection;
   onChange: (selection: PeriodSelection) => void;
-  mode: 'home' | 'inherited' | 'override';
-  homePeriod?: Period;
-  onUseHome?: () => void;
+  mode: 'home' | 'analysis';
 }
 
 export function PeriodSelector({
   selection,
   onChange,
   mode,
-  homePeriod,
-  onUseHome,
 }: PeriodSelectorProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -36,12 +31,6 @@ export function PeriodSelector({
   const [monthDraft, setMonthDraft] = useState('');
   const extended = mode !== 'home';
   const label = periodLabel(selection);
-  const description =
-    mode === 'home'
-      ? 'Default for other views'
-      : mode === 'inherited'
-        ? 'Following Home'
-        : 'Saved for this view';
 
   return (
     <Popover
@@ -57,24 +46,15 @@ export function PeriodSelector({
           type="button"
           data-testid="period-control"
           aria-label={`Period: ${label}`}
-          aria-description={description}
-          title={description}
-          className="flex h-11 w-fit max-w-full shrink-0 items-center gap-2 rounded-full bg-primary/10 px-3.5 text-[13px] hover:bg-primary/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="flex h-8 w-fit max-w-full shrink-0 items-center gap-1.5 rounded-full bg-secondary px-3 text-[13px] hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <CalendarRange
             className="size-4 shrink-0 text-primary"
             aria-hidden="true"
           />
-          <span className="text-muted-foreground">Period:</span>
           <span className="min-w-0 truncate font-semibold text-foreground">
             {label}
           </span>
-          {mode === 'override' && (
-            <span
-              className="size-1.5 shrink-0 rounded-full bg-primary"
-              aria-hidden="true"
-            />
-          )}
           <ChevronDown
             className="size-3.5 shrink-0 text-primary"
             aria-hidden="true"
@@ -84,9 +64,8 @@ export function PeriodSelector({
       <PopoverContent
         align="start"
         aria-label="Period settings"
-        className="w-72 max-w-[calc(100vw-2rem)] rounded-2xl border-none bg-card p-3 shadow-[var(--shadow-card)]"
+        className="w-[212px] max-w-[calc(100vw-2rem)] rounded-xl border-none bg-card p-2 shadow-[var(--shadow-card)]"
       >
-        <p className="mb-2 px-2 text-xs text-muted-foreground">{description}</p>
         <fieldset>
           <legend className="sr-only">Period</legend>
           {PERIOD_OPTIONS.filter(
@@ -109,8 +88,10 @@ export function PeriodSelector({
                   setOpen(false);
                 }}
                 onClick={() => {
-                  if (!selection.month && selection.period === option.value)
+                  if (!selection.month && selection.period === option.value) {
+                    onChange({ period: option.value });
                     setOpen(false);
+                  }
                 }}
                 className="size-4 shrink-0 accent-primary"
               />
@@ -157,29 +138,6 @@ export function PeriodSelector({
               Apply month
             </Button>
           </div>
-        )}
-        {mode === 'override' && onUseHome && (
-          <button
-            type="button"
-            aria-label="Use Home period"
-            aria-description={periodLabel({
-              period: homePeriod ?? 'this_month',
-            })}
-            onClick={() => {
-              onUseHome();
-              setOpen(false);
-              setChoosingMonth(false);
-            }}
-            className="mt-2 flex min-h-11 w-full items-center gap-2 rounded-xl bg-primary/10 px-2 text-left text-sm text-primary hover:bg-primary/15 focus-visible:outline-2 focus-visible:outline-primary"
-          >
-            <RotateCcw className="size-4 shrink-0" aria-hidden="true" />
-            <span>
-              <span className="block font-medium">Use Home period</span>
-              <span className="block text-xs text-muted-foreground">
-                {periodLabel({ period: homePeriod ?? 'this_month' })}
-              </span>
-            </span>
-          </button>
         )}
       </PopoverContent>
     </Popover>

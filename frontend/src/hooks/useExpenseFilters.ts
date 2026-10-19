@@ -1,6 +1,5 @@
 import { useSearchParams } from 'react-router';
 import { useEffect, type SetStateAction } from 'react';
-import { usePeriod } from './usePeriod';
 import { useAuth } from './useAuth';
 import {
   parseStoredPeriod,
@@ -19,23 +18,27 @@ export function useExpenseFilters(
   context: ExpenseFilterContext = 'transactions',
 ) {
   const [params, setParams] = useSearchParams();
-  const { period } = usePeriod();
   const { user, currentSpace } = useAuth();
   const storageKey =
     user && currentSpace
       ? `expense-tracker:period-override:${user.id}:${currentSpace.id}:${context}`
       : null;
-  const filters = filtersFromParams(params, context);
-  const urlPeriod = readPeriodSelection(filters);
+  const urlFilters = filtersFromParams(params, context);
+  const urlPeriod = readPeriodSelection(urlFilters);
   const rememberedPeriod = storageKey
     ? parseStoredPeriod(localStorage.getItem(storageKey))
     : null;
   const periodOverride = urlPeriod ?? rememberedPeriod;
+  const selection: PeriodSelection = periodOverride ?? { period: 'this_month' };
+  const filters: ExpenseFilters = {
+    ...urlFilters,
+    ...periodOverride,
+  };
   const serializedUrlPeriod = urlPeriod ? JSON.stringify(urlPeriod) : null;
   const queryFilters: ExpenseFilters = {
     ...filters,
-    ...(periodOverride ?? { period }),
-    month: periodOverride?.month,
+    ...selection,
+    month: selection.month,
   };
 
   useEffect(() => {
@@ -76,20 +79,11 @@ export function useExpenseFilters(
       period: selection.period,
       month: selection.month,
     }));
-  const useHomePeriod = () =>
-    setFilters((current) => ({
-      ...current,
-      period: undefined,
-      month: undefined,
-    }));
-
   return {
     filters,
     queryFilters,
     setFilters,
-    periodOverride,
-    homePeriod: period,
+    selection,
     setPeriodOverride,
-    useHomePeriod,
   };
 }

@@ -95,15 +95,8 @@ function QueryError({ onRetry }: { onRetry: () => void }) {
 }
 
 export default function Insights() {
-  const {
-    queryFilters,
-    setFilters,
-    periodOverride,
-    homePeriod,
-    setPeriodOverride,
-    useHomePeriod,
-  } = useExpenseFilters('insights');
-  const selection = periodOverride ?? { period: homePeriod };
+  const { queryFilters, setFilters, selection, setPeriodOverride } =
+    useExpenseFilters('insights');
   const filterOptions = useExpenseFilterOptions();
   const transactionFilters = { ...queryFilters, status: 'confirmed' };
   const { format, currencyCode } = useCurrency();
@@ -193,10 +186,8 @@ export default function Insights() {
         periodControl={
           <PeriodSelector
             selection={selection}
-            mode={periodOverride ? 'override' : 'inherited'}
-            homePeriod={homePeriod}
+            mode="analysis"
             onChange={setPeriodOverride}
-            onUseHome={useHomePeriod}
           />
         }
       />

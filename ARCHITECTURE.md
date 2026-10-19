@@ -359,13 +359,13 @@ query cache keys and explicitly appends repeated keys to `URLSearchParams`;
 the API client accepts these alongside existing scalar parameter records.
 Insights and Transactions use the URL as their explicit filter context.
 In v1.0.9 their period selection also has a remembered fallback: explicit valid
-URL period/month, then the view's saved override, then Home's shared period.
+URL period/month, then the view's saved selection, then This Month.
 Overrides use localStorage keys scoped by user ID, space ID and view; only
 period/month are stored, not the other filters or expense data. Home retains the
-existing `expense-tracker:period` default. `useExpenseFilters` keeps synchronous
+existing `expense-tracker:period` preference independently. `useExpenseFilters` keeps synchronous
 URL-backed functional updates while preserving remembered periods on unrelated
-filter edits. "Use Home period" deletes that view's saved override and URL
-period/month without clearing other filters. Clear all deletes the override too.
+filter edits. Home changes never affect analysis selections. Clear all deletes
+the saved selection and other filters, returning that view to This Month.
 View all navigation serializes the effective period, including a remembered month.
 The shared `PeriodSelector` presents the same effective window as the queries;
 selected months are named in the Insights header and chart legend.

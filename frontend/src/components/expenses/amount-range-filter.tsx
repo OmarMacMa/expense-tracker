@@ -43,7 +43,7 @@ export function AmountRangeFilter({ range, onApply }: AmountRangeFilterProps) {
             value={minimum}
             placeholder="No minimum"
             onChange={(event) => setMinimum(event.target.value)}
-            className="mt-1 h-10 rounded-xl border-none bg-card"
+            className="mt-1 h-10 rounded-xl border-none bg-card placeholder:font-normal placeholder:text-neutral-500"
           />
         </label>
         <label className="min-w-[8rem] flex-1 text-xs font-medium text-muted-foreground">
@@ -55,7 +55,7 @@ export function AmountRangeFilter({ range, onApply }: AmountRangeFilterProps) {
             value={maximum}
             placeholder="No maximum"
             onChange={(event) => setMaximum(event.target.value)}
-            className="mt-1 h-10 rounded-xl border-none bg-card"
+            className="mt-1 h-10 rounded-xl border-none bg-card placeholder:font-normal placeholder:text-neutral-500"
           />
         </label>
         <Button
@@ -96,7 +96,7 @@ export function AmountRangeFilter({ range, onApply }: AmountRangeFilterProps) {
           type="button"
           aria-label="Remove applied amount range"
           onClick={() => onApply({})}
-          className="flex max-w-full items-center gap-2 rounded-full bg-accent px-3 py-1.5 text-left text-xs font-medium text-accent-foreground"
+          className="flex min-h-8 max-w-full items-center gap-2 rounded-full bg-accent px-3 py-1.5 text-left text-xs font-medium text-accent-foreground"
         >
           <span className="min-w-0 break-all">
             Amount: {currencyCode} {description}

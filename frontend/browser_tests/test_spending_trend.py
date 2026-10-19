@@ -113,7 +113,12 @@ def open_chart(
         )
     page = context.new_page()
     page.on("pageerror", lambda error: errors.append(str(error)))
-    page.goto(f"{chart_server}/{view}", wait_until="domcontentloaded", timeout=60000)
+    query = f"?period={period}" if view == "insights" else ""
+    page.goto(
+        f"{chart_server}/{view}{query}",
+        wait_until="domcontentloaded",
+        timeout=60000,
+    )
     page.wait_for_load_state("networkidle", timeout=60000)
     page.evaluate("document.fonts.ready")
     if data["timeframe"] == "yearly":

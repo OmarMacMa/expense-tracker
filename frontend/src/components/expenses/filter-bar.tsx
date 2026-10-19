@@ -50,7 +50,7 @@ function MultiSelectFilter({
           type="button"
           aria-label={`${label}: ${selected.length} selected`}
           className={cn(
-            'flex min-h-11 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] font-medium focus-visible:outline-2 focus-visible:outline-primary',
+            'flex min-h-8 shrink-0 items-center gap-2 rounded-full px-3 text-[13px] font-medium hover:bg-accent focus-visible:outline-2 focus-visible:outline-primary',
             selected.length
               ? 'bg-accent text-accent-foreground'
               : 'bg-secondary text-muted-foreground',
@@ -204,7 +204,7 @@ export function FilterBar({
           <button
             type="button"
             onClick={() => onFiltersChange({})}
-            className="flex min-h-11 items-center gap-1 rounded-full bg-secondary px-3 text-[13px] font-medium text-muted-foreground"
+            className="flex min-h-8 items-center gap-1 rounded-full bg-secondary px-3 text-[13px] font-medium text-muted-foreground"
           >
             <X className="h-3.5 w-3.5" /> Clear all
           </button>
@@ -244,7 +244,7 @@ export function FilterBar({
                     values.filter((item) => item !== value),
                   )
                 }
-                className="flex min-h-11 max-w-full items-center gap-2 rounded-full bg-accent px-3 text-xs text-accent-foreground"
+                className="flex min-h-8 max-w-full items-center gap-2 rounded-full bg-accent px-3 text-xs text-accent-foreground"
               >
                 <span className="truncate">
                   {dimension.label}: {label}

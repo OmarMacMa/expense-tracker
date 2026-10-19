@@ -131,49 +131,48 @@ export default function Home() {
   return (
     <div className="mx-auto w-full max-w-[1100px] space-y-4">
       {/* Hero strip */}
-      <div className="flex flex-col gap-3.5 rounded-2xl bg-card p-5 shadow-[var(--shadow-card)] md:flex-row md:items-center md:justify-between md:px-7">
-        <div className="flex flex-col gap-1 md:flex-row md:items-baseline md:gap-5">
-          {summaryLoading ? (
-            <Skeleton className="h-9 w-48" />
-          ) : (
-            <span className="text-4xl font-bold tracking-tight text-foreground md:text-[2rem]">
-              {format(summary?.total_spent ?? '0')}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-2xl bg-card p-4 shadow-[var(--shadow-card)] sm:p-5 md:gap-x-5 md:px-7">
+        {summaryLoading ? (
+          <Skeleton className="h-9 w-full max-w-48" />
+        ) : (
+          <span className="min-w-0 break-words text-2xl font-bold tracking-tight text-foreground min-[375px]:text-3xl md:text-[2rem]">
+            {format(summary?.total_spent ?? '0')}
+          </span>
+        )}
+        <div className="col-span-2 row-start-2 flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">
+            Spent {periodLabel}
+          </span>
+          {summary?.delta_pct != null && (
+            <span
+              className={cn(
+                'inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                summary.delta_pct > 0
+                  ? 'bg-red-50 text-red-600'
+                  : 'bg-green-50 text-green-600',
+              )}
+            >
+              {summary.delta_pct > 0 ? '↑' : '↓'}{' '}
+              {Math.abs(summary.delta_pct).toFixed(1)}% vs{' '}
+              {period === 'this_week'
+                ? `${summary.average_period_count}-week avg`
+                : 'avg'}
             </span>
           )}
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">
-              Total spent {periodLabel}
-            </span>
-            {summary?.delta_pct != null && (
-              <span
-                className={cn(
-                  'inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                  summary.delta_pct > 0
-                    ? 'bg-red-50 text-red-600'
-                    : 'bg-green-50 text-green-600',
-                )}
-              >
-                {summary.delta_pct > 0 ? '↑' : '↓'}{' '}
-                {Math.abs(summary.delta_pct).toFixed(1)}% vs{' '}
-                {period === 'this_week'
-                  ? `${summary.average_period_count}-week avg`
-                  : 'avg'}
-              </span>
-            )}
-          </div>
         </div>
-
-        <PeriodSelector
-          selection={{ period }}
-          mode="home"
-          onChange={(selection) => {
-            if (
-              selection.period === 'this_week' ||
-              selection.period === 'this_month'
-            )
-              setPeriod(selection.period);
-          }}
-        />
+        <div className="col-start-2 row-start-1 justify-self-end">
+          <PeriodSelector
+            selection={{ period }}
+            mode="home"
+            onChange={(selection) => {
+              if (
+                selection.period === 'this_week' ||
+                selection.period === 'this_month'
+              )
+                setPeriod(selection.period);
+            }}
+          />
+        </div>
       </div>
 
       {/* Limit alerts */}
@@ -276,7 +275,7 @@ export default function Home() {
               </p>
             </div>
             <Link
-              to="/transactions"
+              to={`/transactions?period=${period}`}
               className="text-[13px] font-medium text-primary hover:underline"
             >
               View all →

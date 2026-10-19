@@ -53,10 +53,8 @@ export default function TransactionList() {
     filters: localFilters,
     queryFilters,
     setFilters,
-    periodOverride,
-    homePeriod,
+    selection,
     setPeriodOverride,
-    useHomePeriod,
   } = useExpenseFilters();
   const filterOptions = useExpenseFilterOptions();
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -122,11 +120,9 @@ export default function TransactionList() {
         {...filterOptions}
         periodControl={
           <PeriodSelector
-            selection={periodOverride ?? { period: homePeriod }}
-            mode={periodOverride ? 'override' : 'inherited'}
-            homePeriod={homePeriod}
+            selection={selection}
+            mode="analysis"
             onChange={setPeriodOverride}
-            onUseHome={useHomePeriod}
           />
         }
       />

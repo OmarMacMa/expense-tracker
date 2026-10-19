@@ -310,11 +310,12 @@ Full-page form at `/expenses/new`. Fields in order:
 High-signal entry point. Shows:
 1. **Hero number**: Total spent for selected window + **delta vs contributing-week average (weekly) or 3-month average (monthly)** (e.g., "-8% vs 4-week avg").
 2. **Period selector**: "This Week" / "This Month" — all content updates.
-   This is the remembered shared default. Insights and Transactions use the same
-   recognizable control with broader existing options; each remembers its own
-   override per user/space across navigation and reload. Explicit URL selections
-   take priority. "Use Home period" restores inheritance without clearing other
-   filters, and the visible value always matches the requested window.
+   Home, Insights and Transactions remember periods independently. Analysis views
+   use the same lightweight control with broader existing options, remember their
+   selections per user/space across navigation and reload, and default to This
+   Month. Explicit URL selections take priority. View all carries the previewed
+   period; ordinary navigation restores that view's selection. The visible value
+   always matches the requested window.
 3. **Alerts** (2–3 max): limits breached/near-breached.
 4. **Pending recurring**: confirmations card. — **1.1.0+**
 5. **Core graphs (MVP)**:

@@ -8,7 +8,7 @@ from tests.insights_support import seed_insights
 
 
 @pytest.mark.parametrize("width", [390, 1440])
-async def test_real_period_override_and_home_inheritance(real_db, context, width):
+async def test_real_independent_periods(real_db, context, width):
     data = await seed_insights(real_db)
     await authenticate(context, data.partner)
     await context.add_init_script(
@@ -23,7 +23,7 @@ async def test_real_period_override_and_home_inheritance(real_db, context, width
     await expect(header).to_contain_text("$160.00")
     await expect(
         page.get_by_role("button", name="Period: This Month", exact=True)
-    ).to_have_attribute("aria-description", "Following Home")
+    ).to_be_visible()
     await page.get_by_role("button", name="Period: This Month", exact=True).click()
     await page.get_by_role("radio", name="Last Month", exact=True).click()
     await expect(header).to_contain_text("$360.00")
@@ -44,7 +44,7 @@ async def test_real_period_override_and_home_inheritance(real_db, context, width
     await page.get_by_role("button", name="Category: 1 selected").click()
     await page.wait_for_load_state("networkidle")
     await page.get_by_role("button", name="Period: Last Month", exact=True).click()
-    await page.get_by_role("button", name="Use Home period", exact=True).click()
+    await page.get_by_role("radio", name="This Week", exact=True).click()
     await expect(
         page.get_by_role("button", name="Period: This Week", exact=True)
     ).to_be_visible()
@@ -64,11 +64,14 @@ async def test_real_period_override_and_home_inheritance(real_db, context, width
         total,
     )
     await expect(header).to_contain_text(formatted)
-    assert parse_qs(urlparse(page.url).query) == {"category": [str(data.category_id)]}
+    assert parse_qs(urlparse(page.url).query) == {
+        "category": [str(data.category_id)],
+        "period": ["this_week"],
+    }
     await page.get_by_role("link", name="Transactions", exact=True).click()
     await expect(
-        page.get_by_role("button", name="Period: This Week", exact=True)
+        page.get_by_role("button", name="Period: This Month", exact=True)
     ).to_be_visible()
     await expect(
-        page.get_by_role("button", name="Period: This Week", exact=True)
-    ).to_have_attribute("aria-description", "Following Home")
+        page.get_by_role("button", name="Period: This Month", exact=True)
+    ).to_be_visible()
